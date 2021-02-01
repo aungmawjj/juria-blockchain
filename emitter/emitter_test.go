@@ -23,8 +23,8 @@ func TestEmitter_Subscribe(t *testing.T) {
 	c1 := new(MockClient)
 	c2 := new(MockClient)
 
-	go e.Subscribe(0).On(c1.OnNewEvent)
-	go e.Subscribe(0).On(c2.OnNewEvent)
+	go e.Subscribe(0).Listen(c1.OnNewEvent)
+	go e.Subscribe(0).Listen(c2.OnNewEvent)
 
 	events := []string{"Hello", "World"}
 
@@ -48,8 +48,8 @@ func TestEmitter_Unsubscribe(t *testing.T) {
 	s1 := e.Subscribe(0)
 	s2 := e.Subscribe(0)
 
-	go s1.On(c1.OnNewEvent)
-	go s2.On(c2.OnNewEvent)
+	go s1.Listen(c1.OnNewEvent)
+	go s2.Listen(c2.OnNewEvent)
 
 	s1.Unsubscribe()
 

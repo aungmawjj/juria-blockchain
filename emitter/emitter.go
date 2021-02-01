@@ -19,8 +19,8 @@ type Subscription struct {
 	ch       chan Event
 }
 
-// On invokes given function for each event
-func (s *Subscription) On(fn NewEventFunc) {
+// Listen invokes given function for each event
+func (s *Subscription) Listen(fn NewEventFunc) {
 	for e := range s.ch {
 		fn(e)
 	}
