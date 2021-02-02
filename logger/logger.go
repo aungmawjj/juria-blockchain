@@ -43,7 +43,7 @@ func New() Logger {
 	return NewWithConfig(Config{false, 0})
 }
 
-// NewWithConfig returns a new logger
+// NewWithConfig creates a new logger with config
 func NewWithConfig(cfg Config) Logger {
 	var (
 		logger *zap.Logger
@@ -60,20 +60,40 @@ func NewWithConfig(cfg Config) Logger {
 	return &zapLogger{logger.Sugar()}
 }
 
-var logger Logger
+// NewNop creates no-op logger
+func NewNop() Logger {
+	return &zapLogger{zap.NewNop().Sugar()}
+}
+
+var myLogger Logger
 var once sync.Once
 
 // Init creates a global logger
-func Init(l Logger) {
+func Init(logger Logger) {
 	once.Do(func() {
-		logger = l
+		myLogger = logger
 	})
 }
 
 // Instance returns global Logger
 func Instance() Logger {
-	if logger == nil {
+	if myLogger == nil {
 		log.Fatalf("logger isn't initialized")
 	}
-	return logger
+	return myLogger
 }
+
+// Debug level
+func Debug(msg string, keyValues ...interface{}) { Instance().Debug(msg, keyValues) }
+
+// Info level
+func Info(msg string, keyValues ...interface{}) { Instance().Info(msg, keyValues) }
+
+// Warn level
+func Warn(msg string, keyValues ...interface{}) { Instance().Warn(msg, keyValues) }
+
+// Error level
+func Error(msg string, keyValues ...interface{}) { Instance().Error(msg, keyValues) }
+
+// Panic level
+func Panic(msg string, keyValues ...interface{}) { Instance().Panic(msg, keyValues) }
