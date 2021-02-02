@@ -20,9 +20,9 @@ func Test_state_init(t *testing.T) {
 	s.init(b0, q0)
 
 	assert := assert.New(t)
-	assert.Equal(b0, s.getBExec())
-	assert.Equal(b0, s.getBLock())
-	assert.Equal(b0, s.getBLeaf())
-	assert.Equal(q0, s.getQCHigh())
-	assert.Equal(b0.Height(), s.getVHeight())
+	assert.Equal(b0, s.GetBExec())
+	assert.Equal(b0, s.GetBLock())
+	assert.Equal(b0, s.GetBLeaf())
+	assert.Equal(q0, s.GetQCHigh())
+	assert.Equal(b0.Height(), s.GetVHeight())
 }

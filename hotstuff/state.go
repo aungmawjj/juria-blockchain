@@ -29,8 +29,8 @@ func (s *state) setBExec(b Block)         { s.bExec.Store(b) }
 func (s *state) setBLeaf(bNew Block)      { s.bLeaf.Store(bNew) }
 func (s *state) setQCHigh(qcHigh QC)      { s.qcHigh.Store(qcHigh) }
 
-func (s *state) getVHeight() uint64 { return s.vHeight.Load().(uint64) }
-func (s *state) getBLock() Block    { return s.bLock.Load().(Block) }
-func (s *state) getBExec() Block    { return s.bExec.Load().(Block) }
-func (s *state) getBLeaf() Block    { return s.bLeaf.Load().(Block) }
-func (s *state) getQCHigh() QC      { return s.qcHigh.Load().(QC) }
+func (s *state) GetVHeight() uint64 { return s.vHeight.Load().(uint64) }
+func (s *state) GetBLock() Block    { return s.bLock.Load().(Block) }
+func (s *state) GetBExec() Block    { return s.bExec.Load().(Block) }
+func (s *state) GetBLeaf() Block    { return s.bLeaf.Load().(Block) }
+func (s *state) GetQCHigh() QC      { return s.qcHigh.Load().(QC) }

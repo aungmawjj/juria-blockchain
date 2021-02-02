@@ -5,7 +5,12 @@ package hotstuff
 
 // Hotstuff consensus engine
 type Hotstuff struct {
-	state *state
+	state
+}
+
+// Init initializes hotstuff
+func (hs *Hotstuff) Init(b0 Block, q0 QC) {
+	hs.state.init(b0, q0)
 }
 
 // OnReceiveNewView should be invoked when a new view is received from a peer
@@ -14,8 +19,8 @@ func (hs *Hotstuff) OnReceiveNewView(qc QC) {
 }
 
 func (hs *Hotstuff) updateQCHigh(qc QC) {
-	if CmpBlockHeight(qc.Block(), hs.state.getQCHigh().Block()) {
-		hs.state.setQCHigh(qc)
-		hs.state.setBLeaf(qc.Block())
+	if CmpBlockHeight(qc.Block(), hs.GetQCHigh().Block()) {
+		hs.setQCHigh(qc)
+		hs.setBLeaf(qc.Block())
 	}
 }

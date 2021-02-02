@@ -59,14 +59,14 @@ func TestHotstuff_OnReceiveNewView(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			hs := &Hotstuff{state: &state{}}
-			hs.state.init(tt.fields.bLeaf, tt.fields.qcHigh)
+			hs := new(Hotstuff)
+			hs.Init(tt.fields.bLeaf, tt.fields.qcHigh)
 
 			hs.updateQCHigh(tt.args.qc)
 
 			assert := assert.New(t)
-			assert.Equal(tt.want.bLeaf, hs.state.getBLeaf())
-			assert.Equal(tt.want.qcHigh, hs.state.getQCHigh())
+			assert.Equal(tt.want.bLeaf, hs.GetBLeaf())
+			assert.Equal(tt.want.qcHigh, hs.GetQCHigh())
 		})
 	}
 }
