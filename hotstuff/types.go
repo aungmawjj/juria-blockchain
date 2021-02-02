@@ -12,6 +12,17 @@ type Block interface {
 	Justify() QC
 }
 
+// CmpBlockHeight compares two blocks by height
+func CmpBlockHeight(b1, b2 Block) bool {
+	if b1 == nil {
+		return false
+	}
+	if b2 == nil {
+		return true
+	}
+	return b1.Height() > b2.Height()
+}
+
 // QC godoc
 type QC interface {
 	Block() Block
