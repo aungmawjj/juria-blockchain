@@ -24,6 +24,7 @@ type zapLogger struct {
 	logger *zap.SugaredLogger
 }
 
+// make sure to implement Logger interface
 var _ Logger = (*zapLogger)(nil)
 
 func (zl *zapLogger) Debug(msg string, keyValues ...interface{}) { zl.logger.Debugw(msg, keyValues) }
