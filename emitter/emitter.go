@@ -56,10 +56,17 @@ func New() *Emitter {
 func (e *Emitter) Subscribe(buffer int) *Subscription {
 	s := &Subscription{
 		e.delete,
-		make(chan Event, buffer),
+		make(chan Event, max(buffer, 5)),
 	}
 	e.add(s)
 	return s
+}
+
+func max(x, y int) int {
+	if x > y {
+		return x
+	}
+	return y
 }
 
 func (e *Emitter) add(s *Subscription) {
