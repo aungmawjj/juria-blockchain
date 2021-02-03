@@ -5,17 +5,29 @@ package core
 
 import (
 	"crypto/ed25519"
+	"encoding/base64"
 	"fmt"
 )
 
+func toBase64(b []byte) string {
+	return base64.StdEncoding.EncodeToString(b)
+}
+
 // PublicKey type
 type PublicKey struct {
-	key ed25519.PublicKey
+	key    ed25519.PublicKey
+	keyStr string
 }
 
 // DecodePublicKey decodes raw bytes to PublicKey
-func DecodePublicKey(b []byte) *PublicKey {
-	return &PublicKey{key: b}
+func DecodePublicKey(b []byte) (*PublicKey, error) {
+	if len(b) != ed25519.PublicKeySize {
+		return nil, fmt.Errorf("invalid public key size")
+	}
+	return &PublicKey{
+		key:    b,
+		keyStr: toBase64(b),
+	}, nil
 }
 
 // Equal checks whether pub and x has the same value
@@ -25,7 +37,12 @@ func (pub *PublicKey) Equal(x *PublicKey) bool {
 
 // Bytes return raw bytes
 func (pub *PublicKey) Bytes() []byte {
-	return pub.key
+	b := make([]byte, 0, len(pub.key))
+	return append(b, pub.key...)
+}
+
+func (pub *PublicKey) String() string {
+	return pub.keyStr
 }
 
 // Signature type
@@ -40,9 +57,9 @@ func DecodeSignature(b []byte) (*Signature, error) {
 		return nil, fmt.Errorf("invalid signature length")
 	}
 	sig := &Signature{
-		data:   b[0:ed25519.SignatureSize],
-		pubKey: DecodePublicKey(b[ed25519.SignatureSize:]),
+		data: b[0:ed25519.SignatureSize],
 	}
+	sig.pubKey, _ = DecodePublicKey(b[ed25519.SignatureSize:])
 	return sig, nil
 }
 
@@ -56,30 +73,44 @@ func (sig *Signature) Verify(msg []byte) bool {
 	return ed25519.Verify(sig.pubKey.key, msg, sig.data)
 }
 
+// PublicKey returns corresponding public key
+func (sig *Signature) PublicKey() *PublicKey {
+	return sig.pubKey
+}
+
 // PrivateKey type
 type PrivateKey struct {
 	key    ed25519.PrivateKey
-	pubKey PublicKey
+	pubKey *PublicKey
 }
 
 // DecodePrivateKey decodes raw bytes to PrivateKey
-func DecodePrivateKey(b []byte) *PrivateKey {
-	priv := &PrivateKey{key: b}
-	priv.pubKey.key = priv.key.Public().(ed25519.PublicKey)
-	return priv
+func DecodePrivateKey(b []byte) (*PrivateKey, error) {
+	if len(b) != ed25519.PrivateKeySize {
+		return nil, fmt.Errorf("invalid private key size")
+	}
+	priv := &PrivateKey{
+		key: b,
+	}
+	priv.pubKey, _ = DecodePublicKey(priv.key.Public().(ed25519.PublicKey))
+	return priv, nil
 }
 
 // Bytes return raw bytes
 func (priv *PrivateKey) Bytes() []byte {
-	return priv.key
+	b := make([]byte, 0, len(priv.key))
+	return append(b, priv.key...)
 }
 
-// Public returns corresponding public key
-func (priv *PrivateKey) Public() *PublicKey {
-	return &priv.pubKey
+// PublicKey returns corresponding public key
+func (priv *PrivateKey) PublicKey() *PublicKey {
+	return priv.pubKey
 }
 
 // Sign signs the message
 func (priv *PrivateKey) Sign(msg []byte) *Signature {
-	return &Signature{ed25519.Sign(priv.key, msg), &priv.pubKey}
+	return &Signature{
+		ed25519.Sign(priv.key, msg),
+		priv.pubKey,
+	}
 }
