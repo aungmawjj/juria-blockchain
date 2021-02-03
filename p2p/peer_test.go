@@ -17,7 +17,6 @@ func TestPeer_ReadWrite(t *testing.T) {
 	assert := assert.New(t)
 
 	var p Peer
-	pb := &peerBase{}
 
 	type rwcPipe struct {
 		io.Reader
@@ -27,7 +26,7 @@ func TestPeer_ReadWrite(t *testing.T) {
 	r, w := io.Pipe()
 	rwc := &rwcPipe{r, w, r}
 
-	p = newPeerConnected(pb, rwc, func(p Peer) {})
+	p = newPeerConnected(&PeerInfo{}, rwc, func(p Peer) {})
 
 	msg := []byte("message")
 

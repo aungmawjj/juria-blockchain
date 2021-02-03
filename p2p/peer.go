@@ -32,15 +32,18 @@ type Peer interface {
 	Block()
 }
 
-type peerBase struct {
+// PeerInfo type
+type PeerInfo struct {
 	pubKey *core.PublicKey
 	addr   multiaddr.Multiaddr
 }
 
-func (p peerBase) PublicKey() *core.PublicKey {
+// PublicKey of peer
+func (p PeerInfo) PublicKey() *core.PublicKey {
 	return p.pubKey
 }
 
-func (p peerBase) Addr() multiaddr.Multiaddr {
+// Addr of peer
+func (p PeerInfo) Addr() multiaddr.Multiaddr {
 	return p.addr
 }

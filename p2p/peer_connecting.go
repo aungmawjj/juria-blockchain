@@ -10,14 +10,14 @@ import (
 )
 
 type peerConnecting struct {
-	peerBase
+	PeerInfo
 }
 
 var _ Peer = (*peerConnecting)(nil)
 
-func newPeerConnecting(peerBase *peerBase) *peerConnecting {
+func newPeerConnecting(peerInfo *PeerInfo) *peerConnecting {
 	return &peerConnecting{
-		peerBase: *peerBase,
+		PeerInfo: *peerInfo,
 	}
 }
 

@@ -10,16 +10,16 @@ import (
 )
 
 type peerDisconnected struct {
-	peerBase
+	PeerInfo
 	onConnect func(p Peer)
 }
 
 // make sure peerDisconnected implements Peer interface
 var _ Peer = (*peerDisconnected)(nil)
 
-func newPeerDisconnected(peerBase *peerBase, onConnect func(p Peer)) *peerDisconnected {
+func newPeerDisconnected(peerInfo *PeerInfo, onConnect func(p Peer)) *peerDisconnected {
 	return &peerDisconnected{
-		peerBase:  *peerBase,
+		PeerInfo:  *peerInfo,
 		onConnect: onConnect,
 	}
 }

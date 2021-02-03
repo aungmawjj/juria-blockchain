@@ -12,7 +12,7 @@ import (
 )
 
 type peerConnected struct {
-	peerBase
+	PeerInfo
 	rwc          io.ReadWriteCloser
 	emitter      *emitter.Emitter
 	mtx          sync.Mutex
@@ -21,9 +21,9 @@ type peerConnected struct {
 
 var _ Peer = (*peerConnected)(nil)
 
-func newPeerConnected(peerBase *peerBase, rwc io.ReadWriteCloser, onDisconnect func(p Peer)) *peerConnected {
+func newPeerConnected(peerInfo *PeerInfo, rwc io.ReadWriteCloser, onDisconnect func(p Peer)) *peerConnected {
 	p := &peerConnected{
-		peerBase:     *peerBase,
+		PeerInfo:     *peerInfo,
 		rwc:          rwc,
 		emitter:      emitter.New(),
 		onDisconnect: onDisconnect,
