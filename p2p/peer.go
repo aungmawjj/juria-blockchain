@@ -24,6 +24,7 @@ const (
 type Peer interface {
 	PublicKey() *core.PublicKey
 	Addr() multiaddr.Multiaddr
+	String() string
 	Status() PeerStatus
 	Connect()
 	Disconnect()
@@ -46,4 +47,8 @@ func (p PeerInfo) PublicKey() *core.PublicKey {
 // Addr of peer
 func (p PeerInfo) Addr() multiaddr.Multiaddr {
 	return p.addr
+}
+
+func (p PeerInfo) String() string {
+	return p.pubKey.String()
 }
