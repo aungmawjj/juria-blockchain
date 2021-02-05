@@ -40,6 +40,14 @@ type PeerInfo struct {
 	addr   multiaddr.Multiaddr
 }
 
+// NewPeerInfo creates a PeerInfo
+func NewPeerInfo(pubKey *core.PublicKey, addr multiaddr.Multiaddr) *PeerInfo {
+	return &PeerInfo{
+		pubKey,
+		addr,
+	}
+}
+
 // Info returns PeerInfo pointer
 func (p PeerInfo) Info() *PeerInfo {
 	return &p
