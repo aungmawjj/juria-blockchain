@@ -40,7 +40,7 @@ func (p *peerDisconnected) Write(msg []byte) error {
 	return fmt.Errorf("can't write! peer disconnected")
 }
 
-func (p *peerDisconnected) Observe() (*emitter.Subscription, error) {
+func (p *peerDisconnected) SubscribeMsg() (*emitter.Subscription, error) {
 	return nil, fmt.Errorf("can't observe! peer disconnected")
 }
 

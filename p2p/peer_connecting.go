@@ -37,7 +37,7 @@ func (p *peerConnecting) Write(msg []byte) error {
 	return fmt.Errorf("can't write! peer connecting")
 }
 
-func (p *peerConnecting) Observe() (*emitter.Subscription, error) {
+func (p *peerConnecting) SubscribeMsg() (*emitter.Subscription, error) {
 	return nil, fmt.Errorf("can't observe! peer connecting")
 }
 

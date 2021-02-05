@@ -32,7 +32,7 @@ func TestPeer_ReadWrite(t *testing.T) {
 
 	msg := []byte("message")
 
-	sub, _ := p.Observe()
+	sub, _ := p.SubscribeMsg()
 	go sub.Listen(func(e emitter.Event) {
 		assert.EqualValues(msg, e)
 	})

@@ -83,7 +83,7 @@ func (p *peerConnected) Write(msg []byte) error {
 	return err
 }
 
-func (p *peerConnected) Observe() (*emitter.Subscription, error) {
+func (p *peerConnected) SubscribeMsg() (*emitter.Subscription, error) {
 	return p.emitter.Subscribe(10), nil
 }
 

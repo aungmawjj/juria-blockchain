@@ -22,6 +22,7 @@ const (
 
 // Peer repreents a remote peer connection
 type Peer interface {
+	Info() *PeerInfo
 	PublicKey() *core.PublicKey
 	Addr() multiaddr.Multiaddr
 	String() string
@@ -29,7 +30,7 @@ type Peer interface {
 	Connect()
 	Disconnect()
 	Write(msg []byte) error
-	Observe() (*emitter.Subscription, error)
+	SubscribeMsg() (*emitter.Subscription, error)
 	Block()
 }
 
@@ -37,6 +38,11 @@ type Peer interface {
 type PeerInfo struct {
 	pubKey *core.PublicKey
 	addr   multiaddr.Multiaddr
+}
+
+// Info returns PeerInfo pointer
+func (p PeerInfo) Info() *PeerInfo {
+	return &p
 }
 
 // PublicKey of peer
