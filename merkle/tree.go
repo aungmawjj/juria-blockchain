@@ -1,3 +1,6 @@
+// Copyright (C) 2021 Aung Maw
+// Licensed under the GNU General Public License v3.0
+
 package merkle
 
 import (
@@ -39,32 +42,4 @@ func NewTree(opts TreeOptions) *Tree {
 	}
 	t.bfactor = big.NewInt(int64(opts.BranchFactor))
 	return t
-}
-
-func (t *Tree) blockCount(nodeCount *big.Int) *big.Int {
-	// ceil(nodeCount / bfactor)
-	count := big.NewInt(0)
-	m := big.NewInt(0)
-	count.DivMod(nodeCount, t.bfactor, m)
-	if m.Cmp(big.NewInt(0)) == 1 {
-		count.Add(count, big.NewInt(1))
-	}
-	return count
-}
-
-func (t Tree) firstNodeInBlock(blkIdx *big.Int) *big.Int {
-	idx := big.NewInt(0)
-	return idx.Mul(blkIdx, t.bfactor)
-}
-
-func (t *Tree) blockOfNode(nodeIdx *big.Int) *big.Int {
-	// floor(nodeIdx / bfactor)
-	idx := big.NewInt(0)
-	return idx.Div(nodeIdx, t.bfactor)
-}
-
-func (t *Tree) nodeIndexInBlock(nodeIdx *big.Int) *big.Int {
-	// mod(nodeIdx / bfactor)
-	idx := big.NewInt(0)
-	return idx.Mod(nodeIdx, t.bfactor)
 }
