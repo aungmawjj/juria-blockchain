@@ -10,58 +10,58 @@ import (
 	"github.com/stretchr/testify/mock"
 )
 
-type MockClient struct {
+type MockListener struct {
 	mock.Mock
 }
 
-func (m *MockClient) OnNewEvent(e Event) {
+func (m *MockListener) CB(e Event) {
 	m.Called(e)
 }
 
 func TestEmitter_Subscribe(t *testing.T) {
 	e := New()
-	c1 := new(MockClient)
-	c2 := new(MockClient)
+	ln1 := new(MockListener)
+	ln2 := new(MockListener)
 
-	go e.Subscribe(0).Listen(c1.OnNewEvent)
-	go e.Subscribe(0).Listen(c2.OnNewEvent)
+	go e.Subscribe(0).Listen(ln1.CB)
+	go e.Subscribe(0).Listen(ln2.CB)
 
 	events := []string{"Hello", "World"}
 
 	for _, event := range events {
-		c1.On("OnNewEvent", event).Once()
-		c2.On("OnNewEvent", event).Once()
+		ln1.On("CB", event).Once()
+		ln2.On("CB", event).Once()
 
 		e.Emit(event)
 		time.Sleep(time.Millisecond)
 
-		c1.AssertExpectations(t)
-		c2.AssertExpectations(t)
+		ln1.AssertExpectations(t)
+		ln2.AssertExpectations(t)
 	}
 }
 
 func TestEmitter_Unsubscribe(t *testing.T) {
 	e := New()
-	c1 := new(MockClient)
-	c2 := new(MockClient)
+	ln1 := new(MockListener)
+	ln2 := new(MockListener)
 
 	s1 := e.Subscribe(0)
 	s2 := e.Subscribe(0)
 
-	go s1.Listen(c1.OnNewEvent)
-	go s2.Listen(c2.OnNewEvent)
+	go s1.Listen(ln1.CB)
+	go s2.Listen(ln2.CB)
 
 	s1.Unsubscribe()
 
 	events := []string{"Hello", "World"}
 
 	for _, event := range events {
-		c2.On("OnNewEvent", event).Once()
+		ln2.On("CB", event).Once()
 
 		e.Emit(event)
 		time.Sleep(time.Millisecond)
 
-		c1.AssertNotCalled(t, "OnNewEvent")
-		c2.AssertExpectations(t)
+		ln1.AssertNotCalled(t, "CB")
+		ln2.AssertExpectations(t)
 	}
 }

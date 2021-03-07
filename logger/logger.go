@@ -67,19 +67,23 @@ func NewNop() Logger {
 }
 
 var myLogger Logger
-var once sync.Once
+var mtx sync.RWMutex
 
-// Init creates a global logger
-func Init(logger Logger) {
-	once.Do(func() {
-		myLogger = logger
-	})
+// Set sets a global logger
+func Set(logger Logger) {
+	mtx.Lock()
+	defer mtx.Unlock()
+
+	myLogger = logger
 }
 
 // Instance returns global Logger
 func Instance() Logger {
+	mtx.RLock()
+	defer mtx.RUnlock()
+
 	if myLogger == nil {
-		log.Fatalf("logger isn't initialized")
+		panic("logger isn't initialized")
 	}
 	return myLogger
 }

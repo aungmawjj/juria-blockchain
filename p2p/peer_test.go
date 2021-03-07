@@ -10,39 +10,67 @@ import (
 
 	"github.com/aungmawjj/juria-blockchain/emitter"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 )
 
-type rwcPipe struct {
+type rwcLoopBack struct {
 	io.Reader
 	io.Writer
 	io.Closer
 }
 
-func newRWCPipe() *rwcPipe {
+func newRWCLoopBack() *rwcLoopBack {
 	r, w := io.Pipe()
-	return &rwcPipe{r, w, r}
+	return &rwcLoopBack{r, w, r}
+}
+
+type MockListener struct {
+	mock.Mock
+}
+
+func (m *MockListener) cb(e emitter.Event) {
+	m.Called(e)
+}
+
+func TestRWCLoopBack(t *testing.T) {
+	assert := assert.New(t)
+
+	rwc := newRWCLoopBack()
+	recv := make([]byte, 5)
+	go func() {
+		for {
+			rwc.Read(recv)
+		}
+	}()
+
+	sent := []byte("hello")
+	rwc.Write(sent)
+
+	time.Sleep(time.Millisecond)
+	assert.EqualValues(sent, recv)
+
+	rwc.Close()
+	_, err := rwc.Write(sent)
+	assert.Error(err)
 }
 
 func TestPeer_ReadWrite(t *testing.T) {
 	assert := assert.New(t)
-	var p Peer
+	p := NewPeer(nil, nil)
 
-	rwc := newRWCPipe()
-	p = newPeerConnected(&PeerInfo{}, rwc, func(p Peer) {})
+	rwc := newRWCLoopBack()
+	p.OnConnected(rwc)
+	sub := p.SubscribeMsg()
 
-	msg := []byte("message")
+	msg := []byte("hello")
 
-	sub, _ := p.SubscribeMsg()
-	go sub.Listen(func(e emitter.Event) {
-		assert.EqualValues(msg, e)
-	})
-	assert.NoError(p.Write(msg))
+	mln := new(MockListener)
+	mln.On("cb", mock.Anything).Once()
 
-	p = newPeerConnecting(&PeerInfo{})
-	assert.Error(p.Write(msg))
-
-	p = newPeerDisconnected(&PeerInfo{}, func(p Peer) {})
-	assert.Error(p.Write(msg))
+	go sub.Listen(mln.cb)
+	assert.NoError(p.WriteMsg(msg))
 
 	time.Sleep(time.Millisecond)
+
+	mln.AssertExpectations(t)
 }

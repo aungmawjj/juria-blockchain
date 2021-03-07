@@ -17,15 +17,14 @@ func TestPeerStore_LoadOrStore(t *testing.T) {
 	s := newPeerStore()
 
 	pubKey, _ := core.DecodePublicKey(bytes.Repeat([]byte{1}, ed25519.PublicKeySize))
-	pi := &PeerInfo{pubKey: pubKey}
-
-	var p Peer
-	p = newPeerConnecting(pi)
-	_, loaded := s.LoadOrStore(p.String(), p)
+	p := NewPeer(pubKey, nil)
+	actual, loaded := s.LoadOrStore(p)
 	assert.False(loaded)
+	assert.True(p == actual)
 
-	p = newPeerConnected(pi, newRWCPipe(), func(p Peer) {})
-	actual, loaded := s.LoadOrStore(p.String(), p)
+	p1 := NewPeer(pubKey, nil)
+
+	actual, loaded = s.LoadOrStore(p1)
 	assert.True(loaded)
-	assert.NotEqual(p, actual)
+	assert.False(p1 == actual)
 }
