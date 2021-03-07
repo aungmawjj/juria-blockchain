@@ -10,6 +10,11 @@ type TreeCalc struct {
 	bfactor *big.Int
 }
 
+// NewTreeCalc creates a new NewTreeCalc
+func NewTreeCalc(bfactor uint8) *TreeCalc {
+	return &TreeCalc{big.NewInt(int64(bfactor))}
+}
+
 // Height gives the height of the tree based on number of leaves
 func (t *TreeCalc) Height(nleaf *big.Int) uint8 {
 	var h uint8 = 1

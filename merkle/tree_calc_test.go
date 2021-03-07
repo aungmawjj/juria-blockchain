@@ -25,8 +25,7 @@ func TestTreeCalc_Height(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			tc := &TreeCalc{big.NewInt(int64(tt.bfactor))}
-			got := tc.Height(tt.nleaf)
+			got := NewTreeCalc(tt.bfactor).Height(tt.nleaf)
 			assert.Equal(t, tt.want, got)
 		})
 	}
@@ -45,8 +44,7 @@ func TestTreeCalc_BlockCount(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			tc := &TreeCalc{big.NewInt(int64(tt.bfactor))}
-			got := tc.BlockCount(tt.nodeCount)
+			got := NewTreeCalc(tt.bfactor).BlockCount(tt.nodeCount)
 			assert.Equal(t, 0, tt.want.Cmp(got))
 		})
 	}
@@ -65,8 +63,7 @@ func TestTreeCalc_FirstNodeInBlock(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			tc := &TreeCalc{big.NewInt(int64(tt.bfactor))}
-			got := tc.FirstNodeOfBlock(tt.blkIdx)
+			got := NewTreeCalc(tt.bfactor).FirstNodeOfBlock(tt.blkIdx)
 			assert.Equal(t, 0, tt.want.Cmp(got))
 		})
 	}
@@ -86,8 +83,7 @@ func TestTreeCalc_BlockOfNode(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			tc := &TreeCalc{big.NewInt(int64(tt.bfactor))}
-			got := tc.BlockOfNode(tt.nodeIdx)
+			got := NewTreeCalc(tt.bfactor).BlockOfNode(tt.nodeIdx)
 			assert.Equal(t, 0, tt.want.Cmp(got))
 		})
 	}
@@ -107,8 +103,7 @@ func TestTreeCalc_NodeIndexInBlock(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			tc := &TreeCalc{big.NewInt(int64(tt.bfactor))}
-			got := tc.NodeIndexInBlock(tt.nodeIdx)
+			got := NewTreeCalc(tt.bfactor).NodeIndexInBlock(tt.nodeIdx)
 			assert.Equal(t, 0, tt.want.Cmp(got))
 		})
 	}
