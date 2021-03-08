@@ -65,7 +65,7 @@ func TestBlock_Load_Sum(t *testing.T) {
 			assert.EqualValues(tt.bfactor, len(b.nodes))
 			assert.Equal(tt.empty, b.IsEmpty())
 
-			assert.Equal(tt.store.GetNode(tt.parentPosition), b.ComputeParent().Data)
+			assert.Equal(tt.store.GetNode(tt.parentPosition), b.MakeParent().Data)
 		})
 	}
 }
@@ -75,11 +75,14 @@ func TestBlock_SetNode(t *testing.T) {
 
 	b := NewBlock(crypto.SHA1, NewTreeCalc(2), store, NewPosition(1, big.NewInt(0)))
 	b.Load()
-	b.SetNode(&Node{b.nodes[1].Position, []byte{3, 3}})
+	b.SetNode(&Node{
+		Position: NewPosition(0, big.NewInt(1)),
+		Data:     []byte{3, 3},
+	})
 
 	assert := assert.New(t)
 	assert.False(b.IsEmpty())
-	assert.Equal(sha1Sum([]byte{1, 1, 3, 3}), b.ComputeParent().Data)
+	assert.Equal(sha1Sum([]byte{1, 1, 3, 3}), b.MakeParent().Data)
 }
 
 //   h(1,1,2,2)

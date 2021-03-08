@@ -126,8 +126,8 @@ func (b *Block) SetNode(n *Node) *Block {
 	return b
 }
 
-// ComputeParent ...
-func (b *Block) ComputeParent() *Node {
+// MakeParent ...
+func (b *Block) MakeParent() *Node {
 	return &Node{
 		Position: b.parentPosition,
 		Data:     b.Sum(),
@@ -160,7 +160,7 @@ func (b *Block) IsEmpty() bool {
 
 // UpdateResult type
 type UpdateResult struct {
-	Nodes     []*Node
 	LeafCount *big.Int
 	Height    uint8
+	Nodes     []*Node
 }
