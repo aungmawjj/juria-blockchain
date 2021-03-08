@@ -42,21 +42,39 @@ func (tree *Tree) Update(leaves []*Node, newLeafCount *big.Int) *UpdateResult {
 
 	nodes := leaves
 	for i := 1; i < int(res.Height); i++ {
-		bPositions := tree.getBlockPositions(nodes)
-		blocks := tree.createBlocks(tree.mergePositions(bPositions))
-		for _, b := range blocks {
+
+		nbPositions := tree.getBlockPositions(nodes)
+		bPositions := tree.mergePositions(nbPositions)
+		nodesByBlock := tree.groupNodesByBlock(nodes, nbPositions, bPositions)
+
+		blocks := tree.createBlocks(bPositions)
+		parents := make([]*Node, 0, len(blocks)) // parent nodes
+
+		for _, b := range blocks { // the body of the loop can be run in parallel
 			b.Load() // load blocks from store
+			for _, n := range nodesByBlock[b.parentPosition.String()] {
+				b.SetNode(n) // set updated nodes in blocks
+			}
+			p := b.MakeParent()
+			parents = append(parents, p)
+			res.Nodes = append(res.Nodes, p)
 		}
-		for i, n := range nodes {
-			blocks[bPositions[i].String()].SetNode(n) // set updated nodes in blocks
-		}
-		nodes = make([]*Node, 0, len(blocks)) // parent nodes
-		for _, b := range blocks {
-			nodes = append(nodes, b.MakeParent())
-		}
-		res.Nodes = append(res.Nodes, nodes...)
+		nodes = parents
 	}
 	return res
+}
+
+func (tree *Tree) groupNodesByBlock(
+	nodes []*Node, nbPositions []*Position, bPositions map[string]*Position,
+) map[string][]*Node {
+	nb := make(map[string][]*Node, len(bPositions))
+	for key := range bPositions {
+		nb[key] = make([]*Node, 0)
+	}
+	for i, p := range nbPositions {
+		nb[p.String()] = append(nb[p.String()], nodes[i])
+	}
+	return nb
 }
 
 func (tree *Tree) getBlockPositions(nodes []*Node) []*Position {

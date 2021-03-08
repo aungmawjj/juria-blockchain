@@ -24,9 +24,9 @@ func TestMapStore(t *testing.T) {
 		LeafCount: big.NewInt(2),
 		Height:    2,
 		Nodes: []*Node{
-			{NewPosition(0, big.NewInt(0)), []byte("data00")},
-			{NewPosition(0, big.NewInt(1)), []byte("data01")},
-			{NewPosition(1, big.NewInt(0)), []byte("data10")},
+			{NewPosition(0, big.NewInt(0)), []byte{1, 1}},
+			{NewPosition(0, big.NewInt(1)), []byte{2, 2}},
+			{NewPosition(1, big.NewInt(0)), []byte{3, 3}},
 		},
 	}
 
