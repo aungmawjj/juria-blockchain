@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestPosition_Bytes(t *testing.T) {
+func TestPosition(t *testing.T) {
 	tests := []struct {
 		name  string
 		level uint8
@@ -24,8 +24,16 @@ func TestPosition_Bytes(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			p := &Position{tt.level, tt.index}
-			assert.EqualValues(t, tt.want, p.Bytes())
+			assert := assert.New(t)
+			p := NewPosition(tt.level, tt.index)
+
+			assert.EqualValues(tt.want, p.Bytes())
+			assert.Equal(string(tt.want), p.String())
+
+			p1 := UnmarshalPosition(p.Bytes())
+
+			assert.Equal(p.Level(), p1.Level())
+			assert.Equal(p.Index(), p1.Index())
 		})
 	}
 }

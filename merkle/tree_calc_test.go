@@ -45,7 +45,7 @@ func TestTreeCalc_BlockCount(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got := NewTreeCalc(tt.bfactor).BlockCount(tt.nodeCount)
-			assert.Equal(t, 0, tt.want.Cmp(got))
+			assert.Equal(t, tt.want, got)
 		})
 	}
 }
@@ -64,7 +64,7 @@ func TestTreeCalc_FirstNodeInBlock(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got := NewTreeCalc(tt.bfactor).FirstNodeOfBlock(tt.blkIdx)
-			assert.Equal(t, 0, tt.want.Cmp(got))
+			assert.Equal(t, tt.want, got)
 		})
 	}
 }
@@ -84,7 +84,7 @@ func TestTreeCalc_BlockOfNode(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got := NewTreeCalc(tt.bfactor).BlockOfNode(tt.nodeIdx)
-			assert.Equal(t, 0, tt.want.Cmp(got))
+			assert.Equal(t, tt.want, got)
 		})
 	}
 }
@@ -104,7 +104,7 @@ func TestTreeCalc_NodeIndexInBlock(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got := NewTreeCalc(tt.bfactor).NodeIndexInBlock(tt.nodeIdx)
-			assert.Equal(t, 0, tt.want.Cmp(got))
+			assert.Equal(t, tt.want, got)
 		})
 	}
 }
