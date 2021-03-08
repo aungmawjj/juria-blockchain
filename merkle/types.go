@@ -3,7 +3,10 @@
 
 package merkle
 
-import "math/big"
+import (
+	"crypto"
+	"math/big"
+)
 
 // Position of a node in the tree
 type Position struct {
@@ -70,6 +73,89 @@ func (p *Position) String() string {
 type Node struct {
 	Position *Position
 	Data     []byte
+}
+
+// Block type
+type Block struct {
+	hashFunc       crypto.Hash
+	tc             *TreeCalc
+	store          Store
+	parentPosition *Position
+	nodes          []*Node
+}
+
+// NewBlock ...
+func NewBlock(h crypto.Hash, tc *TreeCalc, store Store, parentPosition *Position) *Block {
+	if parentPosition.Level() < 1 {
+		panic("parent level should be at least 1")
+	}
+	return &Block{
+		hashFunc:       h,
+		tc:             tc,
+		store:          store,
+		parentPosition: parentPosition,
+		nodes:          make([]*Node, int(tc.BranchFactor())),
+	}
+}
+
+// ParentPosition ...
+func (b *Block) ParentPosition() *Position {
+	return b.parentPosition
+}
+
+// Load ...
+func (b *Block) Load() *Block {
+	offset := b.tc.FirstNodeOfBlock(b.parentPosition.Index())
+	for i := range b.nodes {
+		index := big.NewInt(0).Add(offset, big.NewInt(int64(i)))
+		p := NewPosition(b.parentPosition.level-1, index)
+
+		if data := b.store.GetNode(p); data != nil {
+			b.nodes[i] = &Node{
+				Position: p,
+				Data:     b.store.GetNode(p),
+			}
+		}
+	}
+	return b
+}
+
+// SetNode ...
+func (b *Block) SetNode(n *Node) *Block {
+	b.nodes[b.tc.NodeIndexInBlock(n.Position.Index())] = n
+	return b
+}
+
+// ComputeParent ...
+func (b *Block) ComputeParent() *Node {
+	return &Node{
+		Position: b.parentPosition,
+		Data:     b.Sum(),
+	}
+}
+
+// Sum ...
+func (b *Block) Sum() []byte {
+	if b.IsEmpty() {
+		return nil
+	}
+	h := b.hashFunc.New()
+	for _, n := range b.nodes {
+		if n != nil {
+			h.Write(n.Data)
+		}
+	}
+	return h.Sum(nil)
+}
+
+// IsEmpty ...
+func (b *Block) IsEmpty() bool {
+	for _, n := range b.nodes {
+		if n != nil {
+			return false
+		}
+	}
+	return true
 }
 
 // UpdateResult type

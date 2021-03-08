@@ -21,7 +21,7 @@ func TestNewTree(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			tree := NewTree(tt.opts)
+			tree := NewTree(nil, tt.opts)
 			assert.Equal(t, tt.want, tree.bfactor)
 		})
 	}

@@ -94,12 +94,12 @@ func TestTreeCalc_NodeIndexInBlock(t *testing.T) {
 		name    string
 		bfactor uint8
 		nodeIdx *big.Int
-		want    *big.Int
+		want    int
 	}{
-		{"first node in block 0", 4, big.NewInt(0), big.NewInt(0)},
-		{"first node in block 1", 4, big.NewInt(4), big.NewInt(0)},
-		{"second node in block 1", 4, big.NewInt(5), big.NewInt(1)},
-		{"last node in block 2", 4, big.NewInt(11), big.NewInt(3)},
+		{"first node in block 0", 4, big.NewInt(0), 0},
+		{"first node in block 1", 4, big.NewInt(4), 0},
+		{"second node in block 1", 4, big.NewInt(5), 1},
+		{"last node in block 2", 4, big.NewInt(11), 3},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

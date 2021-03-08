@@ -4,6 +4,8 @@
 package merkle
 
 import (
+	"crypto"
+	"crypto/sha1"
 	"math/big"
 	"testing"
 
@@ -36,4 +38,72 @@ func TestPosition(t *testing.T) {
 			assert.Equal(p.Index(), p1.Index())
 		})
 	}
+}
+
+func TestBlock_Load_Sum(t *testing.T) {
+	s1 := NewMapStore()
+	s2 := storeWith3Nodes()
+
+	tests := []struct {
+		name           string
+		bfactor        uint8
+		store          Store
+		parentPosition *Position
+		empty          bool
+	}{
+		{"empty store", 2, s1, NewPosition(1, big.NewInt(0)), true},
+		{"2 leaves with bf 2", 2, s2, NewPosition(1, big.NewInt(0)), false},
+		{"2 leaves with bf 4", 4, s2, NewPosition(1, big.NewInt(0)), false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert := assert.New(t)
+
+			b := NewBlock(crypto.SHA1, NewTreeCalc(tt.bfactor), tt.store, tt.parentPosition)
+			b.Load()
+
+			assert.EqualValues(tt.bfactor, len(b.nodes))
+			assert.Equal(tt.empty, b.IsEmpty())
+
+			assert.Equal(tt.store.GetNode(tt.parentPosition), b.ComputeParent().Data)
+		})
+	}
+}
+
+func TestBlock_SetNode(t *testing.T) {
+	store := storeWith3Nodes()
+
+	b := NewBlock(crypto.SHA1, NewTreeCalc(2), store, NewPosition(1, big.NewInt(0)))
+	b.Load()
+	b.SetNode(&Node{b.nodes[1].Position, []byte{3, 3}})
+
+	assert := assert.New(t)
+	assert.False(b.IsEmpty())
+	assert.Equal(sha1Sum([]byte{1, 1, 3, 3}), b.ComputeParent().Data)
+}
+
+//   h(1,1,2,2)
+//    /      \
+// [1,1]    [2,2]
+func storeWith3Nodes() Store {
+	s2 := NewMapStore()
+
+	upd := &UpdateResult{
+		LeafCount: big.NewInt(2),
+		Height:    2,
+		Nodes: []*Node{
+			{NewPosition(0, big.NewInt(0)), []byte{1, 1}},
+			{NewPosition(0, big.NewInt(1)), []byte{2, 2}},
+			{NewPosition(1, big.NewInt(0)), sha1Sum([]byte{1, 1, 2, 2})},
+		},
+	}
+
+	s2.CommitUpdate(upd)
+	return s2
+}
+
+func sha1Sum(b []byte) []byte {
+	h := sha1.New()
+	h.Write(b)
+	return h.Sum(nil)
 }

@@ -15,16 +15,22 @@ type TreeOptions struct {
 
 // Tree type
 type Tree struct {
-	bfactor uint8
+	store    Store
+	bfactor  uint8
+	hashFunc crypto.Hash
+	calc     *TreeCalc
 }
 
 // NewTree creates a new Merkle Tree
-func NewTree(opts TreeOptions) *Tree {
-	t := new(Tree)
+func NewTree(store Store, opts TreeOptions) *Tree {
+	tree := new(Tree)
+	tree.store = store
 	if opts.BranchFactor < 2 {
-		t.bfactor = 2
+		tree.bfactor = 2
 	} else {
-		t.bfactor = opts.BranchFactor
+		tree.bfactor = opts.BranchFactor
 	}
-	return t
+	tree.hashFunc = opts.HashFunc
+	tree.calc = NewTreeCalc(tree.bfactor)
+	return tree
 }
