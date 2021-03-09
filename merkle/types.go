@@ -16,7 +16,7 @@ type Position struct {
 	str   string
 }
 
-// UnmarshalPosition godoc
+// UnmarshalPosition unmarshals position from raw bytes
 func UnmarshalPosition(b []byte) *Position {
 	p := new(Position)
 	p.bytes = b
@@ -29,7 +29,7 @@ func UnmarshalPosition(b []byte) *Position {
 	return p
 }
 
-// NewPosition ...
+// NewPosition create a new position
 func NewPosition(level uint8, index *big.Int) *Position {
 	p := new(Position)
 	p.level = level
@@ -50,17 +50,18 @@ func (p *Position) setString() {
 	p.str = string(p.bytes)
 }
 
-// Level ...
+// Level gives the level of position
 func (p *Position) Level() uint8 {
 	return p.level
 }
 
-// Index ...
+// Index gives the index of position
+// NOTE: the value of index must not be changed
 func (p *Position) Index() *big.Int {
 	return p.index
 }
 
-// Bytes ...
+// Bytes returns the serialized bytes of position
 func (p *Position) Bytes() []byte {
 	return p.bytes
 }
@@ -89,7 +90,7 @@ type Node struct {
 	Data     []byte
 }
 
-// Block type
+// Block is a group of child nodes under the same parent node
 type Block struct {
 	hashFunc       crypto.Hash
 	tc             *TreeCalc
@@ -98,7 +99,7 @@ type Block struct {
 	nodes          []*Node
 }
 
-// NewBlock ...
+// NewBlock creates a new Block
 func NewBlock(h crypto.Hash, tc *TreeCalc, store Store, parentPosition *Position) *Block {
 	return &Block{
 		hashFunc:       h,
@@ -109,7 +110,7 @@ func NewBlock(h crypto.Hash, tc *TreeCalc, store Store, parentPosition *Position
 	}
 }
 
-// Load ...
+// Load loads the child nodes from the store
 func (b *Block) Load() *Block {
 	offset := b.tc.FirstNodeOfBlock(b.parentPosition.Index())
 	for i := range b.nodes {
@@ -123,13 +124,15 @@ func (b *Block) Load() *Block {
 	return b
 }
 
-// SetNode ...
+// SetNode sets the node at the corresponding index in the block
 func (b *Block) SetNode(n *Node) *Block {
-	b.nodes[b.tc.NodeIndexInBlock(n.Position.Index())] = n
+	if b.tc.NodeIndexInBlock(n.Position.Index()) < len(b.nodes) {
+		b.nodes[b.tc.NodeIndexInBlock(n.Position.Index())] = n
+	}
 	return b
 }
 
-// MakeParent ...
+// MakeParent compute the sum of the child nodes and returns the parent node
 func (b *Block) MakeParent() *Node {
 	return &Node{
 		Position: b.parentPosition,
@@ -137,7 +140,7 @@ func (b *Block) MakeParent() *Node {
 	}
 }
 
-// Sum ...
+// Sum sums the child nodes
 func (b *Block) Sum() []byte {
 	if b.IsEmpty() {
 		return nil
@@ -151,7 +154,7 @@ func (b *Block) Sum() []byte {
 	return h.Sum(nil)
 }
 
-// IsEmpty ...
+// IsEmpty checks whether all the child nodes are nil
 func (b *Block) IsEmpty() bool {
 	for _, n := range b.nodes {
 		if n != nil {

@@ -33,7 +33,7 @@ func NewMapStore() *MapStore {
 	}
 }
 
-// GetLeafCount godoc
+// GetLeafCount implement Store
 func (ms *MapStore) GetLeafCount() *big.Int {
 	ms.mtx.RLock()
 	defer ms.mtx.RUnlock()
@@ -41,7 +41,7 @@ func (ms *MapStore) GetLeafCount() *big.Int {
 	return ms.leafCount
 }
 
-// GetHeight godoc
+// GetHeight implement Store
 func (ms *MapStore) GetHeight() uint8 {
 	ms.mtx.RLock()
 	defer ms.mtx.RUnlock()
@@ -49,7 +49,7 @@ func (ms *MapStore) GetHeight() uint8 {
 	return ms.height
 }
 
-// GetNode godoc
+// GetNode implement Store
 func (ms *MapStore) GetNode(p *Position) []byte {
 	ms.mtx.RLock()
 	defer ms.mtx.RUnlock()
@@ -57,7 +57,7 @@ func (ms *MapStore) GetNode(p *Position) []byte {
 	return ms.nodes[p.String()]
 }
 
-// CommitUpdate godoc
+// CommitUpdate commits tree node updates
 func (ms *MapStore) CommitUpdate(res *UpdateResult) {
 	ms.mtx.Lock()
 	defer ms.mtx.Unlock()

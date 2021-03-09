@@ -17,8 +17,7 @@ func TestMapStore(t *testing.T) {
 	assert.Equal(uint8(0), ms.GetHeight())
 	assert.Equal(big.NewInt(0), ms.GetLeafCount())
 
-	leafZero := ms.GetNode(NewPosition(0, big.NewInt(0)))
-	assert.Nil(leafZero)
+	assert.Nil(ms.GetNode(NewPosition(0, big.NewInt(0))))
 
 	upd := &UpdateResult{
 		LeafCount: big.NewInt(2),
