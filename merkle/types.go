@@ -117,10 +117,7 @@ func (b *Block) Load() *Block {
 		p := NewPosition(b.parentPosition.level-1, index)
 
 		if data := b.store.GetNode(p); data != nil {
-			b.nodes[i] = &Node{
-				Position: p,
-				Data:     b.store.GetNode(p),
-			}
+			b.nodes[i] = &Node{p, data}
 		}
 	}
 	return b

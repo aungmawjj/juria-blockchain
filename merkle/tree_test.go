@@ -28,10 +28,40 @@ func TestNewTree(t *testing.T) {
 	}
 }
 
+func TestTree_Root(t *testing.T) {
+	store := NewMapStore()
+	tree := NewTree(store, TreeOptions{
+		BranchFactor: 2,
+		HashFunc:     crypto.SHA1,
+	})
+
+	assert := assert.New(t)
+
+	assert.Nil(tree.Root())
+
+	upd := &UpdateResult{
+		LeafCount: big.NewInt(2),
+		Height:    3,
+		Nodes: []*Node{
+			{NewPosition(0, big.NewInt(0)), []byte{1}},
+			{NewPosition(0, big.NewInt(1)), []byte{2}},
+			{NewPosition(0, big.NewInt(2)), []byte{3}},
+			{NewPosition(1, big.NewInt(0)), []byte{4}},
+			{NewPosition(1, big.NewInt(1)), []byte{5}},
+			{NewPosition(2, big.NewInt(0)), []byte{6}},
+		},
+	}
+	store.CommitUpdate(upd)
+
+	assert.Equal(upd.Nodes[5], tree.Root())
+}
+
 func TestTree_Update(t *testing.T) {
 	store := NewMapStore()
-	var bfactor uint8 = 3
-	tree := NewTree(store, TreeOptions{bfactor, crypto.SHA1})
+	tree := NewTree(store, TreeOptions{
+		BranchFactor: 3,
+		HashFunc:     crypto.SHA1,
+	})
 
 	leaves := make([]*Node, 7)
 	for i := range leaves {
@@ -79,4 +109,42 @@ func TestTree_Update(t *testing.T) {
 	assert.Equal(nn20, store.GetNode(NewPosition(2, big.NewInt(0))))
 	assert.Equal(nn21, store.GetNode(NewPosition(2, big.NewInt(1))))
 	assert.Equal(nn30, store.GetNode(NewPosition(3, big.NewInt(0))))
+}
+
+func TestTree_Verify(t *testing.T) {
+	store := NewMapStore()
+	tree := NewTree(store, TreeOptions{
+		BranchFactor: 3,
+		HashFunc:     crypto.SHA1,
+	})
+
+	leaves := make([]*Node, 7)
+	for i := range leaves {
+		leaves[i] = &Node{NewPosition(0, big.NewInt(int64(i))), []byte{uint8(i)}}
+	}
+
+	assert := assert.New(t)
+	assert.False(tree.Verify(leaves)) // no root in tree
+
+	res := tree.Update(leaves, big.NewInt(7))
+	store.CommitUpdate(res)
+
+	assert.False(tree.Verify([]*Node{})) // no leaves to verify
+	assert.False(tree.Verify([]*Node{
+		{NewPosition(1, big.NewInt(0)), []byte{1}}, // invalid level
+	}))
+	assert.False(tree.Verify([]*Node{
+		{NewPosition(0, big.NewInt(7)), []byte{7}}, // unbounded leaf
+	}))
+	assert.True(tree.Verify(leaves)) // verify all leaves
+	assert.True(tree.Verify([]*Node{leaves[2]}))
+	assert.True(tree.Verify([]*Node{leaves[1], leaves[5]}))
+	assert.False(tree.Verify([]*Node{
+		{leaves[1].Position, []byte{4}}, // one node invalid
+		leaves[5],
+	}))
+	assert.False(tree.Verify([]*Node{ // multiple node invalid
+		{leaves[1].Position, []byte{4}},
+		{leaves[5].Position, []byte{1}},
+	}))
 }

@@ -4,6 +4,7 @@
 package merkle
 
 import (
+	"bytes"
 	"crypto"
 	"math/big"
 )
@@ -14,7 +15,7 @@ type TreeOptions struct {
 	HashFunc     crypto.Hash
 }
 
-// Tree type
+// Tree implements a merkle tree engine
 type Tree struct {
 	store    Store
 	bfactor  uint8
@@ -34,6 +35,15 @@ func NewTree(store Store, opts TreeOptions) *Tree {
 	tree.hashFunc = opts.HashFunc
 	tree.calc = NewTreeCalc(tree.bfactor)
 	return tree
+}
+
+// Root returns the root node of the tree
+func (tree *Tree) Root() *Node {
+	p := NewPosition(tree.store.GetHeight()-1, big.NewInt(0))
+	if data := tree.store.GetNode(p); data != nil {
+		return &Node{p, data}
+	}
+	return nil
 }
 
 // Update accepts new/modified tree leaves,
@@ -58,6 +68,29 @@ func (tree *Tree) Update(leaves []*Node, newLeafCount *big.Int) *UpdateResult {
 		nodes = parents
 	}
 	return res
+}
+
+// Verify verifies leaves with the current root-node.
+func (tree *Tree) Verify(leaves []*Node) bool {
+	root := tree.Root()
+	if root == nil {
+		return false
+	}
+	leafCount := tree.store.GetLeafCount()
+	for _, n := range leaves {
+		if n.Position.Level() != 0 {
+			return false
+		}
+		if leafCount.Cmp(n.Position.Index()) != 1 { // leaf count must be larger than leaf index
+			return false
+		}
+	}
+	res := tree.Update(leaves, leafCount)
+	if len(res.Nodes) < 1 {
+		return false
+	}
+	computedRoot := res.Nodes[len(res.Nodes)-1]
+	return bytes.Equal(root.Data, computedRoot.Data)
 }
 
 func (tree *Tree) groupNodesByBlock(nodes []*Node) (map[string]*Position, map[string][]*Node) {

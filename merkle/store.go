@@ -17,10 +17,10 @@ type Store interface {
 
 // MapStore is simple Store implementation
 type MapStore struct {
-	nleaf  *big.Int
-	height uint8
-	nodes  map[string][]byte
-	mtx    sync.RWMutex
+	leafCount *big.Int
+	height    uint8
+	nodes     map[string][]byte
+	mtx       sync.RWMutex
 }
 
 var _ Store = (*MapStore)(nil)
@@ -28,8 +28,8 @@ var _ Store = (*MapStore)(nil)
 // NewMapStore create a new MapStore
 func NewMapStore() *MapStore {
 	return &MapStore{
-		nleaf: big.NewInt(0),
-		nodes: make(map[string][]byte),
+		leafCount: big.NewInt(0),
+		nodes:     make(map[string][]byte),
 	}
 }
 
@@ -38,7 +38,7 @@ func (ms *MapStore) GetLeafCount() *big.Int {
 	ms.mtx.RLock()
 	defer ms.mtx.RUnlock()
 
-	return ms.nleaf
+	return ms.leafCount
 }
 
 // GetHeight godoc
@@ -62,7 +62,7 @@ func (ms *MapStore) CommitUpdate(res *UpdateResult) {
 	ms.mtx.Lock()
 	defer ms.mtx.Unlock()
 
-	ms.nleaf = res.LeafCount
+	ms.leafCount = res.LeafCount
 	ms.height = res.Height
 	for _, n := range res.Nodes {
 		ms.nodes[n.Position.String()] = n.Data
