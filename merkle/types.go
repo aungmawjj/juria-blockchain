@@ -69,6 +69,20 @@ func (p *Position) String() string {
 	return p.str
 }
 
+// Positions slice
+type Positions []*Position
+
+// UniqueMap merges the same positions
+func (ps Positions) UniqueMap() map[string]*Position {
+	pmap := make(map[string]*Position)
+	for _, p := range ps {
+		if _, found := pmap[p.String()]; !found {
+			pmap[p.String()] = p
+		}
+	}
+	return pmap
+}
+
 // Node type
 type Node struct {
 	Position *Position
@@ -86,9 +100,6 @@ type Block struct {
 
 // NewBlock ...
 func NewBlock(h crypto.Hash, tc *TreeCalc, store Store, parentPosition *Position) *Block {
-	if parentPosition.Level() < 1 {
-		panic("parent level should be at least 1")
-	}
 	return &Block{
 		hashFunc:       h,
 		tc:             tc,
@@ -96,11 +107,6 @@ func NewBlock(h crypto.Hash, tc *TreeCalc, store Store, parentPosition *Position
 		parentPosition: parentPosition,
 		nodes:          make([]*Node, int(tc.BranchFactor())),
 	}
-}
-
-// ParentPosition ...
-func (b *Block) ParentPosition() *Position {
-	return b.parentPosition
 }
 
 // Load ...

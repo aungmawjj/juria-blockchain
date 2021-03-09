@@ -36,23 +36,19 @@ func NewTree(store Store, opts TreeOptions) *Tree {
 	return tree
 }
 
-// Update ...
+// Update accepts new/modified tree leaves,
+// recompute the corresponding nodes until root node.
 func (tree *Tree) Update(leaves []*Node, newLeafCount *big.Int) *UpdateResult {
 	res := &UpdateResult{newLeafCount, tree.calc.Height(newLeafCount), leaves}
-
 	nodes := leaves
-	for i := 1; i < int(res.Height); i++ {
-
-		nbPositions := tree.getBlockPositions(nodes)
-		bPositions := tree.mergePositions(nbPositions)
-		nodesByBlock := tree.groupNodesByBlock(nodes, nbPositions, bPositions)
-
-		blocks := tree.createBlocks(bPositions)
+	for i := res.Height; i > 1; i-- {
+		bpmap, nbmap := tree.groupNodesByBlock(nodes)
+		blocks := tree.createBlocks(bpmap)
 		parents := make([]*Node, 0, len(blocks)) // parent nodes
 
-		for _, b := range blocks { // the body of the loop can be run in parallel
+		for _, b := range blocks { // the body of the loop can run in parallel
 			b.Load() // load blocks from store
-			for _, n := range nodesByBlock[b.parentPosition.String()] {
+			for _, n := range nbmap[b.parentPosition.String()] {
 				b.SetNode(n) // set updated nodes in blocks
 			}
 			p := b.MakeParent()
@@ -64,36 +60,26 @@ func (tree *Tree) Update(leaves []*Node, newLeafCount *big.Int) *UpdateResult {
 	return res
 }
 
-func (tree *Tree) groupNodesByBlock(
-	nodes []*Node, nbPositions []*Position, bPositions map[string]*Position,
-) map[string][]*Node {
-	nb := make(map[string][]*Node, len(bPositions))
-	for key := range bPositions {
-		nb[key] = make([]*Node, 0)
+func (tree *Tree) groupNodesByBlock(nodes []*Node) (map[string]*Position, map[string][]*Node) {
+	nbps := tree.getBlockPositions(nodes)
+	bpmap := nbps.UniqueMap()
+	nbmap := make(map[string][]*Node, len(bpmap))
+	for key := range bpmap {
+		nbmap[key] = make([]*Node, 0)
 	}
-	for i, p := range nbPositions {
-		nb[p.String()] = append(nb[p.String()], nodes[i])
+	for i, p := range nbps {
+		nbmap[p.String()] = append(nbmap[p.String()], nodes[i])
 	}
-	return nb
+	return bpmap, nbmap
 }
 
-func (tree *Tree) getBlockPositions(nodes []*Node) []*Position {
-	positions := make([]*Position, len(nodes))
+func (tree *Tree) getBlockPositions(nodes []*Node) Positions {
+	positions := make(Positions, len(nodes))
 	for i, n := range nodes {
 		bIndex := tree.calc.BlockOfNode(n.Position.Index())
 		positions[i] = NewPosition(n.Position.Level()+1, bIndex)
 	}
 	return positions
-}
-
-func (tree *Tree) mergePositions(positions []*Position) map[string]*Position {
-	pmap := make(map[string]*Position)
-	for _, p := range positions {
-		if _, found := pmap[p.String()]; !found {
-			pmap[p.String()] = p
-		}
-	}
-	return pmap
 }
 
 func (tree *Tree) createBlocks(pmap map[string]*Position) map[string]*Block {
