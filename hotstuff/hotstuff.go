@@ -13,7 +13,7 @@ func (hs *Hotstuff) Init(b0 Block, q0 QC) {
 	hs.state.init(b0, q0)
 }
 
-// OnReceiveNewView should be invoked when a new view is received from a peer
+// OnReceiveNewView is invoked when a new view is received from a peer
 func (hs *Hotstuff) OnReceiveNewView(qc QC) {
 	hs.updateQCHigh(qc)
 }

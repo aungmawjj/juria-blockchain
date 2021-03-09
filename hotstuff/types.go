@@ -3,7 +3,7 @@
 
 package hotstuff
 
-// Block godoc
+// Block type
 type Block interface {
 	Proposer() string
 	Height() uint64
@@ -23,12 +23,12 @@ func CmpBlockHeight(b1, b2 Block) bool {
 	return b1.Height() > b2.Height()
 }
 
-// QC godoc
+// QC type
 type QC interface {
 	Block() Block
 }
 
-// Vote godoc
+// Vote type
 type Vote interface {
 	Block() Block
 	Replica() string

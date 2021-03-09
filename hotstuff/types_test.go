@@ -63,7 +63,7 @@ func (m *MockVote) Block() Block {
 	return castBlock(args.Get(0))
 }
 
-func (m *MockVote) ReplicaID() string {
+func (m *MockVote) Replica() string {
 	args := m.Called()
 	return args.String(0)
 }
