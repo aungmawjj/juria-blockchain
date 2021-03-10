@@ -35,8 +35,9 @@ func (hs *Hotstuff) OnPropose(ctx context.Context) {
 	if bNew == nil {
 		return
 	}
-	hs.driver.SendProposal(bNew)
 	hs.setBLeaf(bNew)
+	hs.startProposal(bNew)
+	hs.driver.SendProposal(bNew)
 }
 
 func (hs *Hotstuff) updateQCHigh(qc QC) {

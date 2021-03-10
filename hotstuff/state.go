@@ -59,7 +59,7 @@ func (s *state) IsProposing() bool {
 	s.pMtx.RLock()
 	defer s.pMtx.RUnlock()
 
-	return s.proposal == nil
+	return s.proposal != nil
 }
 
 func (s *state) startProposal(b Block) {

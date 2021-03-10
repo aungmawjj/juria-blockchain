@@ -121,13 +121,19 @@ func TestHotstuff_OnPropose(t *testing.T) {
 
 	assert := assert.New(t)
 	assert.Equal(b1, hs.GetBLeaf())
+	assert.True(hs.IsProposing())
 
-	driver.On("CreateLeaf", mock.Anything, b1, q0, b1.Height()+1).Once().Return(nil)
+	hs = new(Hotstuff)
+	hs.driver = driver
+	hs.state.init(b0, q0)
+
+	driver.On("CreateLeaf", mock.Anything, b0, q0, b0.Height()+1).Once().Return(nil)
 
 	hs.OnPropose(context.Background())
 
 	driver.AssertExpectations(t)
 	driver.AssertNotCalled(t, "SendProposal")
 
-	assert.Equal(b1, hs.GetBLeaf())
+	assert.Equal(b0, hs.GetBLeaf())
+	assert.False(hs.IsProposing())
 }
