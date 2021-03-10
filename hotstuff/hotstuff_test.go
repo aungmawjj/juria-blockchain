@@ -230,15 +230,34 @@ func TestHotstuff_OnReceiveProposal(t *testing.T) {
 	b4 := newMockBlock(14, b3, q3)
 	_ = b4
 
+	bf0 := newMockBlock(10, nil, q0) // bLock
+
+	hs0 := new(Hotstuff)
+	hs0.state.init(b0, q0)
+
 	tests := []struct {
-		name string
-		hs   *Hotstuff
-		bNew Block
-		want bool
-	}{}
+		name     string
+		hs       *Hotstuff
+		bNew     Block
+		willVote bool
+	}{
+		{"proposal 1", hs0, b1, true},
+		{"proposal dup", hs0, bf0, false},
+	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			driver := new(MockDriver)
+			tt.hs.driver = driver
+			if tt.willVote {
+				driver.On("VoteBlock", tt.bNew).Once()
+			}
 			tt.hs.OnReceiveProposal(tt.bNew)
+
+			assert := assert.New(t)
+			driver.AssertExpectations(t)
+			if tt.willVote {
+				assert.Equal(tt.bNew.Height(), tt.hs.GetVHeight())
+			}
 		})
 	}
 }

@@ -77,5 +77,8 @@ func (hs *Hotstuff) CheckLivenessRule(bNew Block) bool {
 
 // OnReceiveProposal is called when a new proposal is received
 func (hs *Hotstuff) OnReceiveProposal(bNew Block) {
-
+	if hs.CanVote(bNew) {
+		hs.driver.VoteBlock(bNew)
+		hs.setVHeight(bNew.Height())
+	}
 }
