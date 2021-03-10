@@ -49,8 +49,8 @@ type Vote interface {
 type Driver interface {
 	CreateLeaf(ctx context.Context, parent Block, qc QC, height uint64) Block
 	CreateQC(votes []Vote) QC
-	SendProposal(blk Block)
-	SendVote(blk Block)
+	BroadcastProposal(blk Block)
+	VoteBlock(blk Block)
 	Execute(blk Block)
 	MajorityCount() int
 }

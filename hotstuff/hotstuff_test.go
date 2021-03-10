@@ -85,7 +85,7 @@ func TestHotstuff_SuccessfulPropose(t *testing.T) {
 	b1 := newMockBlock(11, b0, q0)
 
 	driver.On("CreateLeaf", mock.Anything, b0, q0, b0.Height()+1).Once().Return(b1)
-	driver.On("SendProposal", b1).Once()
+	driver.On("BroadcastProposal", b1).Once()
 
 	hs.OnPropose(context.Background())
 
@@ -117,7 +117,7 @@ func TestHotstuff_FailedPropose(t *testing.T) {
 	hs.OnPropose(context.Background())
 
 	driver.AssertExpectations(t)
-	driver.AssertNotCalled(t, "SendProposal")
+	driver.AssertNotCalled(t, "BroadcastProposal")
 
 	assert := assert.New(t)
 	assert.Equal(b0, hs.GetBLeaf())
@@ -137,7 +137,7 @@ func TestHotstuff_OnReceiveVote(t *testing.T) {
 	hs.driver = driver
 	hs.state.init(b0, q0)
 	driver.On("CreateLeaf", mock.Anything, b0, q0, b0.Height()+1).Once().Return(b1)
-	driver.On("SendProposal", b1).Once()
+	driver.On("BroadcastProposal", b1).Once()
 	hs.OnPropose(context.Background())
 	driver.On("MajorityCount").Return(2)
 
@@ -162,4 +162,53 @@ func TestHotstuff_OnReceiveVote(t *testing.T) {
 	assert.Equal(0, hs.GetVoteCount())
 	assert.False(hs.IsProposing())
 	assert.Equal(q1, hs.GetQCHigh())
+}
+
+func TestHotstuff_CanVote(t *testing.T) {
+	q0 := newMockQC(nil)
+	b0 := newMockBlock(10, nil, q0) // bLock
+
+	b1 := newMockBlock(11, b0, q0)
+	q1 := newMockQC(b1)
+
+	b2 := newMockBlock(12, b1, q1)
+	q2 := newMockQC(b2)
+
+	b3 := newMockBlock(13, b2, q2)
+	q3 := newMockQC(b3)
+
+	b4 := newMockBlock(14, b3, q3)
+
+	bf1 := newMockBlock(11, b0, q0)
+	qf1 := newMockQC(bf1)
+
+	bf2 := newMockBlock(12, bf1, qf1)
+	qf2 := newMockQC(bf2)
+
+	bf3 := newMockBlock(13, bf1, qf2)
+	bf4 := newMockBlock(14, bf3, qf2)
+
+	tests := []struct {
+		name    string
+		vHeight uint64
+		bLock   Block
+		bNew    Block
+		want    bool
+	}{
+		{"proposal 1", 10, b0, b1, true},
+		{"proposal 2", 11, b0, b2, true},
+		{"proposal 3", 12, b0, b3, true},
+		{"proposal 4", 13, b1, b4, true},
+		{"proposal not higher", 13, b1, b3, false},
+		{"trigger liveness rule", 13, b1, bf4, true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			hs := new(Hotstuff)
+			hs.setVHeight(tt.vHeight)
+			hs.setBLock(tt.bLock)
+
+			assert.Equal(t, tt.want, hs.CanVote(tt.bNew))
+		})
+	}
 }

@@ -144,11 +144,11 @@ func (m *MockDriver) CreateQC(votes []Vote) QC {
 	return args.Get(0).(QC)
 }
 
-func (m *MockDriver) SendProposal(blk Block) {
+func (m *MockDriver) BroadcastProposal(blk Block) {
 	m.Called(blk)
 }
 
-func (m *MockDriver) SendVote(blk Block) {
+func (m *MockDriver) VoteBlock(blk Block) {
 	m.Called(blk)
 }
 

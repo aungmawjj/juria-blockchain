@@ -27,7 +27,7 @@ func (hs *Hotstuff) OnPropose(ctx context.Context) {
 	}
 	hs.setBLeaf(bNew)
 	hs.startProposal(bNew)
-	hs.driver.SendProposal(bNew)
+	hs.driver.BroadcastProposal(bNew)
 }
 
 // OnReceiveVote is called when received a vote
@@ -49,4 +49,28 @@ func (hs *Hotstuff) UpdateQCHigh(qc QC) {
 		hs.setQCHigh(qc)
 		hs.setBLeaf(qc.Block())
 	}
+}
+
+// CanVote returns true if the hotstuff instance can vote the given block
+func (hs *Hotstuff) CanVote(bNew Block) bool {
+	if bNew.Height() <= hs.GetVHeight() {
+		return false
+	}
+	return hs.CheckSafetyRule(bNew) || hs.CheckLivenessRule(bNew)
+}
+
+// CheckSafetyRule returns true if the given block extends from b_Lock
+func (hs *Hotstuff) CheckSafetyRule(bNew Block) bool {
+	bLock := hs.GetBLock()
+	for b := bNew; CmpBlockHeight(b, bLock) != -1; b = b.Parent() {
+		if bLock.Equal(b) {
+			return true
+		}
+	}
+	return false
+}
+
+// CheckLivenessRule returns true if the qc referenced block of the given block is higher than b_Lock
+func (hs *Hotstuff) CheckLivenessRule(bNew Block) bool {
+	return CmpBlockHeight(bNew.Justify().Block(), hs.GetBLock()) == 1
 }
