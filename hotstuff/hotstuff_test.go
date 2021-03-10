@@ -77,12 +77,12 @@ func TestHotstuff_SuccessfulPropose(t *testing.T) {
 	q0 := newMockQC(nil)
 	b0 := newMockBlock(10, nil, q0)
 
-	b1 := newMockBlock(11, b0, q0)
-
 	driver := new(MockDriver)
 	hs := new(Hotstuff)
 	hs.driver = driver
 	hs.state.init(b0, q0)
+
+	b1 := newMockBlock(11, b0, q0)
 
 	driver.On("CreateLeaf", mock.Anything, b0, q0, b0.Height()+1).Once().Return(b1)
 	driver.On("SendProposal", b1).Once()
@@ -122,4 +122,44 @@ func TestHotstuff_FailedPropose(t *testing.T) {
 	assert := assert.New(t)
 	assert.Equal(b0, hs.GetBLeaf())
 	assert.False(hs.IsProposing())
+}
+
+func TestHotstuff_OnReceiveVote(t *testing.T) {
+	q0 := newMockQC(nil)
+	b0 := newMockBlock(10, nil, q0)
+	b1 := newMockBlock(11, b0, q0)
+	q1 := newMockQC(b1)
+
+	assert := assert.New(t)
+
+	driver := new(MockDriver)
+	hs := new(Hotstuff)
+	hs.driver = driver
+	hs.state.init(b0, q0)
+	driver.On("CreateLeaf", mock.Anything, b0, q0, b0.Height()+1).Once().Return(b1)
+	driver.On("SendProposal", b1).Once()
+	hs.OnPropose(context.Background())
+	driver.On("MajorityCount").Return(2)
+
+	v1 := newMockVote(b1, "r1")
+	hs.OnReceiveVote(v1)
+
+	driver.AssertNotCalled(t, "CreateQC")
+	assert.Equal(1, hs.GetVoteCount())
+
+	v1Dup := newMockVote(b1, "r1")
+	hs.OnReceiveVote(v1Dup)
+
+	driver.AssertNotCalled(t, "CreateQC")
+	assert.Equal(1, hs.GetVoteCount())
+
+	driver.On("CreateQC", mock.Anything).Return(q1)
+
+	v2 := newMockVote(b1, "r2")
+	hs.OnReceiveVote(v2)
+
+	driver.AssertExpectations(t)
+	assert.Equal(0, hs.GetVoteCount())
+	assert.False(hs.IsProposing())
+	assert.Equal(q1, hs.GetQCHigh())
 }

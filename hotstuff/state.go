@@ -70,7 +70,7 @@ func (s *state) startProposal(b Block) {
 	s.votes = make(map[string]Vote)
 }
 
-func (s *state) stopProposal(b Block) {
+func (s *state) stopProposal() {
 	s.pMtx.Lock()
 	defer s.pMtx.Unlock()
 
