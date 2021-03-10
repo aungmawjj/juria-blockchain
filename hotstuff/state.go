@@ -96,6 +96,13 @@ func (s *state) addVote(v Vote) error {
 	return nil
 }
 
+func (s *state) GetVoteCount() int {
+	s.pMtx.RLock()
+	defer s.pMtx.RUnlock()
+
+	return len(s.votes)
+}
+
 func (s *state) GetVotes() []Vote {
 	s.pMtx.RLock()
 	defer s.pMtx.RUnlock()

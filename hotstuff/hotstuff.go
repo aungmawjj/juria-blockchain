@@ -18,16 +18,6 @@ func (hs *Hotstuff) Init(b0 Block, q0 QC) {
 	hs.state.init(b0, q0)
 }
 
-// OnNextSyncView is called when view change occurs
-func (hs *Hotstuff) OnNextSyncView() {
-	hs.driver.SendNewView(hs.GetQCHigh())
-}
-
-// OnReceiveNewView is called when a new view is received from a peer
-func (hs *Hotstuff) OnReceiveNewView(qc QC) {
-	hs.updateQCHigh(qc)
-}
-
 // OnPropose is called to propose a new block
 func (hs *Hotstuff) OnPropose(ctx context.Context) {
 	bLeaf := hs.GetBLeaf()
@@ -46,10 +36,15 @@ func (hs *Hotstuff) OnReceiveVote(v Vote) {
 	if err != nil {
 		return
 	}
+	if hs.GetVoteCount() >= hs.driver.MajorityCount() {
+		qc := hs.driver.CreateQC(hs.GetVotes())
+		hs.UpdateQCHigh(qc)
+	}
 }
 
-func (hs *Hotstuff) updateQCHigh(qc QC) {
-	if CmpBlockHeight(qc.Block(), hs.GetQCHigh().Block()) {
+// UpdateQCHigh replaces qcHigh if the block of given qc is higher than the qcHigh block
+func (hs *Hotstuff) UpdateQCHigh(qc QC) {
+	if CmpBlockHeight(qc.Block(), hs.GetQCHigh().Block()) == 1 {
 		hs.setQCHigh(qc)
 		hs.setBLeaf(qc.Block())
 	}

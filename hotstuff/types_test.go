@@ -21,6 +21,8 @@ type MockBlock struct {
 	mock.Mock
 }
 
+var _ Block = (*MockBlock)(nil)
+
 func (m *MockBlock) Proposer() string {
 	args := m.Called()
 	return string(args.String(0))
@@ -50,6 +52,8 @@ type MockQC struct {
 	mock.Mock
 }
 
+var _ QC = (*MockQC)(nil)
+
 func (m *MockQC) Block() Block {
 	args := m.Called()
 	return castBlock(args.Get(0))
@@ -58,6 +62,8 @@ func (m *MockQC) Block() Block {
 type MockVote struct {
 	mock.Mock
 }
+
+var _ Vote = (*MockVote)(nil)
 
 func (m *MockVote) Block() Block {
 	args := m.Called()
@@ -104,14 +110,14 @@ func TestCmpBlockHeight(t *testing.T) {
 	tests := []struct {
 		name string
 		args args
-		want bool
+		want int
 	}{
-		{"nil blocks", args{nil, nil}, false},
-		{"b1 is nil", args{nil, new(MockBlock)}, false},
-		{"b2 is nil", args{new(MockBlock), nil}, true},
-		{"b1 is higher", args{bh5, bh4}, true},
-		{"b2 is higher", args{bh4, bh5}, false},
-		{"same height", args{bh4, bh4}, false},
+		{"nil blocks", args{nil, nil}, 0},
+		{"b1 is nil", args{nil, new(MockBlock)}, -1},
+		{"b2 is nil", args{new(MockBlock), nil}, 1},
+		{"b1 is higher", args{bh5, bh4}, 1},
+		{"b2 is higher", args{bh4, bh5}, -1},
+		{"same height", args{bh4, bh4}, 0},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -125,6 +131,8 @@ func TestCmpBlockHeight(t *testing.T) {
 type MockDriver struct {
 	mock.Mock
 }
+
+var _ Driver = (*MockDriver)(nil)
 
 func (m *MockDriver) CreateLeaf(ctx context.Context, parent Block, qc QC, height uint64) Block {
 	args := m.Called(ctx, parent, qc, height)
@@ -140,13 +148,8 @@ func (m *MockDriver) SendProposal(blk Block) {
 	m.Called(blk)
 }
 
-func (m *MockDriver) VoteBlock(blk Block) Vote {
-	args := m.Called(blk)
-	return args.Get(0).(Vote)
-}
-
-func (m *MockDriver) SendVote(v Vote) {
-	m.Called(v)
+func (m *MockDriver) SendVote(blk Block) {
+	m.Called(blk)
 }
 
 func (m *MockDriver) SendNewView(qc QC) {

@@ -15,14 +15,23 @@ type Block interface {
 }
 
 // CmpBlockHeight compares two blocks by height
-func CmpBlockHeight(b1, b2 Block) bool {
+func CmpBlockHeight(b1, b2 Block) int {
+	if b1 == nil && b2 == nil {
+		return 0
+	}
 	if b1 == nil {
-		return false
+		return -1
 	}
 	if b2 == nil {
-		return true
+		return 1
 	}
-	return b1.Height() > b2.Height()
+	if b1.Height() == b2.Height() {
+		return 0
+	}
+	if b1.Height() > b2.Height() {
+		return 1
+	}
+	return -1
 }
 
 // QC type
@@ -41,9 +50,7 @@ type Driver interface {
 	CreateLeaf(ctx context.Context, parent Block, qc QC, height uint64) Block
 	CreateQC(votes []Vote) QC
 	SendProposal(blk Block)
-	VoteBlock(blk Block) Vote
-	SendVote(v Vote)
-	SendNewView(qc QC)
+	SendVote(blk Block)
 	Execute(blk Block)
 	MajorityCount() int
 }

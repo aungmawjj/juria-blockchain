@@ -11,7 +11,7 @@ import (
 	"github.com/stretchr/testify/mock"
 )
 
-func TestHotstuff_OnReceiveNewView(t *testing.T) {
+func TestHotstuff_UpdateQCHigh(t *testing.T) {
 	q0 := newMockQC(nil)
 	b0 := newMockBlock(10, nil, q0)
 
@@ -64,40 +64,13 @@ func TestHotstuff_OnReceiveNewView(t *testing.T) {
 			hs := new(Hotstuff)
 			hs.state.init(tt.fields.bLeaf, tt.fields.qcHigh)
 
-			hs.updateQCHigh(tt.args.qc)
+			hs.UpdateQCHigh(tt.args.qc)
 
 			assert := assert.New(t)
 			assert.Equal(tt.want.bLeaf, hs.GetBLeaf())
 			assert.Equal(tt.want.qcHigh, hs.GetQCHigh())
 		})
 	}
-}
-
-func TestHotstuff_OnNextSyncView(t *testing.T) {
-
-	q0 := newMockQC(nil)
-	b0 := newMockBlock(10, nil, q0)
-
-	b1 := newMockBlock(11, b0, q0)
-	q1 := newMockQC(b1)
-
-	driver := new(MockDriver)
-
-	hs := new(Hotstuff)
-	hs.driver = driver
-	hs.state.init(b0, q0)
-
-	driver.On("SendNewView", q0).Once()
-	hs.OnNextSyncView()
-
-	driver.AssertExpectations(t)
-
-	hs.state.init(b1, q1)
-
-	driver.On("SendNewView", q1).Once()
-	hs.OnNextSyncView()
-
-	driver.AssertExpectations(t)
 }
 
 func TestHotstuff_SuccessfulPropose(t *testing.T) {
@@ -121,6 +94,8 @@ func TestHotstuff_SuccessfulPropose(t *testing.T) {
 	assert := assert.New(t)
 	assert.Equal(b1, hs.GetBLeaf())
 	assert.True(hs.IsProposing())
+
+	driver.On("MajorityCount").Return(3)
 
 	v1 := newMockVote(b1, "r1")
 	hs.OnReceiveVote(v1)
