@@ -187,6 +187,7 @@ func TestHotstuff_CanVote(t *testing.T) {
 
 	bf3 := newMockBlock(13, bf1, qf2)
 	bf4 := newMockBlock(14, bf3, qf2)
+	_ = bf4
 
 	tests := []struct {
 		name    string
@@ -209,6 +210,35 @@ func TestHotstuff_CanVote(t *testing.T) {
 			hs.setBLock(tt.bLock)
 
 			assert.Equal(t, tt.want, hs.CanVote(tt.bNew))
+		})
+	}
+}
+
+func TestHotstuff_OnReceiveProposal(t *testing.T) {
+	q0 := newMockQC(nil)
+	b0 := newMockBlock(10, nil, q0) // bLock
+
+	b1 := newMockBlock(11, b0, q0)
+	q1 := newMockQC(b1)
+
+	b2 := newMockBlock(12, b1, q1)
+	q2 := newMockQC(b2)
+
+	b3 := newMockBlock(13, b2, q2)
+	q3 := newMockQC(b3)
+
+	b4 := newMockBlock(14, b3, q3)
+	_ = b4
+
+	tests := []struct {
+		name string
+		hs   *Hotstuff
+		bNew Block
+		want bool
+	}{}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.hs.OnReceiveProposal(tt.bNew)
 		})
 	}
 }

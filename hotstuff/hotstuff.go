@@ -74,3 +74,8 @@ func (hs *Hotstuff) CheckSafetyRule(bNew Block) bool {
 func (hs *Hotstuff) CheckLivenessRule(bNew Block) bool {
 	return CmpBlockHeight(bNew.Justify().Block(), hs.GetBLock()) == 1
 }
+
+// OnReceiveProposal is called when a new proposal is received
+func (hs *Hotstuff) OnReceiveProposal(bNew Block) {
+
+}
