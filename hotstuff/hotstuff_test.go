@@ -60,7 +60,7 @@ func TestHotstuff_OnReceiveNewView(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			hs := new(Hotstuff)
-			hs.Init(tt.fields.bLeaf, tt.fields.qcHigh)
+			hs.state.init(tt.fields.bLeaf, tt.fields.qcHigh)
 
 			hs.updateQCHigh(tt.args.qc)
 
@@ -69,4 +69,31 @@ func TestHotstuff_OnReceiveNewView(t *testing.T) {
 			assert.Equal(tt.want.qcHigh, hs.GetQCHigh())
 		})
 	}
+}
+
+func TestHotstuff_OnNextSyncView(t *testing.T) {
+
+	q0 := newMockQC(nil)
+	b0 := newMockBlock(10, nil, q0)
+
+	b1 := newMockBlock(11, b0, q0)
+	q1 := newMockQC(b1)
+
+	driver := new(MockDriver)
+
+	hs := new(Hotstuff)
+	hs.driver = driver
+	hs.state.init(b0, q0)
+
+	driver.On("SendNewView", q0).Once()
+	hs.OnNextSyncView()
+
+	driver.AssertExpectations(t)
+
+	hs.state.init(b1, q1)
+
+	driver.On("SendNewView", q1).Once()
+	hs.OnNextSyncView()
+
+	driver.AssertExpectations(t)
 }

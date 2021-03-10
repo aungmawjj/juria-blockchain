@@ -3,6 +3,8 @@
 
 package hotstuff
 
+import "context"
+
 // Block type
 type Block interface {
 	Proposer() string
@@ -32,4 +34,16 @@ type QC interface {
 type Vote interface {
 	Block() Block
 	Replica() string
+}
+
+// Driver godoc
+type Driver interface {
+	CreateLeaf(ctx context.Context, parent Block, qc QC, height uint64) Block
+	CreateQC(votes []Vote) QC
+	SendProposal(blk Block)
+	VoteBlock(blk Block) Vote
+	SendVote(v Vote)
+	SendNewView(qc QC)
+	Execute(blk Block)
+	MajorityCount() int
 }

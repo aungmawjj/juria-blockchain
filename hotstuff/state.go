@@ -62,12 +62,20 @@ func (s *state) IsProposing() bool {
 	return s.proposal == nil
 }
 
-func (s *state) setProposal(b Block) {
+func (s *state) startProposal(b Block) {
 	s.pMtx.Lock()
 	defer s.pMtx.Unlock()
 
 	s.proposal = b
 	s.votes = make(map[string]Vote)
+}
+
+func (s *state) stopProposal(b Block) {
+	s.pMtx.Lock()
+	defer s.pMtx.Unlock()
+
+	s.proposal = nil
+	s.votes = nil
 }
 
 func (s *state) addVote(v Vote) error {

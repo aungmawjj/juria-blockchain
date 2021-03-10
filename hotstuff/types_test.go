@@ -4,6 +4,7 @@
 package hotstuff
 
 import (
+	"context"
 	"testing"
 
 	"github.com/stretchr/testify/mock"
@@ -112,4 +113,44 @@ func TestCmpBlockHeight(t *testing.T) {
 			}
 		})
 	}
+}
+
+type MockDriver struct {
+	mock.Mock
+}
+
+func (m *MockDriver) CreateLeaf(ctx context.Context, parent Block, qc QC, height uint64) Block {
+	args := m.Called(ctx, parent, qc, height)
+	return castBlock(args.Get(0))
+}
+
+func (m *MockDriver) CreateQC(votes []Vote) QC {
+	args := m.Called(votes)
+	return args.Get(0).(QC)
+}
+
+func (m *MockDriver) SendProposal(blk Block) {
+	m.Called(blk)
+}
+
+func (m *MockDriver) VoteBlock(blk Block) Vote {
+	args := m.Called(blk)
+	return args.Get(0).(Vote)
+}
+
+func (m *MockDriver) SendVote(v Vote) {
+	m.Called(v)
+}
+
+func (m *MockDriver) SendNewView(qc QC) {
+	m.Called(qc)
+}
+
+func (m *MockDriver) Execute(blk Block) {
+	m.Called(blk)
+}
+
+func (m *MockDriver) MajorityCount() int {
+	args := m.Called()
+	return args.Int(0)
 }
