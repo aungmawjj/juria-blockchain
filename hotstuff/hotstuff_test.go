@@ -4,9 +4,11 @@
 package hotstuff
 
 import (
+	"context"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 )
 
 func TestHotstuff_OnReceiveNewView(t *testing.T) {
@@ -96,4 +98,36 @@ func TestHotstuff_OnNextSyncView(t *testing.T) {
 	hs.OnNextSyncView()
 
 	driver.AssertExpectations(t)
+}
+
+func TestHotstuff_OnPropose(t *testing.T) {
+	q0 := newMockQC(nil)
+	b0 := newMockBlock(10, nil, q0)
+
+	b1 := newMockBlock(11, b0, q0)
+
+	driver := new(MockDriver)
+
+	hs := new(Hotstuff)
+	hs.driver = driver
+	hs.state.init(b0, q0)
+
+	driver.On("CreateLeaf", mock.Anything, b0, q0, b0.Height()+1).Once().Return(b1)
+	driver.On("SendProposal", b1).Once()
+
+	hs.OnPropose(context.Background())
+
+	driver.AssertExpectations(t)
+
+	assert := assert.New(t)
+	assert.Equal(b1, hs.GetBLeaf())
+
+	driver.On("CreateLeaf", mock.Anything, b1, q0, b1.Height()+1).Once().Return(nil)
+
+	hs.OnPropose(context.Background())
+
+	driver.AssertExpectations(t)
+	driver.AssertNotCalled(t, "SendProposal")
+
+	assert.Equal(b1, hs.GetBLeaf())
 }
