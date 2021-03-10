@@ -40,6 +40,14 @@ func (hs *Hotstuff) OnPropose(ctx context.Context) {
 	hs.driver.SendProposal(bNew)
 }
 
+// OnReceiveVote is called when received a vote
+func (hs *Hotstuff) OnReceiveVote(v Vote) {
+	err := hs.addVote(v)
+	if err != nil {
+		return
+	}
+}
+
 func (hs *Hotstuff) updateQCHigh(qc QC) {
 	if CmpBlockHeight(qc.Block(), hs.GetQCHigh().Block()) {
 		hs.setQCHigh(qc)

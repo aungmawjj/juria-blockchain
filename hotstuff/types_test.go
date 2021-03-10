@@ -85,6 +85,13 @@ func newMockQC(blk Block) *MockQC {
 	return qc
 }
 
+func newMockVote(blk Block, replica string) *MockVote {
+	vote := new(MockVote)
+	vote.On("Block").Return(blk)
+	vote.On("Replica").Return(replica)
+	return vote
+}
+
 func TestCmpBlockHeight(t *testing.T) {
 	type args struct {
 		b1 Block

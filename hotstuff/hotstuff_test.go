@@ -100,14 +100,13 @@ func TestHotstuff_OnNextSyncView(t *testing.T) {
 	driver.AssertExpectations(t)
 }
 
-func TestHotstuff_OnPropose(t *testing.T) {
+func TestHotstuff_SuccessfulPropose(t *testing.T) {
 	q0 := newMockQC(nil)
 	b0 := newMockBlock(10, nil, q0)
 
 	b1 := newMockBlock(11, b0, q0)
 
 	driver := new(MockDriver)
-
 	hs := new(Hotstuff)
 	hs.driver = driver
 	hs.state.init(b0, q0)
@@ -123,7 +122,18 @@ func TestHotstuff_OnPropose(t *testing.T) {
 	assert.Equal(b1, hs.GetBLeaf())
 	assert.True(hs.IsProposing())
 
-	hs = new(Hotstuff)
+	v1 := newMockVote(b1, "r1")
+	hs.OnReceiveVote(v1)
+
+	assert.Equal([]Vote{v1}, hs.GetVotes())
+}
+
+func TestHotstuff_FailedPropose(t *testing.T) {
+	q0 := newMockQC(nil)
+	b0 := newMockBlock(10, nil, q0)
+
+	driver := new(MockDriver)
+	hs := new(Hotstuff)
 	hs.driver = driver
 	hs.state.init(b0, q0)
 
@@ -134,6 +144,7 @@ func TestHotstuff_OnPropose(t *testing.T) {
 	driver.AssertExpectations(t)
 	driver.AssertNotCalled(t, "SendProposal")
 
+	assert := assert.New(t)
 	assert.Equal(b0, hs.GetBLeaf())
 	assert.False(hs.IsProposing())
 }
