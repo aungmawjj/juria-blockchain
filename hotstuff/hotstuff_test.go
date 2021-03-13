@@ -259,6 +259,9 @@ func TestHotstuff_Update(t *testing.T) {
 	hs2.state.init(b0, q2)
 	hs2.setBLock(b1)
 
+	hs3 := new(Hotstuff)
+	hs3.state.init(b2, q2)
+
 	tests := []struct {
 		name      string
 		hs        *Hotstuff
@@ -275,6 +278,7 @@ func TestHotstuff_Update(t *testing.T) {
 		{"proposal 4", hs2, b4, 1, q3, b2, b1},
 		{"not three chain", hs0, bb5, 0, qq4, bb3, b0},
 		{"exec debts", hs0, bb6, 3, qq5, bb4, bb3},
+		{"three chain but invalid commit phase", hs3, b4, 0, q3, b2, b2},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
