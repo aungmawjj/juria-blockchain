@@ -5,7 +5,10 @@
 
 package hotstuff
 
-import "context"
+import (
+	"context"
+	"fmt"
+)
 
 // Hotstuff consensus engine
 type Hotstuff struct {
@@ -80,5 +83,29 @@ func (hs *Hotstuff) OnReceiveProposal(bNew Block) {
 	if hs.CanVote(bNew) {
 		hs.driver.VoteBlock(bNew)
 		hs.setVHeight(bNew.Height())
+	}
+	hs.update(bNew)
+}
+
+func (hs *Hotstuff) update(bNew Block) {
+	b, b1, b2 := GetJustifyBlocks(bNew)
+	hs.UpdateQCHigh(bNew.Justify())
+	if CmpBlockHeight(b1, hs.GetBLock()) == 1 {
+		hs.setBLock(b1)
+	}
+	if IsThreeChain(b, b1, b2) {
+		hs.onCommit(b)
+		hs.setBExec(b)
+	}
+}
+
+func (hs *Hotstuff) onCommit(b Block) {
+	if CmpBlockHeight(b, hs.GetBExec()) == 1 {
+		// commit parent blocks recurrsively
+		hs.onCommit(b.Parent())
+		hs.driver.Execute(b)
+
+	} else if !hs.GetBExec().Equal(b) {
+		panic(fmt.Sprintf("hotstuff safety breached!!!\n%+v\n%+v\n", b, hs.GetBExec()))
 	}
 }

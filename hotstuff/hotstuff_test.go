@@ -230,19 +230,52 @@ func TestHotstuff_OnReceiveProposal(t *testing.T) {
 	b4 := newMockBlock(14, b3, q3)
 	_ = b4
 
-	bf0 := newMockBlock(10, nil, q0) // bLock
+	bf0 := newMockBlock(10, nil, q0)
+
+	bb1 := newMockBlock(11, b0, q0)
+	qq1 := newMockQC(bb1)
+
+	bb2 := newMockBlock(12, bb1, qq1) // could not get qc for bb2
+
+	bb3 := newMockBlock(13, bb2, qq1)
+	qq3 := newMockQC(bb3)
+
+	bb4 := newMockBlock(14, bb3, qq3)
+	qq4 := newMockQC(bb4)
+
+	bb5 := newMockBlock(15, bb4, qq4)
+	qq5 := newMockQC(bb5)
+
+	bb6 := newMockBlock(16, bb5, qq5)
+	_ = bb6
 
 	hs0 := new(Hotstuff)
 	hs0.state.init(b0, q0)
 
+	hs1 := new(Hotstuff)
+	hs1.state.init(b0, q1)
+
+	hs2 := new(Hotstuff)
+	hs2.state.init(b0, q2)
+	hs2.setBLock(b1)
+
 	tests := []struct {
-		name     string
-		hs       *Hotstuff
-		bNew     Block
-		willVote bool
+		name      string
+		hs        *Hotstuff
+		bNew      Block
+		willVote  bool
+		execCount int
+		qcHigh    QC
+		bLock     Block
+		bExec     Block
 	}{
-		{"proposal 1", hs0, b1, true},
-		{"proposal dup", hs0, bf0, false},
+		{"proposal 1", hs0, b1, true, 0, q0, b0, b0},
+		{"proposal dup", hs0, bf0, false, 0, q0, b0, b0},
+		{"proposal 2", hs0, b2, true, 0, q1, b0, b0},
+		{"proposal 3", hs1, b3, true, 0, q2, b1, b0},
+		{"proposal 4", hs2, b4, true, 1, q3, b2, b1},
+		{"not three chain", hs0, bb5, true, 0, qq4, bb3, b0},
+		{"exec debts", hs0, bb6, true, 3, qq5, bb4, bb3},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -251,6 +284,9 @@ func TestHotstuff_OnReceiveProposal(t *testing.T) {
 			if tt.willVote {
 				driver.On("VoteBlock", tt.bNew).Once()
 			}
+			if tt.execCount > 0 {
+				driver.On("Execute", mock.Anything).Times(tt.execCount)
+			}
 			tt.hs.OnReceiveProposal(tt.bNew)
 
 			assert := assert.New(t)
@@ -258,6 +294,9 @@ func TestHotstuff_OnReceiveProposal(t *testing.T) {
 			if tt.willVote {
 				assert.Equal(tt.bNew.Height(), tt.hs.GetVHeight())
 			}
+			assert.Equal(tt.qcHigh, tt.hs.GetQCHigh())
+			assert.Equal(tt.bLock, tt.hs.GetBLock())
+			assert.Equal(tt.bExec, tt.hs.GetBExec())
 		})
 	}
 }
