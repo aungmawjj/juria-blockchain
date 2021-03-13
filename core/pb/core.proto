@@ -1,0 +1,67 @@
+// Copyright (C) 2021 Aung Maw
+// Licensed under the GNU General Public License v3.0
+
+syntax = "proto3";
+
+package core.pb;
+
+option go_package = ".;core_pb";
+
+message Block {
+	bytes hash = 1;
+	uint64 height = 2;
+	bytes parent = 3;
+	bytes proposer = 4;
+	QuorumCert quorumCert = 5;
+	uint64 execHeight = 6;
+	bytes stateRoot = 7;
+	repeated bytes transactions = 8; // transaction hashes
+}
+
+message Signature {
+	bytes pubKey = 1;
+	bytes sig = 2;
+}
+
+message QuorumCert {
+	bytes block = 1;
+	repeated Signature signatures = 2;
+}
+
+message Vote {
+	bytes block = 1;
+	Signature signature = 2;
+}
+
+message Transaction {
+	bytes hash = 1;
+	bytes signature = 2;
+	uint64 nonce = 3;
+	bytes sender = 4;
+	bytes codeAddr = 5;
+	bytes data = 6;
+	ExecInfo execInfo = 7;
+
+	message ExecInfo {
+		bytes block = 1;
+		uint64 blockHeight = 2;
+		Error error = 3;
+
+		message Error {
+			string message = 1;
+		}
+	}
+}
+
+message TxList {
+  	repeated Transaction list = 1;
+}
+
+message ByteList {
+  	repeated bytes list = 1;
+}
+
+message KeyValue {
+  	bytes key = 1;
+  	bytes value = 2;
+}

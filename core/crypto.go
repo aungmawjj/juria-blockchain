@@ -5,12 +5,43 @@ package core
 
 import (
 	"crypto/ed25519"
-	"encoding/base64"
-	"fmt"
+	"errors"
+
+	core_pb "github.com/aungmawjj/juria-blockchain/core/pb"
 )
 
-func toBase64(b []byte) string {
-	return base64.StdEncoding.EncodeToString(b)
+// errors
+var (
+	ErrInvalidKeySize = errors.New("invalid key size")
+)
+
+// Signature type
+type Signature struct {
+	data   *core_pb.Signature
+	pubKey *PublicKey
+}
+
+// NewSignature creates signature from pb data
+func NewSignature(data *core_pb.Signature) (*Signature, error) {
+	sig := &Signature{
+		data: data,
+	}
+	var err error
+	sig.pubKey, err = NewPublicKey(data.PubKey)
+	if err != nil {
+		return nil, err
+	}
+	return sig, nil
+}
+
+// Verify verifies the signature
+func (sig *Signature) Verify(msg []byte) bool {
+	return ed25519.Verify(sig.pubKey.key, msg, sig.data.Sig)
+}
+
+// PublicKey returns corresponding public key
+func (sig *Signature) PublicKey() *PublicKey {
+	return sig.pubKey
 }
 
 // PublicKey type
@@ -19,10 +50,10 @@ type PublicKey struct {
 	keyStr string
 }
 
-// DecodePublicKey decodes raw bytes to PublicKey
-func DecodePublicKey(b []byte) (*PublicKey, error) {
+// NewPublicKey creates PublicKey from bytes
+func NewPublicKey(b []byte) (*PublicKey, error) {
 	if len(b) != ed25519.PublicKeySize {
-		return nil, fmt.Errorf("invalid public key size")
+		return nil, ErrInvalidKeySize
 	}
 	return &PublicKey{
 		key:    b,
@@ -37,45 +68,11 @@ func (pub *PublicKey) Equal(x *PublicKey) bool {
 
 // Bytes return raw bytes
 func (pub *PublicKey) Bytes() []byte {
-	b := make([]byte, 0, len(pub.key))
-	return append(b, pub.key...)
+	return pub.key
 }
 
 func (pub *PublicKey) String() string {
 	return pub.keyStr
-}
-
-// Signature type
-type Signature struct {
-	data   []byte
-	pubKey *PublicKey
-}
-
-// DecodeSignature decodes raw bytes to signature
-func DecodeSignature(b []byte) (*Signature, error) {
-	if len(b) != ed25519.PublicKeySize+ed25519.SignatureSize {
-		return nil, fmt.Errorf("invalid signature length")
-	}
-	sig := &Signature{
-		data: b[0:ed25519.SignatureSize],
-	}
-	sig.pubKey, _ = DecodePublicKey(b[ed25519.SignatureSize:])
-	return sig, nil
-}
-
-// Bytes returns raw bytes
-func (sig *Signature) Bytes() []byte {
-	return append(sig.data, sig.pubKey.key...)
-}
-
-// Verify verifies the signature
-func (sig *Signature) Verify(msg []byte) bool {
-	return ed25519.Verify(sig.pubKey.key, msg, sig.data)
-}
-
-// PublicKey returns corresponding public key
-func (sig *Signature) PublicKey() *PublicKey {
-	return sig.pubKey
 }
 
 // PrivateKey type
@@ -84,22 +81,21 @@ type PrivateKey struct {
 	pubKey *PublicKey
 }
 
-// DecodePrivateKey decodes raw bytes to PrivateKey
-func DecodePrivateKey(b []byte) (*PrivateKey, error) {
+// NewPrivateKey creates PrivateKey from bytes
+func NewPrivateKey(b []byte) (*PrivateKey, error) {
 	if len(b) != ed25519.PrivateKeySize {
-		return nil, fmt.Errorf("invalid private key size")
+		return nil, ErrInvalidKeySize
 	}
 	priv := &PrivateKey{
 		key: b,
 	}
-	priv.pubKey, _ = DecodePublicKey(priv.key.Public().(ed25519.PublicKey))
+	priv.pubKey, _ = NewPublicKey(priv.key.Public().(ed25519.PublicKey))
 	return priv, nil
 }
 
 // Bytes return raw bytes
 func (priv *PrivateKey) Bytes() []byte {
-	b := make([]byte, 0, len(priv.key))
-	return append(b, priv.key...)
+	return priv.key
 }
 
 // PublicKey returns corresponding public key
@@ -109,8 +105,11 @@ func (priv *PrivateKey) PublicKey() *PublicKey {
 
 // Sign signs the message
 func (priv *PrivateKey) Sign(msg []byte) *Signature {
-	return &Signature{
-		ed25519.Sign(priv.key, msg),
-		priv.pubKey,
-	}
+	sig, _ := NewSignature(
+		&core_pb.Signature{
+			Sig:    ed25519.Sign(priv.key, msg),
+			PubKey: priv.pubKey.Bytes(),
+		},
+	)
+	return sig
 }

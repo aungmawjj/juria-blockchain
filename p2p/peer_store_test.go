@@ -16,7 +16,7 @@ func TestPeerStore_LoadOrStore(t *testing.T) {
 	assert := assert.New(t)
 	s := newPeerStore()
 
-	pubKey, _ := core.DecodePublicKey(bytes.Repeat([]byte{1}, ed25519.PublicKeySize))
+	pubKey, _ := core.NewPublicKey(bytes.Repeat([]byte{1}, ed25519.PublicKeySize))
 	p := NewPeer(pubKey, nil)
 	actual, loaded := s.LoadOrStore(p)
 	assert.False(loaded)
