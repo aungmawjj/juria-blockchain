@@ -16,11 +16,6 @@ type Hotstuff struct {
 	driver Driver
 }
 
-// Init initializes hotstuff
-func (hs *Hotstuff) Init(b0 Block, q0 QC) {
-	hs.state.init(b0, q0)
-}
-
 // OnPropose is called to propose a new block
 func (hs *Hotstuff) OnPropose(ctx context.Context) {
 	bLeaf := hs.GetBLeaf()
@@ -85,6 +80,8 @@ func (hs *Hotstuff) Update(bNew Block) {
 	hs.UpdateQCHigh(bNew.Justify()) // precommit phase for b2
 	if CmpBlockHeight(b1, hs.GetBLock()) == 1 {
 		hs.setBLock(b1) // commit phase for b1
+	} else {
+		return
 	}
 	if IsThreeChain(b, b1, b2) {
 		hs.onCommit(b) // decide phase for b
