@@ -214,7 +214,7 @@ func TestHotstuff_CanVote(t *testing.T) {
 	}
 }
 
-func TestHotstuff_OnReceiveProposal(t *testing.T) {
+func TestHotstuff_Update(t *testing.T) {
 	q0 := newMockQC(nil)
 	b0 := newMockBlock(10, nil, q0) // bLock
 
@@ -263,37 +263,30 @@ func TestHotstuff_OnReceiveProposal(t *testing.T) {
 		name      string
 		hs        *Hotstuff
 		bNew      Block
-		willVote  bool
 		execCount int
 		qcHigh    QC
 		bLock     Block
 		bExec     Block
 	}{
-		{"proposal 1", hs0, b1, true, 0, q0, b0, b0},
-		{"proposal dup", hs0, bf0, false, 0, q0, b0, b0},
-		{"proposal 2", hs0, b2, true, 0, q1, b0, b0},
-		{"proposal 3", hs1, b3, true, 0, q2, b1, b0},
-		{"proposal 4", hs2, b4, true, 1, q3, b2, b1},
-		{"not three chain", hs0, bb5, true, 0, qq4, bb3, b0},
-		{"exec debts", hs0, bb6, true, 3, qq5, bb4, bb3},
+		{"proposal 1", hs0, b1, 0, q0, b0, b0},
+		{"proposal dup", hs0, bf0, 0, q0, b0, b0},
+		{"proposal 2", hs0, b2, 0, q1, b0, b0},
+		{"proposal 3", hs1, b3, 0, q2, b1, b0},
+		{"proposal 4", hs2, b4, 1, q3, b2, b1},
+		{"not three chain", hs0, bb5, 0, qq4, bb3, b0},
+		{"exec debts", hs0, bb6, 3, qq5, bb4, bb3},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			driver := new(MockDriver)
 			tt.hs.driver = driver
-			if tt.willVote {
-				driver.On("VoteBlock", tt.bNew).Once()
-			}
 			if tt.execCount > 0 {
 				driver.On("Execute", mock.Anything).Times(tt.execCount)
 			}
-			tt.hs.OnReceiveProposal(tt.bNew)
+			tt.hs.Update(tt.bNew)
 
 			assert := assert.New(t)
 			driver.AssertExpectations(t)
-			if tt.willVote {
-				assert.Equal(tt.bNew.Height(), tt.hs.GetVHeight())
-			}
 			assert.Equal(tt.qcHigh, tt.hs.GetQCHigh())
 			assert.Equal(tt.bLock, tt.hs.GetBLock())
 			assert.Equal(tt.bExec, tt.hs.GetBExec())

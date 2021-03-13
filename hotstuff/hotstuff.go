@@ -46,12 +46,13 @@ func (hs *Hotstuff) OnReceiveVote(v Vote) {
 	}
 }
 
-// UpdateQCHigh replaces qcHigh if the block of given qc is higher than the qcHigh block
-func (hs *Hotstuff) UpdateQCHigh(qc QC) {
-	if CmpBlockHeight(qc.Block(), hs.GetQCHigh().Block()) == 1 {
-		hs.setQCHigh(qc)
-		hs.setBLeaf(qc.Block())
+// OnReceiveProposal is called when a new proposal is received
+func (hs *Hotstuff) OnReceiveProposal(bNew Block) {
+	if hs.CanVote(bNew) {
+		hs.driver.VoteBlock(bNew)
+		hs.setVHeight(bNew.Height())
 	}
+	hs.Update(bNew)
 }
 
 // CanVote returns true if the hotstuff instance can vote the given block
@@ -78,23 +79,15 @@ func (hs *Hotstuff) CheckLivenessRule(bNew Block) bool {
 	return CmpBlockHeight(bNew.Justify().Block(), hs.GetBLock()) == 1
 }
 
-// OnReceiveProposal is called when a new proposal is received
-func (hs *Hotstuff) OnReceiveProposal(bNew Block) {
-	if hs.CanVote(bNew) {
-		hs.driver.VoteBlock(bNew)
-		hs.setVHeight(bNew.Height())
-	}
-	hs.update(bNew)
-}
-
-func (hs *Hotstuff) update(bNew Block) {
+// Update perform three chain consensus phases
+func (hs *Hotstuff) Update(bNew Block) {
 	b, b1, b2 := GetJustifyBlocks(bNew)
-	hs.UpdateQCHigh(bNew.Justify())
+	hs.UpdateQCHigh(bNew.Justify()) // precommit phase for b2
 	if CmpBlockHeight(b1, hs.GetBLock()) == 1 {
-		hs.setBLock(b1)
+		hs.setBLock(b1) // commit phase for b1
 	}
 	if IsThreeChain(b, b1, b2) {
-		hs.onCommit(b)
+		hs.onCommit(b) // decide phase for b
 		hs.setBExec(b)
 	}
 }
@@ -107,5 +100,13 @@ func (hs *Hotstuff) onCommit(b Block) {
 
 	} else if !hs.GetBExec().Equal(b) {
 		panic(fmt.Sprintf("hotstuff safety breached!!!\n%+v\n%+v\n", b, hs.GetBExec()))
+	}
+}
+
+// UpdateQCHigh replaces qcHigh if the block of given qc is higher than the qcHigh block
+func (hs *Hotstuff) UpdateQCHigh(qc QC) {
+	if CmpBlockHeight(qc.Block(), hs.GetQCHigh().Block()) == 1 {
+		hs.setQCHigh(qc)
+		hs.setBLeaf(qc.Block())
 	}
 }
