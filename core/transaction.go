@@ -15,6 +15,7 @@ import (
 // errors
 var (
 	ErrInvalidTxHash = errors.New("invalid tx hash")
+	ErrNilTx         = errors.New("nil tx")
 )
 
 // Transaction type
@@ -22,11 +23,12 @@ type Transaction struct {
 	data *core_pb.Transaction
 }
 
-// NewTransaction creates tx from pb data
-func NewTransaction(data *core_pb.Transaction) *Transaction {
-	return &Transaction{
-		data: data,
+// newTransaction creates tx from pb data
+func newTransaction(data *core_pb.Transaction) (*Transaction, error) {
+	if data == nil {
+		return nil, ErrNilTx
 	}
+	return &Transaction{data}, nil
 }
 
 // UnmarshalTransaction decodes transaction from bytes
@@ -35,7 +37,7 @@ func UnmarshalTransaction(b []byte) (*Transaction, error) {
 	if err := proto.Unmarshal(b, data); err != nil {
 		return nil, err
 	}
-	return NewTransaction(data), nil
+	return newTransaction(data)
 }
 
 // Marshal encodes transaction as bytes
@@ -58,9 +60,9 @@ func (tx *Transaction) Validate() error {
 	if !bytes.Equal(tx.Sum(), tx.data.Hash) {
 		return ErrInvalidTxHash
 	}
-	sig, err := NewSignature(&core_pb.Signature{
+	sig, err := newSignature(&core_pb.Signature{
 		PubKey: tx.data.Sender,
-		Sig:    tx.data.Signature,
+		Value:  tx.data.Signature,
 	})
 	if err != nil {
 		return err
@@ -79,7 +81,11 @@ func UnmarshalTxList(b []byte) ([]*Transaction, error) {
 	}
 	txs := make([]*Transaction, len(data.List))
 	for i, txData := range data.List {
-		txs[i] = NewTransaction(txData)
+		tx, err := newTransaction(txData)
+		if err != nil {
+			return nil, err
+		}
+		txs[i] = tx
 	}
 	return txs, nil
 }

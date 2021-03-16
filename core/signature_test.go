@@ -21,6 +21,8 @@ func TestSignVerify(t *testing.T) {
 	privKey, err := NewPrivateKey(priv)
 	assert.NoError(err)
 
+	assert.Equal(pubKey, privKey.PublicKey())
+
 	msg := []byte("message to be signed")
 
 	sig := privKey.Sign(msg)
@@ -29,6 +31,5 @@ func TestSignVerify(t *testing.T) {
 	assert.True(sig.Verify(msg))
 	assert.False(sig.Verify([]byte("tampered message")))
 
-	assert.True(pubKey.Equal(sig.PublicKey()))
-	assert.True(pubKey.Equal(privKey.PublicKey()))
+	assert.Equal(pubKey, sig.PublicKey())
 }

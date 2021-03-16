@@ -10,7 +10,7 @@ option go_package = ".;core_pb";
 message Block {
 	bytes hash = 1;
 	uint64 height = 2;
-	bytes parent = 3;
+	bytes parentHash = 3;
 	bytes proposer = 4;
 	QuorumCert quorumCert = 5;
 	uint64 execHeight = 6;
@@ -20,16 +20,16 @@ message Block {
 
 message Signature {
 	bytes pubKey = 1;
-	bytes sig = 2;
+	bytes value = 2;
 }
 
 message QuorumCert {
-	bytes block = 1;
+	bytes blockHash = 1;
 	repeated Signature signatures = 2;
 }
 
 message Vote {
-	bytes block = 1;
+	bytes blockHash = 1;
 	Signature signature = 2;
 }
 
@@ -40,16 +40,13 @@ message Transaction {
 	bytes sender = 4;
 	bytes codeAddr = 5;
 	bytes data = 6;
-	ExecInfo execInfo = 7;
+	Commit commit = 7;
 
-	message ExecInfo {
-		bytes block = 1;
+	message Commit {
+		bytes blockHash = 1;
 		uint64 blockHeight = 2;
-		Error error = 3;
-
-		message Error {
-			string message = 1;
-		}
+		string error = 3;
+		uint64 elapsed = 4;
 	}
 }
 

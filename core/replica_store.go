@@ -6,10 +6,7 @@ package core
 // ReplicaStore godoc
 type ReplicaStore interface {
 	ReplicaCount() int
-
 	IsReplica(pubKey *PublicKey) bool
-
 	GetReplica(idx int) []byte
-
 	GetReplicaIndex(pubKey *PublicKey) (int, bool)
 }

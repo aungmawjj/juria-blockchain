@@ -15,35 +15,6 @@ var (
 	ErrInvalidKeySize = errors.New("invalid key size")
 )
 
-// Signature type
-type Signature struct {
-	data   *core_pb.Signature
-	pubKey *PublicKey
-}
-
-// NewSignature creates signature from pb data
-func NewSignature(data *core_pb.Signature) (*Signature, error) {
-	sig := &Signature{
-		data: data,
-	}
-	var err error
-	sig.pubKey, err = NewPublicKey(data.PubKey)
-	if err != nil {
-		return nil, err
-	}
-	return sig, nil
-}
-
-// Verify verifies the signature
-func (sig *Signature) Verify(msg []byte) bool {
-	return ed25519.Verify(sig.pubKey.key, msg, sig.data.Sig)
-}
-
-// PublicKey returns corresponding public key
-func (sig *Signature) PublicKey() *PublicKey {
-	return sig.pubKey
-}
-
 // PublicKey type
 type PublicKey struct {
 	key    ed25519.PublicKey
@@ -105,9 +76,9 @@ func (priv *PrivateKey) PublicKey() *PublicKey {
 
 // Sign signs the message
 func (priv *PrivateKey) Sign(msg []byte) *Signature {
-	sig, _ := NewSignature(
+	sig, _ := newSignature(
 		&core_pb.Signature{
-			Sig:    ed25519.Sign(priv.key, msg),
+			Value:  ed25519.Sign(priv.key, msg),
 			PubKey: priv.pubKey.Bytes(),
 		},
 	)

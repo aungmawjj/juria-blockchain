@@ -4,8 +4,15 @@
 package core
 
 import (
+	"errors"
+
 	core_pb "github.com/aungmawjj/juria-blockchain/core/pb"
 	"google.golang.org/protobuf/proto"
+)
+
+// errors
+var (
+	ErrNilVote = errors.New("nil vote")
 )
 
 // Vote type
@@ -13,11 +20,12 @@ type Vote struct {
 	data *core_pb.Vote
 }
 
-// NewVote creates vote from pb data
-func NewVote(data *core_pb.Vote) *Vote {
-	return &Vote{
-		data: data,
+// newVote creates vote from pb data
+func newVote(data *core_pb.Vote) (*Vote, error) {
+	if data == nil {
+		return nil, ErrNilVote
 	}
+	return &Vote{data}, nil
 }
 
 // UnmarshalVote decodes vote from bytes
@@ -26,7 +34,7 @@ func UnmarshalVote(b []byte) (*Vote, error) {
 	if err := proto.Unmarshal(b, data); err != nil {
 		return nil, err
 	}
-	return NewVote(data), nil
+	return newVote(data)
 }
 
 // Marshal encodes vote as bytes
@@ -36,18 +44,18 @@ func (vote *Vote) Marshal() ([]byte, error) {
 
 // Validate vote
 func (vote *Vote) Validate(rs ReplicaStore) error {
-	if vote.data.Signature == nil {
-		return ErrNilSig
-	}
-	sig, err := NewSignature(vote.data.Signature)
+	sig, err := newSignature(vote.data.Signature)
 	if err != nil {
 		return err
 	}
 	if !rs.IsReplica(sig.PublicKey()) {
 		return ErrInvalidReplica
 	}
-	if !sig.Verify(vote.data.Block) {
+	if !sig.Verify(vote.data.BlockHash) {
 		return ErrInvalidSig
 	}
 	return nil
 }
+
+// BlockHash of vote
+func (vote *Vote) BlockHash() []byte { return vote.data.BlockHash }

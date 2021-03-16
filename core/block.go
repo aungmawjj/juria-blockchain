@@ -15,6 +15,7 @@ import (
 // errors
 var (
 	ErrInvalidBlockHash = errors.New("invalid block hash")
+	ErrNilBlock         = errors.New("nil block")
 )
 
 // Block type
@@ -23,13 +24,16 @@ type Block struct {
 	quorumCert *QuorumCert
 }
 
-// NewBlock creates Block from pb data
-func NewBlock(data *core_pb.Block) *Block {
-	blk := &Block{
-		data: data,
+// newBlock creates Block from pb data
+func newBlock(data *core_pb.Block) (*Block, error) {
+	if data == nil {
+		return nil, ErrNilBlock
 	}
-	blk.quorumCert = NewQuorumCert(data.QuorumCert)
-	return blk
+	qc, err := newQuorumCert(data.QuorumCert)
+	if err != nil {
+		return nil, err
+	}
+	return &Block{data, qc}, nil
 }
 
 // UnmarshalBlock decodes block from bytes
@@ -38,7 +42,7 @@ func UnmarshalBlock(b []byte) (*Block, error) {
 	if err := proto.Unmarshal(b, data); err != nil {
 		return nil, err
 	}
-	return NewBlock(data), nil
+	return newBlock(data)
 }
 
 // Marshal encodes blk as bytes
@@ -50,10 +54,10 @@ func (blk *Block) Marshal() ([]byte, error) {
 func (blk *Block) Sum() []byte {
 	h := sha3.New256()
 	h.Write(uint64ToBytes(blk.data.Height))
-	h.Write(blk.data.Parent)
+	h.Write(blk.data.ParentHash)
 	h.Write(blk.data.Proposer)
 	if blk.data.QuorumCert != nil {
-		h.Write(blk.data.QuorumCert.Block) // qc reference block hash
+		h.Write(blk.data.QuorumCert.BlockHash) // qc reference block hash
 	}
 	h.Write(uint64ToBytes(blk.data.ExecHeight))
 	h.Write(blk.data.StateRoot)
@@ -76,8 +80,65 @@ func (blk *Block) Validate(rs ReplicaStore) error {
 
 // Vote creates a vote for block
 func (blk *Block) Vote(priv *PrivateKey) *Vote {
-	return NewVote(&core_pb.Vote{
-		Block:     blk.data.Hash,
+	vote, _ := newVote(&core_pb.Vote{
+		BlockHash: blk.data.Hash,
 		Signature: priv.Sign(blk.data.Hash).data,
 	})
+	return vote
+}
+
+func (blk *Block) setData() *Block {
+	if blk.data == nil {
+		blk.data = new(core_pb.Block)
+	}
+	return blk
+}
+
+func (blk *Block) SetHash(val []byte) *Block {
+	blk.setData()
+	blk.data.Hash = val
+	return blk
+}
+
+func (blk *Block) SetHeight(val uint64) *Block {
+	blk.setData()
+	blk.data.Height = val
+	return blk
+}
+
+func (blk *Block) SetParentHash(val []byte) *Block {
+	blk.setData()
+	blk.data.ParentHash = val
+	return blk
+}
+
+func (blk *Block) SetProposer(val []byte) *Block {
+	blk.setData()
+	blk.data.Proposer = val
+	return blk
+}
+
+func (blk *Block) SetQuorumCert(val *QuorumCert) *Block {
+	blk.setData()
+	blk.quorumCert = val
+	blk.data.QuorumCert = val.data
+	return blk
+}
+
+func (blk *Block) SetExecHeight(val uint64) *Block {
+	blk.setData()
+	blk.data.ExecHeight = val
+	return blk
+}
+
+func (blk *Block) SetStateRoot(val []byte) *Block {
+	blk.setData()
+	blk.data.StateRoot = val
+	return blk
+}
+
+func (blk *Block) SetTransactions(val [][]byte) *Block {
+	blk.setData()
+	blk.data.Transactions = val
+	return blk
 }
