@@ -25,31 +25,18 @@ type QuorumCert struct {
 	data *core_pb.QuorumCert
 }
 
-// newQuorumCert creates QC from pb data
-func newQuorumCert(data *core_pb.QuorumCert) (*QuorumCert, error) {
-	if data == nil {
-		return nil, ErrNilQC
+func NewQuorumCert() *QuorumCert {
+	return &QuorumCert{
+		data: new(core_pb.QuorumCert),
 	}
-	return &QuorumCert{data}, nil
-}
-
-// UnmarshalQuorumCert decodes quorum cert from bytes
-func UnmarshalQuorumCert(b []byte) (*QuorumCert, error) {
-	data := new(core_pb.QuorumCert)
-	if err := proto.Unmarshal(b, data); err != nil {
-		return nil, err
-	}
-	return newQuorumCert(data)
-}
-
-// Marshal encodes quorum cert as bytes
-func (qc *QuorumCert) Marshal() ([]byte, error) {
-	return proto.Marshal(qc.data)
 }
 
 // Validate godoc
 func (qc *QuorumCert) Validate(rs ReplicaStore) error {
-	sigs, err := makeSigList(qc.data.Signatures)
+	if qc.data == nil {
+		return ErrNilQC
+	}
+	sigs, err := newSigList(qc.data.Signatures)
 	if err != nil {
 		return err
 	}
@@ -66,4 +53,33 @@ func (qc *QuorumCert) Validate(rs ReplicaStore) error {
 		return ErrInvalidSig
 	}
 	return nil
+}
+
+// newQuorumCert creates QC from pb data
+func (qc *QuorumCert) setData(data *core_pb.QuorumCert) *QuorumCert {
+	qc.data = data
+	return qc
+}
+
+func (qc *QuorumCert) Build(votes []*Vote) *QuorumCert {
+	qc.data.BlockHash = votes[0].data.BlockHash
+	qc.data.Signatures = make([]*core_pb.Signature, len(votes))
+	for i, vote := range votes {
+		qc.data.Signatures[i] = vote.data.Signature
+	}
+	return qc
+}
+
+// Marshal encodes quorum cert as bytes
+func (qc *QuorumCert) Marshal() ([]byte, error) {
+	return proto.Marshal(qc.data)
+}
+
+// UnmarshalQuorumCert decodes quorum cert from bytes
+func UnmarshalQuorumCert(b []byte) (*QuorumCert, error) {
+	data := new(core_pb.QuorumCert)
+	if err := proto.Unmarshal(b, data); err != nil {
+		return nil, err
+	}
+	return NewQuorumCert().setData(data), nil
 }

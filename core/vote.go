@@ -20,30 +20,17 @@ type Vote struct {
 	data *core_pb.Vote
 }
 
-// newVote creates vote from pb data
-func newVote(data *core_pb.Vote) (*Vote, error) {
-	if data == nil {
-		return nil, ErrNilVote
+func NewVote() *Vote {
+	return &Vote{
+		data: new(core_pb.Vote),
 	}
-	return &Vote{data}, nil
-}
-
-// UnmarshalVote decodes vote from bytes
-func UnmarshalVote(b []byte) (*Vote, error) {
-	data := new(core_pb.Vote)
-	if err := proto.Unmarshal(b, data); err != nil {
-		return nil, err
-	}
-	return newVote(data)
-}
-
-// Marshal encodes vote as bytes
-func (vote *Vote) Marshal() ([]byte, error) {
-	return proto.Marshal(vote.data)
 }
 
 // Validate vote
 func (vote *Vote) Validate(rs ReplicaStore) error {
+	if vote.data == nil {
+		return ErrNilVote
+	}
 	sig, err := newSignature(vote.data.Signature)
 	if err != nil {
 		return err
@@ -57,5 +44,24 @@ func (vote *Vote) Validate(rs ReplicaStore) error {
 	return nil
 }
 
+func (vote *Vote) setData(data *core_pb.Vote) *Vote {
+	vote.data = data
+	return vote
+}
+
 // BlockHash of vote
 func (vote *Vote) BlockHash() []byte { return vote.data.BlockHash }
+
+// Marshal encodes vote as bytes
+func (vote *Vote) Marshal() ([]byte, error) {
+	return proto.Marshal(vote.data)
+}
+
+// UnmarshalVote decodes vote from bytes
+func UnmarshalVote(b []byte) (*Vote, error) {
+	data := new(core_pb.Vote)
+	if err := proto.Unmarshal(b, data); err != nil {
+		return nil, err
+	}
+	return NewVote().setData(data), nil
+}

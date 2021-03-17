@@ -24,30 +24,10 @@ type Block struct {
 	quorumCert *QuorumCert
 }
 
-// newBlock creates Block from pb data
-func newBlock(data *core_pb.Block) (*Block, error) {
-	if data == nil {
-		return nil, ErrNilBlock
+func NewBlock() *Block {
+	return &Block{
+		data: new(core_pb.Block),
 	}
-	qc, err := newQuorumCert(data.QuorumCert)
-	if err != nil {
-		return nil, err
-	}
-	return &Block{data, qc}, nil
-}
-
-// UnmarshalBlock decodes block from bytes
-func UnmarshalBlock(b []byte) (*Block, error) {
-	data := new(core_pb.Block)
-	if err := proto.Unmarshal(b, data); err != nil {
-		return nil, err
-	}
-	return newBlock(data)
-}
-
-// Marshal encodes blk as bytes
-func (blk *Block) Marshal() ([]byte, error) {
-	return proto.Marshal(blk.data)
 }
 
 // Sum returns sha3 sum of block
@@ -69,6 +49,9 @@ func (blk *Block) Sum() []byte {
 
 // Validate block
 func (blk *Block) Validate(rs ReplicaStore) error {
+	if blk.data == nil {
+		return ErrNilBlock
+	}
 	if err := blk.quorumCert.Validate(rs); err != nil {
 		return err
 	}
@@ -80,65 +63,78 @@ func (blk *Block) Validate(rs ReplicaStore) error {
 
 // Vote creates a vote for block
 func (blk *Block) Vote(priv *PrivateKey) *Vote {
-	vote, _ := newVote(&core_pb.Vote{
+	return NewVote().setData(&core_pb.Vote{
 		BlockHash: blk.data.Hash,
 		Signature: priv.Sign(blk.data.Hash).data,
 	})
-	return vote
 }
 
-func (blk *Block) setData() *Block {
-	if blk.data == nil {
-		blk.data = new(core_pb.Block)
-	}
+func (blk *Block) setData(data *core_pb.Block) *Block {
+	blk.data = data
+	blk.quorumCert = NewQuorumCert().setData(data.QuorumCert)
 	return blk
 }
 
 func (blk *Block) SetHash(val []byte) *Block {
-	blk.setData()
 	blk.data.Hash = val
 	return blk
 }
 
 func (blk *Block) SetHeight(val uint64) *Block {
-	blk.setData()
 	blk.data.Height = val
 	return blk
 }
 
 func (blk *Block) SetParentHash(val []byte) *Block {
-	blk.setData()
 	blk.data.ParentHash = val
 	return blk
 }
 
 func (blk *Block) SetProposer(val []byte) *Block {
-	blk.setData()
 	blk.data.Proposer = val
 	return blk
 }
 
 func (blk *Block) SetQuorumCert(val *QuorumCert) *Block {
-	blk.setData()
 	blk.quorumCert = val
 	blk.data.QuorumCert = val.data
 	return blk
 }
 
 func (blk *Block) SetExecHeight(val uint64) *Block {
-	blk.setData()
 	blk.data.ExecHeight = val
 	return blk
 }
 
 func (blk *Block) SetStateRoot(val []byte) *Block {
-	blk.setData()
 	blk.data.StateRoot = val
 	return blk
 }
 
 func (blk *Block) SetTransactions(val [][]byte) *Block {
-	blk.setData()
 	blk.data.Transactions = val
 	return blk
+}
+
+func (blk *Block) Hash() []byte            { return blk.data.Hash }
+func (blk *Block) Height() uint64          { return blk.data.Height }
+func (blk *Block) ParentHash() []byte      { return blk.data.ParentHash }
+func (blk *Block) Proposer() []byte        { return blk.data.Proposer }
+func (blk *Block) QuorumCert() *QuorumCert { return blk.quorumCert }
+func (blk *Block) ExecHeight() uint64      { return blk.data.ExecHeight }
+func (blk *Block) StateRoot() []byte       { return blk.data.StateRoot }
+func (blk *Block) Transactions() [][]byte  { return blk.data.Transactions }
+
+// Marshal encodes blk as bytes
+func (blk *Block) Marshal() ([]byte, error) {
+	return proto.Marshal(blk.data)
+}
+
+// UnmarshalBlock decodes block from bytes
+func UnmarshalBlock(b []byte) (*Block, error) {
+	data := new(core_pb.Block)
+	if err := proto.Unmarshal(b, data); err != nil {
+		return nil, err
+	}
+	return NewBlock().setData(data), nil
 }

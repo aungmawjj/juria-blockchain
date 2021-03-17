@@ -76,11 +76,11 @@ func (priv *PrivateKey) PublicKey() *PublicKey {
 
 // Sign signs the message
 func (priv *PrivateKey) Sign(msg []byte) *Signature {
-	sig, _ := newSignature(
-		&core_pb.Signature{
+	return &Signature{
+		data: &core_pb.Signature{
 			Value:  ed25519.Sign(priv.key, msg),
 			PubKey: priv.pubKey.Bytes(),
 		},
-	)
-	return sig
+		pubKey: priv.pubKey,
+	}
 }

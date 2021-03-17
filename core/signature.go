@@ -15,7 +15,6 @@ type Signature struct {
 	pubKey *PublicKey
 }
 
-// newSignature creates signature from pb data
 func newSignature(data *core_pb.Signature) (*Signature, error) {
 	if data == nil {
 		return nil, ErrNilSig
@@ -39,7 +38,7 @@ func (sig *Signature) PublicKey() *PublicKey {
 
 type sigList []*Signature
 
-func makeSigList(pbsigs []*core_pb.Signature) (sigList, error) {
+func newSigList(pbsigs []*core_pb.Signature) (sigList, error) {
 	sigs := make([]*Signature, len(pbsigs))
 	for i, data := range pbsigs {
 		sig, err := newSignature(data)

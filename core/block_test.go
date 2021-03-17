@@ -21,7 +21,7 @@ func TestBlock_Vote(t *testing.T) {
 	privKey, err := NewPrivateKey(priv)
 	assert.NoError(err)
 
-	block := new(Block).SetHash([]byte("hash"))
+	block := NewBlock().SetHash([]byte("hash"))
 
 	vote := block.Vote(privKey)
 	assert.Equal([]byte("hash"), vote.BlockHash())

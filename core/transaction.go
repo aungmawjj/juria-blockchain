@@ -23,26 +23,10 @@ type Transaction struct {
 	data *core_pb.Transaction
 }
 
-// newTransaction creates tx from pb data
-func newTransaction(data *core_pb.Transaction) (*Transaction, error) {
-	if data == nil {
-		return nil, ErrNilTx
+func NewTransaction() *Transaction {
+	return &Transaction{
+		data: new(core_pb.Transaction),
 	}
-	return &Transaction{data}, nil
-}
-
-// UnmarshalTransaction decodes transaction from bytes
-func UnmarshalTransaction(b []byte) (*Transaction, error) {
-	data := new(core_pb.Transaction)
-	if err := proto.Unmarshal(b, data); err != nil {
-		return nil, err
-	}
-	return newTransaction(data)
-}
-
-// Marshal encodes transaction as bytes
-func (tx *Transaction) Marshal() ([]byte, error) {
-	return proto.Marshal(tx.data)
 }
 
 // Sum returns sha3 sum of transaction
@@ -57,6 +41,9 @@ func (tx *Transaction) Sum() []byte {
 
 // Validate transaction
 func (tx *Transaction) Validate() error {
+	if tx.data == nil {
+		return ErrNilTx
+	}
 	if !bytes.Equal(tx.Sum(), tx.data.Hash) {
 		return ErrInvalidTxHash
 	}
@@ -73,6 +60,25 @@ func (tx *Transaction) Validate() error {
 	return nil
 }
 
+func (tx *Transaction) setData(data *core_pb.Transaction) *Transaction {
+	tx.data = data
+	return tx
+}
+
+// Marshal encodes transaction as bytes
+func (tx *Transaction) Marshal() ([]byte, error) {
+	return proto.Marshal(tx.data)
+}
+
+// UnmarshalTransaction decodes transaction from bytes
+func UnmarshalTransaction(b []byte) (*Transaction, error) {
+	data := new(core_pb.Transaction)
+	if err := proto.Unmarshal(b, data); err != nil {
+		return nil, err
+	}
+	return NewTransaction().setData(data), nil
+}
+
 // UnmarshalTxList decodes tx list from bytes
 func UnmarshalTxList(b []byte) ([]*Transaction, error) {
 	data := new(core_pb.TxList)
@@ -81,11 +87,7 @@ func UnmarshalTxList(b []byte) ([]*Transaction, error) {
 	}
 	txs := make([]*Transaction, len(data.List))
 	for i, txData := range data.List {
-		tx, err := newTransaction(txData)
-		if err != nil {
-			return nil, err
-		}
-		txs[i] = tx
+		txs[i] = NewTransaction().setData(txData)
 	}
 	return txs, nil
 }
