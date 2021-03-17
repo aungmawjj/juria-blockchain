@@ -39,7 +39,7 @@ message Transaction {
 	uint64 nonce = 3;
 	bytes sender = 4;
 	bytes codeAddr = 5;
-	bytes data = 6;
+	bytes input = 6;
 	Commit commit = 7;
 
 	message Commit {

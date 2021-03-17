@@ -55,7 +55,7 @@ func (blk *Block) Validate(rs ReplicaStore) error {
 	if err := blk.quorumCert.Validate(rs); err != nil {
 		return err
 	}
-	if !bytes.Equal(blk.Sum(), blk.data.Hash) {
+	if !bytes.Equal(blk.Sum(), blk.Hash()) {
 		return ErrInvalidBlockHash
 	}
 	return nil
@@ -63,10 +63,12 @@ func (blk *Block) Validate(rs ReplicaStore) error {
 
 // Vote creates a vote for block
 func (blk *Block) Vote(priv *PrivateKey) *Vote {
-	return NewVote().setData(&core_pb.Vote{
-		BlockHash: blk.data.Hash,
-		Signature: priv.Sign(blk.data.Hash).data,
-	})
+	return &Vote{
+		data: &core_pb.Vote{
+			BlockHash: blk.data.Hash,
+			Signature: priv.Sign(blk.data.Hash).data,
+		},
+	}
 }
 
 func (blk *Block) setData(data *core_pb.Block) *Block {

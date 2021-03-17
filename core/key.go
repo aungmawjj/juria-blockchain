@@ -6,6 +6,7 @@ package core
 import (
 	"crypto/ed25519"
 	"errors"
+	"io"
 
 	core_pb "github.com/aungmawjj/juria-blockchain/core/pb"
 )
@@ -83,4 +84,10 @@ func (priv *PrivateKey) Sign(msg []byte) *Signature {
 		},
 		pubKey: priv.pubKey,
 	}
+}
+
+func GenerateKey(rand io.Reader) *PrivateKey {
+	_, priv, _ := ed25519.GenerateKey(rand)
+	privKey, _ := NewPrivateKey(priv)
+	return privKey
 }

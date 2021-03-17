@@ -35,7 +35,7 @@ func (tx *Transaction) Sum() []byte {
 	h.Write(uint64ToBytes(tx.data.Nonce))
 	h.Write(tx.data.Sender)
 	h.Write(tx.data.CodeAddr)
-	h.Write(tx.data.Data)
+	h.Write(tx.data.Input)
 	return h.Sum(nil)
 }
 
@@ -44,7 +44,7 @@ func (tx *Transaction) Validate() error {
 	if tx.data == nil {
 		return ErrNilTx
 	}
-	if !bytes.Equal(tx.Sum(), tx.data.Hash) {
+	if !bytes.Equal(tx.Sum(), tx.Hash()) {
 		return ErrInvalidTxHash
 	}
 	sig, err := newSignature(&core_pb.Signature{
@@ -64,6 +64,34 @@ func (tx *Transaction) setData(data *core_pb.Transaction) *Transaction {
 	tx.data = data
 	return tx
 }
+
+func (tx *Transaction) SetNonce(val uint64) *Transaction {
+	tx.data.Nonce = val
+	return tx
+}
+
+func (tx *Transaction) SetCodeAddr(val []byte) *Transaction {
+	tx.data.CodeAddr = val
+	return tx
+}
+
+func (tx *Transaction) SetInput(val []byte) *Transaction {
+	tx.data.Input = val
+	return tx
+}
+
+func (tx *Transaction) Sign(priv *PrivateKey) *Transaction {
+	tx.data.Sender = priv.PublicKey().key
+	tx.data.Hash = tx.Sum()
+	tx.data.Signature = priv.Sign(tx.data.Hash).data.Value
+	return tx
+}
+
+func (tx *Transaction) Hash() []byte     { return tx.data.Hash }
+func (tx *Transaction) Nonce() uint64    { return tx.data.Nonce }
+func (tx *Transaction) Sender() []byte   { return tx.data.Sender }
+func (tx *Transaction) CodeAddr() []byte { return tx.data.CodeAddr }
+func (tx *Transaction) Input() []byte    { return tx.data.Input }
 
 // Marshal encodes transaction as bytes
 func (tx *Transaction) Marshal() ([]byte, error) {

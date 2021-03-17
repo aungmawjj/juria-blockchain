@@ -20,12 +20,6 @@ type Vote struct {
 	data *core_pb.Vote
 }
 
-func NewVote() *Vote {
-	return &Vote{
-		data: new(core_pb.Vote),
-	}
-}
-
 // Validate vote
 func (vote *Vote) Validate(rs ReplicaStore) error {
 	if vote.data == nil {
@@ -44,11 +38,6 @@ func (vote *Vote) Validate(rs ReplicaStore) error {
 	return nil
 }
 
-func (vote *Vote) setData(data *core_pb.Vote) *Vote {
-	vote.data = data
-	return vote
-}
-
 // BlockHash of vote
 func (vote *Vote) BlockHash() []byte { return vote.data.BlockHash }
 
@@ -63,5 +52,5 @@ func UnmarshalVote(b []byte) (*Vote, error) {
 	if err := proto.Unmarshal(b, data); err != nil {
 		return nil, err
 	}
-	return NewVote().setData(data), nil
+	return &Vote{data}, nil
 }
