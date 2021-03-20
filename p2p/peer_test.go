@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aungmawjj/juria-blockchain/emitter"
+	"github.com/aungmawjj/juria-blockchain/util/emitter"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
@@ -22,14 +22,6 @@ type rwcLoopBack struct {
 func newRWCLoopBack() *rwcLoopBack {
 	r, w := io.Pipe()
 	return &rwcLoopBack{r, w, r}
-}
-
-type MockListener struct {
-	mock.Mock
-}
-
-func (m *MockListener) cb(e emitter.Event) {
-	m.Called(e)
 }
 
 func TestRWCLoopBack(t *testing.T) {
@@ -52,6 +44,14 @@ func TestRWCLoopBack(t *testing.T) {
 	rwc.Close()
 	_, err := rwc.Write(sent)
 	assert.Error(err)
+}
+
+type MockListener struct {
+	mock.Mock
+}
+
+func (m *MockListener) cb(e emitter.Event) {
+	m.Called(e)
 }
 
 func TestPeer_ReadWrite(t *testing.T) {

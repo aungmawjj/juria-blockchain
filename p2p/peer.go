@@ -10,7 +10,7 @@ import (
 	"sync"
 
 	"github.com/aungmawjj/juria-blockchain/core"
-	"github.com/aungmawjj/juria-blockchain/emitter"
+	"github.com/aungmawjj/juria-blockchain/util/emitter"
 	"github.com/multiformats/go-multiaddr"
 )
 

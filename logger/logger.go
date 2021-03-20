@@ -88,17 +88,8 @@ func Instance() Logger {
 	return myLogger
 }
 
-// Debug level
 func Debug(msg string, keyValues ...interface{}) { Instance().Debug(msg, keyValues) }
-
-// Info level
-func Info(msg string, keyValues ...interface{}) { Instance().Info(msg, keyValues) }
-
-// Warn level
-func Warn(msg string, keyValues ...interface{}) { Instance().Warn(msg, keyValues) }
-
-// Error level
+func Info(msg string, keyValues ...interface{})  { Instance().Info(msg, keyValues) }
+func Warn(msg string, keyValues ...interface{})  { Instance().Warn(msg, keyValues) }
 func Error(msg string, keyValues ...interface{}) { Instance().Error(msg, keyValues) }
-
-// Panic level
 func Panic(msg string, keyValues ...interface{}) { Instance().Panic(msg, keyValues) }
