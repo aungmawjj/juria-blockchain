@@ -58,10 +58,6 @@ func (p *Peer) Addr() multiaddr.Multiaddr {
 	return p.addr
 }
 
-func (p *Peer) String() string {
-	return p.pubKey.String()
-}
-
 // Status gogoc
 func (p *Peer) Status() PeerStatus {
 	p.statusMtx.RLock()
@@ -76,7 +72,10 @@ func (p *Peer) Disconnect() error {
 	defer p.statusMtx.Unlock()
 
 	p.status = PeerStatusDisconnected
-	return p.rwc.Close()
+	if p.rwc != nil {
+		return p.rwc.Close()
+	}
+	return nil
 }
 
 // SetConnecting gogoc

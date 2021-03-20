@@ -3,38 +3,42 @@
 
 package p2p
 
-import "sync"
+import (
+	"sync"
 
-type peerStore struct {
+	"github.com/aungmawjj/juria-blockchain/core"
+)
+
+type PeerStore struct {
 	peers map[string]*Peer
 	mtx   sync.RWMutex
 }
 
-func newPeerStore() *peerStore {
-	return &peerStore{
+func newPeerStore() *PeerStore {
+	return &PeerStore{
 		peers: make(map[string]*Peer),
 	}
 }
 
-func (s *peerStore) Load(key string) *Peer {
+func (s *PeerStore) Load(pubKey *core.PublicKey) *Peer {
 	s.mtx.RLock()
 	defer s.mtx.RUnlock()
-	return s.peers[key]
+	return s.peers[pubKey.String()]
 }
 
-func (s *peerStore) Store(p *Peer) {
+func (s *PeerStore) Store(p *Peer) {
 	s.mtx.Lock()
 	defer s.mtx.Unlock()
-	s.peers[p.String()] = p
+	s.peers[p.PublicKey().String()] = p
 }
 
-func (s *peerStore) Delete(key string) {
+func (s *PeerStore) Delete(pubKey *core.PublicKey) {
 	s.mtx.Lock()
 	defer s.mtx.Unlock()
-	delete(s.peers, key)
+	delete(s.peers, pubKey.String())
 }
 
-func (s *peerStore) List() []*Peer {
+func (s *PeerStore) List() []*Peer {
 	s.mtx.RLock()
 	defer s.mtx.RUnlock()
 	peers := make([]*Peer, 0, len(s.peers))
@@ -44,12 +48,12 @@ func (s *peerStore) List() []*Peer {
 	return peers
 }
 
-func (s *peerStore) LoadOrStore(p *Peer) (actual *Peer, loaded bool) {
+func (s *PeerStore) LoadOrStore(p *Peer) (actual *Peer, loaded bool) {
 	s.mtx.Lock()
 	defer s.mtx.Unlock()
-	if actual, loaded = s.peers[p.String()]; loaded {
+	if actual, loaded = s.peers[p.PublicKey().String()]; loaded {
 		return actual, loaded
 	}
-	s.peers[p.String()] = p
+	s.peers[p.PublicKey().String()] = p
 	return p, false
 }
