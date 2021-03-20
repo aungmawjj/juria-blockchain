@@ -9,6 +9,7 @@ import (
 
 	core_pb "github.com/aungmawjj/juria-blockchain/core/pb"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 )
 
 func TestBlock(t *testing.T) {
@@ -27,15 +28,16 @@ func TestBlock(t *testing.T) {
 	blk := NewBlock().
 		SetHeight(4).
 		SetParentHash([]byte{1}).
-		SetProposer([]byte{1}).
 		SetExecHeight(0).
 		SetQuorumCert(qc).
 		SetStateRoot([]byte{1}).
-		SetTransactions([][]byte{{1}})
+		SetTransactions([][]byte{{1}}).
+		Sign(privKey)
 
 	assertt.Equal(uint64(4), blk.Height())
 	assertt.Equal([]byte{1}, blk.ParentHash())
-	assertt.Equal([]byte{1}, blk.Proposer())
+	assertt.Equal(privKey.PublicKey(), blk.Proposer())
+	assertt.Equal(privKey.PublicKey().Bytes(), blk.data.Proposer)
 	assertt.Equal(uint64(0), blk.ExecHeight())
 	assertt.Equal(qc, blk.QuorumCert())
 	assertt.Equal([]byte{1}, blk.StateRoot())
@@ -44,18 +46,25 @@ func TestBlock(t *testing.T) {
 	rs := new(MockReplicaStore)
 	rs.On("ReplicaCount").Return(1)
 	rs.On("IsReplica", privKey.PublicKey()).Return(true)
+	rs.On("IsReplica", mock.Anything).Return(false)
 
-	assertt.Error(blk.Validate(rs)) // nil hash
-
-	blk.SetHash(blk.Sum())
 	bOk, err := blk.Marshal()
 	assertt.NoError(err)
 
-	blk.SetQuorumCert(NewQuorumCert())
-	blk.SetHash(blk.Sum())
-	bNilQC, _ := blk.Marshal()
+	blk.data.Signature = []byte("invalid sig")
+	bInvalidSig, _ := blk.Marshal()
 
-	blk.SetHash([]byte("invalid hash"))
+	_, priv, _ = ed25519.GenerateKey(nil)
+	privKey1, _ := NewPrivateKey(priv)
+
+	bInvalidReplica, _ := blk.Sign(privKey1).Marshal()
+
+	bNilQC, _ := blk.
+		SetQuorumCert(NewQuorumCert()).
+		Sign(privKey).
+		Marshal()
+
+	blk.data.Hash = []byte("invalid hash")
 	bInvalidHash, _ := blk.Marshal()
 
 	// test validate
@@ -66,6 +75,8 @@ func TestBlock(t *testing.T) {
 	}{
 		{"valid", bOk, false},
 		{"nil block", nil, true},
+		{"invalid sig", bInvalidSig, true},
+		{"invalid replica", bInvalidReplica, true},
 		{"nil qc", bNilQC, true},
 		{"invalid", bInvalidHash, true},
 	}
@@ -98,10 +109,10 @@ func TestBlock_Vote(t *testing.T) {
 	privKey, err := NewPrivateKey(priv)
 	assert.NoError(err)
 
-	blk := NewBlock().SetHash([]byte("hash"))
+	blk := NewBlock().Sign(privKey)
 
 	vote := blk.Vote(privKey)
-	assert.Equal([]byte("hash"), vote.BlockHash())
+	assert.Equal(blk.Hash(), vote.BlockHash())
 
 	rs := new(MockReplicaStore)
 	rs.On("IsReplica", pubKey).Return(true)

@@ -20,9 +20,12 @@ func TestVote(t *testing.T) {
 	assert.NoError(t, err)
 
 	_, priv, _ := ed25519.GenerateKey(nil)
+	proposer, _ := NewPrivateKey(priv)
+
+	_, priv, _ = ed25519.GenerateKey(nil)
 	privKey, _ := NewPrivateKey(priv)
 
-	blk := NewBlock().SetHash([]byte("hash"))
+	blk := NewBlock().Sign(proposer)
 	vote = blk.Vote(privKey)
 	vOk, _ := vote.Marshal()
 

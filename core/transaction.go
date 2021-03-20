@@ -20,7 +20,8 @@ var (
 
 // Transaction type
 type Transaction struct {
-	data *core_pb.Transaction
+	data   *core_pb.Transaction
+	sender *PublicKey
 }
 
 func NewTransaction() *Transaction {
@@ -62,6 +63,7 @@ func (tx *Transaction) Validate() error {
 
 func (tx *Transaction) setData(data *core_pb.Transaction) *Transaction {
 	tx.data = data
+	tx.sender, _ = NewPublicKey(tx.data.Sender)
 	return tx
 }
 
@@ -81,17 +83,18 @@ func (tx *Transaction) SetInput(val []byte) *Transaction {
 }
 
 func (tx *Transaction) Sign(priv *PrivateKey) *Transaction {
+	tx.sender = priv.PublicKey()
 	tx.data.Sender = priv.PublicKey().key
 	tx.data.Hash = tx.Sum()
 	tx.data.Signature = priv.Sign(tx.data.Hash).data.Value
 	return tx
 }
 
-func (tx *Transaction) Hash() []byte     { return tx.data.Hash }
-func (tx *Transaction) Nonce() uint64    { return tx.data.Nonce }
-func (tx *Transaction) Sender() []byte   { return tx.data.Sender }
-func (tx *Transaction) CodeAddr() []byte { return tx.data.CodeAddr }
-func (tx *Transaction) Input() []byte    { return tx.data.Input }
+func (tx *Transaction) Hash() []byte       { return tx.data.Hash }
+func (tx *Transaction) Nonce() uint64      { return tx.data.Nonce }
+func (tx *Transaction) Sender() *PublicKey { return tx.sender }
+func (tx *Transaction) CodeAddr() []byte   { return tx.data.CodeAddr }
+func (tx *Transaction) Input() []byte      { return tx.data.Input }
 
 // Marshal encodes transaction as bytes
 func (tx *Transaction) Marshal() ([]byte, error) {

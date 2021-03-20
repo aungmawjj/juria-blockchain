@@ -13,7 +13,7 @@ import (
 func TestSignVerify(t *testing.T) {
 	assert := assert.New(t)
 
-	pub, priv, err := ed25519.GenerateKey(nil)
+	pub, priv, _ := ed25519.GenerateKey(nil)
 
 	pubKey, err := NewPublicKey(pub)
 	assert.NoError(err)

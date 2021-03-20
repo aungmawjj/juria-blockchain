@@ -16,6 +16,7 @@ message Block {
 	uint64 execHeight = 6;
 	bytes stateRoot = 7;
 	repeated bytes transactions = 8; // transaction hashes
+	bytes signature = 9; // signature of proposer
 }
 
 message Signature {

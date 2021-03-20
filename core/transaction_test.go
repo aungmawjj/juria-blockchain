@@ -28,7 +28,8 @@ func TestTransaction(t *testing.T) {
 	assert.Equal(nonce, tx.Nonce())
 	assert.Equal([]byte{1}, tx.CodeAddr())
 	assert.Equal([]byte{2}, tx.Input())
-	assert.Equal(privKey.PublicKey().Bytes(), tx.Sender())
+	assert.Equal(privKey.PublicKey(), tx.Sender())
+	assert.Equal(privKey.PublicKey().Bytes(), tx.data.Sender)
 
 	assert.NoError(tx.Validate())
 

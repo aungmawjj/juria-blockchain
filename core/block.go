@@ -21,6 +21,7 @@ var (
 // Block type
 type Block struct {
 	data       *core_pb.Block
+	proposer   *PublicKey
 	quorumCert *QuorumCert
 }
 
@@ -58,6 +59,19 @@ func (blk *Block) Validate(rs ReplicaStore) error {
 	if !bytes.Equal(blk.Sum(), blk.Hash()) {
 		return ErrInvalidBlockHash
 	}
+	sig, err := newSignature(&core_pb.Signature{
+		PubKey: blk.data.Proposer,
+		Value:  blk.data.Signature,
+	})
+	if !rs.IsReplica(sig.PublicKey()) {
+		return ErrInvalidReplica
+	}
+	if err != nil {
+		return err
+	}
+	if !sig.Verify(blk.data.Hash) {
+		return ErrInvalidSig
+	}
 	return nil
 }
 
@@ -74,11 +88,7 @@ func (blk *Block) Vote(priv *PrivateKey) *Vote {
 func (blk *Block) setData(data *core_pb.Block) *Block {
 	blk.data = data
 	blk.quorumCert = NewQuorumCert().setData(data.QuorumCert)
-	return blk
-}
-
-func (blk *Block) SetHash(val []byte) *Block {
-	blk.data.Hash = val
+	blk.proposer, _ = NewPublicKey(blk.data.Proposer)
 	return blk
 }
 
@@ -89,11 +99,6 @@ func (blk *Block) SetHeight(val uint64) *Block {
 
 func (blk *Block) SetParentHash(val []byte) *Block {
 	blk.data.ParentHash = val
-	return blk
-}
-
-func (blk *Block) SetProposer(val []byte) *Block {
-	blk.data.Proposer = val
 	return blk
 }
 
@@ -118,10 +123,18 @@ func (blk *Block) SetTransactions(val [][]byte) *Block {
 	return blk
 }
 
+func (blk *Block) Sign(priv *PrivateKey) *Block {
+	blk.proposer = priv.PublicKey()
+	blk.data.Proposer = priv.PublicKey().key
+	blk.data.Hash = blk.Sum()
+	blk.data.Signature = priv.Sign(blk.data.Hash).data.Value
+	return blk
+}
+
 func (blk *Block) Hash() []byte            { return blk.data.Hash }
 func (blk *Block) Height() uint64          { return blk.data.Height }
 func (blk *Block) ParentHash() []byte      { return blk.data.ParentHash }
-func (blk *Block) Proposer() []byte        { return blk.data.Proposer }
+func (blk *Block) Proposer() *PublicKey    { return blk.proposer }
 func (blk *Block) QuorumCert() *QuorumCert { return blk.quorumCert }
 func (blk *Block) ExecHeight() uint64      { return blk.data.ExecHeight }
 func (blk *Block) StateRoot() []byte       { return blk.data.StateRoot }
