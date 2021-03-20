@@ -42,10 +42,12 @@ func TestTree_Root(t *testing.T) {
 	upd := &UpdateResult{
 		LeafCount: big.NewInt(2),
 		Height:    3,
-		Nodes: []*Node{
+		Leaves: []*Node{
 			{NewPosition(0, big.NewInt(0)), []byte{1}},
 			{NewPosition(0, big.NewInt(1)), []byte{2}},
 			{NewPosition(0, big.NewInt(2)), []byte{3}},
+		},
+		Branches: []*Node{
 			{NewPosition(1, big.NewInt(0)), []byte{4}},
 			{NewPosition(1, big.NewInt(1)), []byte{5}},
 			{NewPosition(2, big.NewInt(0)), []byte{6}},
@@ -53,7 +55,7 @@ func TestTree_Root(t *testing.T) {
 	}
 	store.CommitUpdate(upd)
 
-	assert.Equal(upd.Nodes[5], tree.Root())
+	assert.Equal(upd.Branches[2], tree.Root())
 }
 
 func TestTree_Update(t *testing.T) {

@@ -64,7 +64,10 @@ func (ms *MapStore) CommitUpdate(res *UpdateResult) {
 
 	ms.leafCount = res.LeafCount
 	ms.height = res.Height
-	for _, n := range res.Nodes {
+	for _, n := range res.Leaves {
+		ms.nodes[n.Position.String()] = n.Data
+	}
+	for _, n := range res.Branches {
 		ms.nodes[n.Position.String()] = n.Data
 	}
 }

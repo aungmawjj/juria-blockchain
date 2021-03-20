@@ -168,5 +168,6 @@ func (b *Block) IsEmpty() bool {
 type UpdateResult struct {
 	LeafCount *big.Int
 	Height    uint8
-	Nodes     []*Node
+	Leaves    []*Node
+	Branches  []*Node
 }

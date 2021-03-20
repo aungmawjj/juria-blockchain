@@ -49,7 +49,7 @@ func (tree *Tree) Root() *Node {
 // Update accepts new/modified tree leaves,
 // recompute the corresponding nodes until root node.
 func (tree *Tree) Update(leaves []*Node, newLeafCount *big.Int) *UpdateResult {
-	res := &UpdateResult{newLeafCount, tree.calc.Height(newLeafCount), leaves}
+	res := &UpdateResult{newLeafCount, tree.calc.Height(newLeafCount), leaves, make([]*Node, 0)}
 	nodes := leaves
 	for i := res.Height; i > 1; i-- {
 		bpmap, nbmap := tree.groupNodesByBlock(nodes)
@@ -63,7 +63,7 @@ func (tree *Tree) Update(leaves []*Node, newLeafCount *big.Int) *UpdateResult {
 			}
 			p := b.MakeParent()
 			parents = append(parents, p)
-			res.Nodes = append(res.Nodes, p)
+			res.Branches = append(res.Branches, p)
 		}
 		nodes = parents
 	}
@@ -86,10 +86,10 @@ func (tree *Tree) Verify(leaves []*Node) bool {
 		}
 	}
 	res := tree.Update(leaves, leafCount)
-	if len(res.Nodes) < 1 {
+	if len(res.Branches) < 1 {
 		return false
 	}
-	computedRoot := res.Nodes[len(res.Nodes)-1]
+	computedRoot := res.Branches[len(res.Branches)-1]
 	return bytes.Equal(root.Data, computedRoot.Data)
 }
 

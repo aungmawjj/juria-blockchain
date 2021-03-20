@@ -22,9 +22,11 @@ func TestMapStore(t *testing.T) {
 	upd := &UpdateResult{
 		LeafCount: big.NewInt(2),
 		Height:    2,
-		Nodes: []*Node{
+		Leaves: []*Node{
 			{NewPosition(0, big.NewInt(0)), []byte{1, 1}},
 			{NewPosition(0, big.NewInt(1)), []byte{2, 2}},
+		},
+		Branches: []*Node{
 			{NewPosition(1, big.NewInt(0)), []byte{3, 3}},
 		},
 	}
