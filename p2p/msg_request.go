@@ -58,6 +58,10 @@ type reqClient struct {
 }
 
 func (client *reqClient) makeRequest() (interface{}, error) {
+	if client.peer == nil {
+		return nil, errors.New("peer not found")
+	}
+
 	sub := client.peer.SubscribeMsg()
 	defer sub.Unsubscribe()
 
