@@ -63,7 +63,10 @@ func (host *Host) handleStream(s network.Stream) {
 	if err != nil {
 		return
 	}
-	peer, _ := host.peerStore.LoadOrStore(NewPeer(pubKey, s.Conn().RemoteMultiaddr()))
+	peer, loaded := host.peerStore.LoadOrStore(NewPeer(pubKey, s.Conn().RemoteMultiaddr()))
+	if !loaded && host.onAddedPeer != nil {
+		go host.onAddedPeer(peer)
+	}
 	if err := peer.SetConnecting(); err != nil {
 		s.Close()
 		return
@@ -109,7 +112,7 @@ func (host *Host) AddPeer(peer *Peer) {
 	go host.connectPeer(peer)
 }
 
-func (host *Host) SetNewPeerHandler(fn func(peer *Peer)) {
+func (host *Host) SetPeerAddedHandler(fn func(peer *Peer)) {
 	host.onAddedPeer = fn
 }
 

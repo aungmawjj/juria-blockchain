@@ -20,10 +20,8 @@ type Subscription struct {
 }
 
 // Listen invokes given function for each event
-func (s *Subscription) Listen(fn NewEventFunc) {
-	for e := range s.ch {
-		fn(e)
-	}
+func (s *Subscription) Events() <-chan Event {
+	return s.ch
 }
 
 // Unsubscribe stops getting new events

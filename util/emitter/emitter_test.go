@@ -23,8 +23,17 @@ func TestEmitter_Subscribe(t *testing.T) {
 	ln1 := new(MockListener)
 	ln2 := new(MockListener)
 
-	go e.Subscribe(0).Listen(ln1.CB)
-	go e.Subscribe(0).Listen(ln2.CB)
+	go func() {
+		for event := range e.Subscribe(0).Events() {
+			ln1.CB(event)
+		}
+	}()
+
+	go func() {
+		for event := range e.Subscribe(0).Events() {
+			ln2.CB(event)
+		}
+	}()
 
 	events := []string{"Hello", "World"}
 
@@ -48,8 +57,17 @@ func TestEmitter_Unsubscribe(t *testing.T) {
 	s1 := e.Subscribe(0)
 	s2 := e.Subscribe(0)
 
-	go s1.Listen(ln1.CB)
-	go s2.Listen(ln2.CB)
+	go func() {
+		for event := range s1.Events() {
+			ln1.CB(event)
+		}
+	}()
+
+	go func() {
+		for event := range s2.Events() {
+			ln2.CB(event)
+		}
+	}()
 
 	s1.Unsubscribe()
 

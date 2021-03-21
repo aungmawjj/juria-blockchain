@@ -55,11 +55,6 @@ message TxList {
   	repeated Transaction list = 1;
 }
 
-message ByteList {
+message HashList {
   	repeated bytes list = 1;
-}
-
-message KeyValue {
-  	bytes key = 1;
-  	bytes value = 2;
 }

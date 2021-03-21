@@ -110,8 +110,10 @@ func UnmarshalTransaction(b []byte) (*Transaction, error) {
 	return NewTransaction().setData(data), nil
 }
 
+type TxList []*Transaction
+
 // UnmarshalTxList decodes tx list from bytes
-func UnmarshalTxList(b []byte) ([]*Transaction, error) {
+func UnmarshalTxList(b []byte) (TxList, error) {
 	data := new(core_pb.TxList)
 	if err := proto.Unmarshal(b, data); err != nil {
 		return nil, err
@@ -123,12 +125,28 @@ func UnmarshalTxList(b []byte) ([]*Transaction, error) {
 	return txs, nil
 }
 
-// MarshalTxList encodes tx list as bytes
-func MarshalTxList(txs []*Transaction) ([]byte, error) {
+// Marshal encodes tx list as bytes
+func (txs TxList) Marshal() ([]byte, error) {
 	data := new(core_pb.TxList)
 	data.List = make([]*core_pb.Transaction, len(txs))
 	for i, tx := range txs {
 		data.List[i] = tx.data
 	}
+	return proto.Marshal(data)
+}
+
+type HashList [][]byte
+
+func UnmarshalHashList(b []byte) (HashList, error) {
+	data := new(core_pb.HashList)
+	if err := proto.Unmarshal(b, data); err != nil {
+		return nil, err
+	}
+	return data.List, nil
+}
+
+func (hl HashList) Marshal() ([]byte, error) {
+	data := new(core_pb.HashList)
+	data.List = hl
 	return proto.Marshal(data)
 }

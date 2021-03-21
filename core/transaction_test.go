@@ -59,10 +59,11 @@ func TestTxList(t *testing.T) {
 
 	assert := assert.New(t)
 
-	b, err := MarshalTxList([]*Transaction{tx1, tx2})
+	var txs TxList = []*Transaction{tx1, tx2}
+	b, err := txs.Marshal()
 	assert.NoError(err)
 
-	txs, err := UnmarshalTxList(b)
+	txs, err = UnmarshalTxList(b)
 	assert.NoError(err)
 
 	assert.Equal(2, len(txs))

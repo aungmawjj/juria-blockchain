@@ -1,0 +1,25 @@
+// Copyright (C) 2020 Aung Maw
+// Licensed under the GNU General Public License v3.0
+
+syntax = "proto3";
+
+package p2p.pb;
+
+option go_package = ".;p2p_pb";
+
+message Message {
+	Type type = 1;
+	bytes data = 2;
+	uint32 seq = 3;
+	string error  = 4; // response error
+
+	enum Type {
+		Proposal = 0;
+		Vote  = 1;
+		NewView = 2;
+		TxList = 3;
+		Response = 4;
+		BlockReq = 5;
+		TxListReq = 6;
+	}
+}

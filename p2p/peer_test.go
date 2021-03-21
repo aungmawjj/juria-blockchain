@@ -50,7 +50,7 @@ type MockListener struct {
 	mock.Mock
 }
 
-func (m *MockListener) cb(e emitter.Event) {
+func (m *MockListener) CB(e emitter.Event) {
 	m.Called(e)
 }
 
@@ -67,7 +67,12 @@ func TestPeer_ReadWrite(t *testing.T) {
 	mln := new(MockListener)
 	mln.On("cb", mock.Anything).Once()
 
-	go sub.Listen(mln.cb)
+	go func() {
+		for event := range sub.Events() {
+			mln.CB(event)
+		}
+	}()
+
 	assert.NoError(p.WriteMsg(msg))
 
 	time.Sleep(time.Millisecond)
