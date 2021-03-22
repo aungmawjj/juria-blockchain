@@ -4,6 +4,8 @@
 package p2p
 
 import (
+	"bytes"
+	"errors"
 	"testing"
 	"time"
 
@@ -161,20 +163,20 @@ func TestMsgService_BroadcastTxList(t *testing.T) {
 
 	svc, raws, _ := setupMsgServiceWithLoopBackPeers()
 	sub := svc.SubscribeTxList(5)
-	var recvTxList core.TxList
+	var recvTxs core.TxList
 	var recvCount int
 	go func() {
 		for e := range sub.Events() {
 			recvCount++
-			recvTxList = e.(core.TxList)
+			recvTxs = e.(core.TxList)
 		}
 	}()
 
-	txList := core.TxList{
+	txs := core.TxList{
 		core.NewTransaction().SetNonce(1),
 		core.NewTransaction().SetNonce(2),
 	}
-	err := svc.BroadcastTxList(txList)
+	err := svc.BroadcastTxList(txs)
 
 	if !assert.NoError(err) {
 		return
@@ -190,8 +192,52 @@ func TestMsgService_BroadcastTxList(t *testing.T) {
 	assert.Equal(p2p_pb.Message_TxList, recvMsg.Type)
 
 	assert.Equal(2, recvCount)
-	if assert.NotNil(recvTxList) {
-		assert.Equal(txList[0].Nonce(), recvTxList[0].Nonce())
-		assert.Equal(txList[1].Nonce(), recvTxList[1].Nonce())
+	if assert.NotNil(recvTxs) {
+		assert.Equal(txs[0].Nonce(), recvTxs[0].Nonce())
+		assert.Equal(txs[1].Nonce(), recvTxs[1].Nonce())
+	}
+}
+
+func TestMsgService_RequestBlock(t *testing.T) {
+	assert := assert.New(t)
+
+	svc, _, peers := setupMsgServiceWithLoopBackPeers()
+
+	blk := core.NewBlock().SetHeight(10).Sign(core.GenerateKey(nil))
+	blkReqHandler := func(hash []byte) (*core.Block, error) {
+		if bytes.Equal(blk.Hash(), hash) {
+			return blk, nil
+		}
+		return nil, errors.New("block not found")
+	}
+	svc.SetBlockReqHandler(blkReqHandler)
+
+	recvBlk, err := svc.RequestBlock(peers[0].PublicKey(), blk.Hash())
+	if assert.NoError(err) && assert.NotNil(recvBlk) {
+		assert.Equal(blk.Height(), recvBlk.Height())
+	}
+
+	_, err = svc.RequestBlock(peers[0].PublicKey(), []byte{1})
+	assert.Error(err)
+}
+
+func TestMsgService_RequestTxList(t *testing.T) {
+	assert := assert.New(t)
+
+	svc, _, peers := setupMsgServiceWithLoopBackPeers()
+
+	var txs core.TxList = []*core.Transaction{
+		core.NewTransaction().SetNonce(1),
+		core.NewTransaction().SetNonce(2),
+	}
+	txListReqHandler := func(hashList core.HashList) (core.TxList, error) {
+		return txs, nil
+	}
+	svc.SetTxListReqHandler(txListReqHandler)
+
+	recvTxs, err := svc.RequestTxList(peers[0].PublicKey(), core.HashList{[]byte{1}, []byte{2}})
+	if assert.NoError(err) && assert.NotNil(recvTxs) {
+		assert.Equal(txs[0].Nonce(), recvTxs[0].Nonce())
+		assert.Equal(txs[1].Nonce(), recvTxs[1].Nonce())
 	}
 }

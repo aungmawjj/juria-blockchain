@@ -142,7 +142,7 @@ func (svc *MsgService) sendData(pubKey *core.PublicKey, msgType p2p_pb.Message_T
 func (svc *MsgService) SetBlockReqHandler(handler func(hash []byte) (*core.Block, error)) {
 	blkReqHandler := &reqHandler{
 		unmarshalReq: unmarshalBytesTypeCast,
-		handler:      (interface{})(handler).(reqHandlerFunc),
+		handler:      castReqHandlerFunc(handler),
 	}
 	svc.handlers[p2p_pb.Message_BlockReq] = blkReqHandler.msgHandlerFunc
 }
@@ -150,7 +150,7 @@ func (svc *MsgService) SetBlockReqHandler(handler func(hash []byte) (*core.Block
 func (svc *MsgService) SetTxListReqHandler(handler func(hashList core.HashList) (core.TxList, error)) {
 	txListReqHandler := &reqHandler{
 		unmarshalReq: unmarshalHashList,
-		handler:      (interface{})(handler).(reqHandlerFunc),
+		handler:      castReqHandlerFunc(handler),
 	}
 	svc.handlers[p2p_pb.Message_TxListReq] = txListReqHandler.msgHandlerFunc
 }
@@ -172,7 +172,7 @@ func (svc *MsgService) RequestBlock(pubKey *core.PublicKey, hash []byte) (*core.
 	return (resp).(*core.Block), nil
 }
 
-func (svc *MsgService) RequestTxList(pubKey *core.PublicKey, hashList core.HashList) (*core.TxList, error) {
+func (svc *MsgService) RequestTxList(pubKey *core.PublicKey, hashList core.HashList) (core.TxList, error) {
 	seq := atomic.AddUint32(&svc.reqSeq, 1)
 	client := &reqClient{
 		peer:            svc.host.PeerStore().Load(pubKey),
@@ -186,5 +186,5 @@ func (svc *MsgService) RequestTxList(pubKey *core.PublicKey, hashList core.HashL
 	if err != nil {
 		return nil, err
 	}
-	return (resp).(*core.TxList), nil
+	return (resp).(core.TxList), nil
 }

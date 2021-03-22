@@ -38,12 +38,13 @@ func NewHost(privKey *core.PrivateKey, localAddr multiaddr.Multiaddr) (*Host, er
 	host.localAddr = localAddr
 	host.peerStore = NewPeerStore()
 
-	var err error
-	host.libHost, err = host.newLibHost()
+	libHost, err := host.newLibHost()
 	if err != nil {
 		return nil, err
 	}
+	host.libHost = libHost
 	host.libHost.SetStreamHandler(protocolID, host.handleStream)
+	host.reconnectInterval = 1 * time.Minute
 	go host.reconnectLoop()
 	return host, nil
 }
