@@ -65,7 +65,7 @@ func TestPeer_ReadWrite(t *testing.T) {
 	msg := []byte("hello")
 
 	mln := new(MockListener)
-	mln.On("CB", mock.Anything).Once()
+	mln.On("CB", msg).Once()
 
 	go func() {
 		for event := range sub.Events() {
@@ -78,4 +78,36 @@ func TestPeer_ReadWrite(t *testing.T) {
 	time.Sleep(time.Millisecond)
 
 	mln.AssertExpectations(t)
+}
+
+func TestPeer_ConnStatus(t *testing.T) {
+	assert := assert.New(t)
+	p := NewPeer(nil, nil)
+
+	assert.Equal(PeerStatusDisconnected, p.Status())
+
+	rwc := newRWCLoopBack()
+	p.OnConnected(rwc)
+
+	assert.Equal(PeerStatusConnected, p.Status())
+
+	rwc.Close()
+	time.Sleep(time.Millisecond)
+
+	assert.Equal(PeerStatusDisconnected, p.Status())
+
+	p = NewPeer(nil, nil)
+	err := p.SetConnecting()
+
+	assert.NoError(err)
+	assert.Equal(PeerStatusConnecting, p.Status())
+
+	p.Disconnect()
+	assert.Equal(PeerStatusDisconnected, p.Status())
+
+	p.OnConnected(newRWCLoopBack())
+	err = p.SetConnecting()
+
+	assert.Error(err)
+	assert.Equal(PeerStatusConnected, p.Status())
 }

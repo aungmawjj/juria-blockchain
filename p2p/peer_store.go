@@ -14,7 +14,7 @@ type PeerStore struct {
 	mtx   sync.RWMutex
 }
 
-func newPeerStore() *PeerStore {
+func NewPeerStore() *PeerStore {
 	return &PeerStore{
 		peers: make(map[string]*Peer),
 	}
@@ -26,16 +26,20 @@ func (s *PeerStore) Load(pubKey *core.PublicKey) *Peer {
 	return s.peers[pubKey.String()]
 }
 
-func (s *PeerStore) Store(p *Peer) {
+func (s *PeerStore) Store(p *Peer) *Peer {
 	s.mtx.Lock()
 	defer s.mtx.Unlock()
 	s.peers[p.PublicKey().String()] = p
+	return p
 }
 
-func (s *PeerStore) Delete(pubKey *core.PublicKey) {
+func (s *PeerStore) Delete(pubKey *core.PublicKey) *Peer {
 	s.mtx.Lock()
 	defer s.mtx.Unlock()
+
+	p := s.peers[pubKey.String()]
 	delete(s.peers, pubKey.String())
+	return p
 }
 
 func (s *PeerStore) List() []*Peer {

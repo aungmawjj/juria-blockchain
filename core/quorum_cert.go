@@ -70,6 +70,8 @@ func (qc *QuorumCert) Build(votes []*Vote) *QuorumCert {
 	return qc
 }
 
+func (qc *QuorumCert) BlockHash() []byte { return qc.data.BlockHash }
+
 // Marshal encodes quorum cert as bytes
 func (qc *QuorumCert) Marshal() ([]byte, error) {
 	return proto.Marshal(qc.data)

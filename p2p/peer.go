@@ -63,7 +63,7 @@ func (p *Peer) Status() PeerStatus {
 	p.statusMtx.RLock()
 	defer p.statusMtx.RUnlock()
 
-	return PeerStatusConnected
+	return p.status
 }
 
 // Disconnect gogoc
@@ -86,7 +86,7 @@ func (p *Peer) SetConnecting() error {
 	if p.status != PeerStatusDisconnected {
 		return fmt.Errorf("Status must be disconnected")
 	}
-	p.status = PeerStatusConnected
+	p.status = PeerStatusConnecting
 	return nil
 }
 

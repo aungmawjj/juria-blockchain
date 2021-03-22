@@ -28,13 +28,15 @@ type Host struct {
 	libHost   host.Host
 
 	onAddedPeer func(peer *Peer)
+
+	reconnectInterval time.Duration
 }
 
 func NewHost(privKey *core.PrivateKey, localAddr multiaddr.Multiaddr) (*Host, error) {
 	host := new(Host)
 	host.privKey = privKey
 	host.localAddr = localAddr
-	host.peerStore = newPeerStore()
+	host.peerStore = NewPeerStore()
 
 	var err error
 	host.libHost, err = host.newLibHost()
@@ -75,7 +77,7 @@ func (host *Host) handleStream(s network.Stream) {
 }
 
 func (host *Host) reconnectLoop() {
-	for range time.Tick(2 * time.Minute) {
+	for range time.Tick(host.reconnectInterval) {
 		peers := host.peerStore.List()
 		for _, peer := range peers {
 			go host.connectPeer(peer)

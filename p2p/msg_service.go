@@ -34,7 +34,7 @@ type MsgService struct {
 	reqSeq uint32
 }
 
-func NewMsgService(host *Host) {
+func NewMsgService(host *Host) *MsgService {
 	svc := new(MsgService)
 	svc.host = host
 	svc.handlers = make(map[p2p_pb.Message_Type]msgHandlerFunc)
@@ -46,19 +46,19 @@ func NewMsgService(host *Host) {
 	svc.txListEmitter = emitter.New()
 
 	svc.setReceiverHandlers()
+	return svc
 }
 
 func (svc *MsgService) setReceiverHandlers() {
-	svc.handlers[p2p_pb.Message_Proposal] = svc.receiverHandlerFunc(core.UnmarshalBlock, svc.proposalEmitter)
-	svc.handlers[p2p_pb.Message_Vote] = svc.receiverHandlerFunc(core.UnmarshalVote, svc.voteEmitter)
-	svc.handlers[p2p_pb.Message_NewView] = svc.receiverHandlerFunc(core.UnmarshalQuorumCert, svc.newViewEmitter)
-	svc.handlers[p2p_pb.Message_TxList] = svc.receiverHandlerFunc(core.UnmarshalTxList, svc.txListEmitter)
+	svc.handlers[p2p_pb.Message_Proposal] = svc.receiverHandlerFunc(unmarshalBlock, svc.proposalEmitter)
+	svc.handlers[p2p_pb.Message_Vote] = svc.receiverHandlerFunc(unmarshalVote, svc.voteEmitter)
+	svc.handlers[p2p_pb.Message_NewView] = svc.receiverHandlerFunc(unmarshalQuorumCert, svc.newViewEmitter)
+	svc.handlers[p2p_pb.Message_TxList] = svc.receiverHandlerFunc(unmarshalTxList, svc.txListEmitter)
 }
 
-func (svc *MsgService) receiverHandlerFunc(unmarshal interface{}, emitter *emitter.Emitter) msgHandlerFunc {
-	unmarshalData := unmarshal.(unmarshalFunc)
+func (svc *MsgService) receiverHandlerFunc(unmarshal unmarshalFunc, emitter *emitter.Emitter) msgHandlerFunc {
 	return func(peer *Peer, msg *p2p_pb.Message) {
-		data, err := unmarshalData(msg.Data)
+		data, err := unmarshal(msg.Data)
 		if err != nil {
 			return
 		}
@@ -67,6 +67,10 @@ func (svc *MsgService) receiverHandlerFunc(unmarshal interface{}, emitter *emitt
 }
 
 func (svc *MsgService) onAddedPeer(peer *Peer) {
+	go svc.handlePeerMsg(peer)
+}
+
+func (svc *MsgService) handlePeerMsg(peer *Peer) {
 	sub := peer.SubscribeMsg()
 	for e := range sub.Events() {
 		msgB := e.([]byte)
@@ -108,8 +112,8 @@ func (svc *MsgService) SendNewView(pubKey *core.PublicKey, qc *core.QuorumCert) 
 	return svc.sendData(pubKey, p2p_pb.Message_NewView, qc)
 }
 
-func (svc *MsgService) SendTxList(pubKey *core.PublicKey, txList core.TxList) error {
-	return svc.sendData(pubKey, p2p_pb.Message_TxList, txList)
+func (svc *MsgService) BroadcastTxList(txList core.TxList) error {
+	return svc.broadcastData(p2p_pb.Message_TxList, txList)
 }
 
 func (svc *MsgService) broadcastData(msgType p2p_pb.Message_Type, data marshalable) error {
@@ -137,7 +141,7 @@ func (svc *MsgService) sendData(pubKey *core.PublicKey, msgType p2p_pb.Message_T
 
 func (svc *MsgService) SetBlockReqHandler(handler func(hash []byte) (*core.Block, error)) {
 	blkReqHandler := &reqHandler{
-		unmarshalReq: (interface{})(unmarshalBytesType).(unmarshalFunc),
+		unmarshalReq: unmarshalBytesTypeCast,
 		handler:      (interface{})(handler).(reqHandlerFunc),
 	}
 	svc.handlers[p2p_pb.Message_BlockReq] = blkReqHandler.msgHandlerFunc
@@ -145,7 +149,7 @@ func (svc *MsgService) SetBlockReqHandler(handler func(hash []byte) (*core.Block
 
 func (svc *MsgService) SetTxListReqHandler(handler func(hashList core.HashList) (core.TxList, error)) {
 	txListReqHandler := &reqHandler{
-		unmarshalReq: (interface{})(core.UnmarshalHashList).(unmarshalFunc),
+		unmarshalReq: unmarshalHashList,
 		handler:      (interface{})(handler).(reqHandlerFunc),
 	}
 	svc.handlers[p2p_pb.Message_TxListReq] = txListReqHandler.msgHandlerFunc
@@ -159,7 +163,7 @@ func (svc *MsgService) RequestBlock(pubKey *core.PublicKey, hash []byte) (*core.
 		reqType:         p2p_pb.Message_BlockReq,
 		seq:             seq,
 		timeoutDuration: 2 * time.Second,
-		unmarshalResp:   (interface{})(core.UnmarshalBlock).(unmarshalFunc),
+		unmarshalResp:   unmarshalBlock,
 	}
 	resp, err := client.makeRequest()
 	if err != nil {
@@ -176,33 +180,11 @@ func (svc *MsgService) RequestTxList(pubKey *core.PublicKey, hashList core.HashL
 		reqType:         p2p_pb.Message_TxListReq,
 		seq:             seq,
 		timeoutDuration: 2 * time.Second,
-		unmarshalResp:   (interface{})(core.UnmarshalTxList).(unmarshalFunc),
+		unmarshalResp:   unmarshalTxList,
 	}
 	resp, err := client.makeRequest()
 	if err != nil {
 		return nil, err
 	}
 	return (resp).(*core.TxList), nil
-}
-
-func makeMsgBytes(msgType p2p_pb.Message_Type, data marshalable) ([]byte, error) {
-	b, err := data.Marshal()
-	if err != nil {
-		return nil, err
-	}
-	msg := new(p2p_pb.Message)
-	msg.Type = msgType
-	msg.Data = b
-
-	return proto.Marshal(msg)
-}
-
-type bytesType []byte
-
-func (b bytesType) Marshal() ([]byte, error) {
-	return b, nil
-}
-
-func unmarshalBytesType(b []byte) ([]byte, error) {
-	return b, nil
 }
