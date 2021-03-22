@@ -4,7 +4,6 @@
 package core
 
 import (
-	"crypto/ed25519"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -13,15 +12,9 @@ import (
 func TestSignVerify(t *testing.T) {
 	assert := assert.New(t)
 
-	pub, priv, _ := ed25519.GenerateKey(nil)
+	privKey := GenerateKey(nil)
 
-	pubKey, err := NewPublicKey(pub)
-	assert.NoError(err)
-
-	privKey, err := NewPrivateKey(priv)
-	assert.NoError(err)
-
-	assert.Equal(pubKey, privKey.PublicKey())
+	assert.Equal(privKey.PublicKey(), privKey.PublicKey())
 
 	msg := []byte("message to be signed")
 
@@ -31,5 +24,5 @@ func TestSignVerify(t *testing.T) {
 	assert.True(sig.Verify(msg))
 	assert.False(sig.Verify([]byte("tampered message")))
 
-	assert.Equal(pubKey, sig.PublicKey())
+	assert.Equal(privKey.PublicKey(), sig.PublicKey())
 }

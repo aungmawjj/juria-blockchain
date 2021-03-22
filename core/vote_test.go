@@ -4,7 +4,6 @@
 package core
 
 import (
-	"crypto/ed25519"
 	"testing"
 
 	core_pb "github.com/aungmawjj/juria-blockchain/core/pb"
@@ -19,14 +18,11 @@ func TestVote(t *testing.T) {
 	vNilSig, err := vote.Marshal()
 	assert.NoError(t, err)
 
-	_, priv, _ := ed25519.GenerateKey(nil)
-	proposer, _ := NewPrivateKey(priv)
-
-	_, priv, _ = ed25519.GenerateKey(nil)
-	privKey, _ := NewPrivateKey(priv)
+	proposer := GenerateKey(nil)
+	validator := GenerateKey(nil)
 
 	blk := NewBlock().Sign(proposer)
-	vote = blk.Vote(privKey)
+	vote = blk.Vote(validator)
 	vOk, _ := vote.Marshal()
 
 	vote.data.BlockHash = []byte("invalid hash")

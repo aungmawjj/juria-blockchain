@@ -4,7 +4,6 @@
 package core
 
 import (
-	"crypto/ed25519"
 	"testing"
 
 	core_pb "github.com/aungmawjj/juria-blockchain/core/pb"
@@ -15,8 +14,7 @@ import (
 func TestBlock(t *testing.T) {
 	assertt := assert.New(t)
 
-	_, priv, _ := ed25519.GenerateKey(nil)
-	privKey, _ := NewPrivateKey(priv)
+	privKey := GenerateKey(nil)
 
 	qc := NewQuorumCert().Build([]*Vote{
 		{data: &core_pb.Vote{
@@ -54,9 +52,7 @@ func TestBlock(t *testing.T) {
 	blk.data.Signature = []byte("invalid sig")
 	bInvalidSig, _ := blk.Marshal()
 
-	_, priv, _ = ed25519.GenerateKey(nil)
-	privKey1, _ := NewPrivateKey(priv)
-
+	privKey1 := GenerateKey(nil)
 	bInvalidValidator, _ := blk.Sign(privKey1).Marshal()
 
 	bNilQC, _ := blk.
@@ -101,13 +97,7 @@ func TestBlock(t *testing.T) {
 func TestBlock_Vote(t *testing.T) {
 	assert := assert.New(t)
 
-	pub, priv, _ := ed25519.GenerateKey(nil)
-
-	pubKey, err := NewPublicKey(pub)
-	assert.NoError(err)
-
-	privKey, err := NewPrivateKey(priv)
-	assert.NoError(err)
+	privKey := GenerateKey(nil)
 
 	blk := NewBlock().Sign(privKey)
 
@@ -115,9 +105,9 @@ func TestBlock_Vote(t *testing.T) {
 	assert.Equal(blk.Hash(), vote.BlockHash())
 
 	rs := new(MockValidatorStore)
-	rs.On("IsValidator", pubKey).Return(true)
+	rs.On("IsValidator", privKey.PublicKey()).Return(true)
 
-	err = vote.Validate(rs)
+	err := vote.Validate(rs)
 	assert.NoError(err)
 	rs.AssertExpectations(t)
 }

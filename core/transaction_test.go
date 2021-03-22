@@ -4,7 +4,6 @@
 package core
 
 import (
-	"crypto/ed25519"
 	"testing"
 	"time"
 
@@ -12,8 +11,7 @@ import (
 )
 
 func TestTransaction(t *testing.T) {
-	_, priv, _ := ed25519.GenerateKey(nil)
-	privKey, _ := NewPrivateKey(priv)
+	privKey := GenerateKey(nil)
 
 	nonce := uint64(time.Now().UnixNano())
 

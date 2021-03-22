@@ -4,7 +4,6 @@
 package core
 
 import (
-	"crypto/ed25519"
 	"testing"
 
 	core_pb "github.com/aungmawjj/juria-blockchain/core/pb"
@@ -20,8 +19,7 @@ func TestQuorumCert(t *testing.T) {
 	rs.On("ValidatorCount").Return(4)
 
 	for i := range privKeys {
-		_, priv, _ := ed25519.GenerateKey(nil)
-		privKeys[i], _ = NewPrivateKey(priv)
+		privKeys[i] = GenerateKey(nil)
 		if i != 4 {
 			rs.On("IsValidator", privKeys[i].pubKey).Return(true)
 		}
