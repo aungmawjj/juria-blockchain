@@ -50,8 +50,8 @@ func TestVote(t *testing.T) {
 			vote, err := UnmarshalVote(tt.b)
 			assert.NoError(err)
 
-			rs := new(MockReplicaStore)
-			rs.On("IsReplica", mock.Anything).Return(true)
+			rs := new(MockValidatorStore)
+			rs.On("IsValidator", mock.Anything).Return(true)
 
 			err = vote.Validate(rs)
 

@@ -49,11 +49,11 @@ func (blk *Block) Sum() []byte {
 }
 
 // Validate block
-func (blk *Block) Validate(rs ReplicaStore) error {
+func (blk *Block) Validate(vs ValidatorStore) error {
 	if blk.data == nil {
 		return ErrNilBlock
 	}
-	if err := blk.quorumCert.Validate(rs); err != nil {
+	if err := blk.quorumCert.Validate(vs); err != nil {
 		return err
 	}
 	if !bytes.Equal(blk.Sum(), blk.Hash()) {
@@ -63,8 +63,8 @@ func (blk *Block) Validate(rs ReplicaStore) error {
 		PubKey: blk.data.Proposer,
 		Value:  blk.data.Signature,
 	})
-	if !rs.IsReplica(sig.PublicKey()) {
-		return ErrInvalidReplica
+	if !vs.IsValidator(sig.PublicKey()) {
+		return ErrInvalidValidator
 	}
 	if err != nil {
 		return err

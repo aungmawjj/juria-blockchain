@@ -5,23 +5,23 @@ package core
 
 import "github.com/stretchr/testify/mock"
 
-type MockReplicaStore struct {
+type MockValidatorStore struct {
 	mock.Mock
 }
 
-var _ ReplicaStore = (*MockReplicaStore)(nil)
+var _ ValidatorStore = (*MockValidatorStore)(nil)
 
-func (m *MockReplicaStore) ReplicaCount() int {
+func (m *MockValidatorStore) ValidatorCount() int {
 	args := m.Called()
 	return args.Int(0)
 }
 
-func (m *MockReplicaStore) IsReplica(pubKey *PublicKey) bool {
+func (m *MockValidatorStore) IsValidator(pubKey *PublicKey) bool {
 	args := m.Called(pubKey)
 	return args.Bool(0)
 }
 
-func (m *MockReplicaStore) GetReplica(idx int) []byte {
+func (m *MockValidatorStore) GetValidator(idx int) []byte {
 	args := m.Called(idx)
 	val := args.Get(0)
 	if r, ok := val.([]byte); ok {
@@ -30,7 +30,7 @@ func (m *MockReplicaStore) GetReplica(idx int) []byte {
 	return nil
 }
 
-func (m *MockReplicaStore) GetReplicaIndex(pubKey *PublicKey) (int, bool) {
+func (m *MockValidatorStore) GetValidatorIndex(pubKey *PublicKey) (int, bool) {
 	args := m.Called(pubKey)
 	return args.Int(0), args.Bool(1)
 }

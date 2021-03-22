@@ -11,7 +11,7 @@ import (
 
 func TestMajorityCount(t *testing.T) {
 	type args struct {
-		replicaCount int
+		validatorCount int
 	}
 	tests := []struct {
 		name string
@@ -26,7 +26,7 @@ func TestMajorityCount(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := MajorityCount(tt.args.replicaCount)
+			got := MajorityCount(tt.args.validatorCount)
 			assert.Equal(t, tt.want, got)
 		})
 	}

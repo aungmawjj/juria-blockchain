@@ -16,17 +16,17 @@ func TestQuorumCert(t *testing.T) {
 
 	privKeys := make([]*PrivateKey, 5)
 
-	rs := new(MockReplicaStore)
-	rs.On("ReplicaCount").Return(4)
+	rs := new(MockValidatorStore)
+	rs.On("ValidatorCount").Return(4)
 
 	for i := range privKeys {
 		_, priv, _ := ed25519.GenerateKey(nil)
 		privKeys[i], _ = NewPrivateKey(priv)
 		if i != 4 {
-			rs.On("IsReplica", privKeys[i].pubKey).Return(true)
+			rs.On("IsValidator", privKeys[i].pubKey).Return(true)
 		}
 	}
-	rs.On("IsReplica", mock.Anything).Return(false)
+	rs.On("IsValidator", mock.Anything).Return(false)
 
 	blockHash := []byte{1}
 	votes := make([]*Vote, len(privKeys))
@@ -64,7 +64,7 @@ func TestQuorumCert(t *testing.T) {
 	qcDuplicateKey, _ := qc.Marshal()
 
 	qc = NewQuorumCert().Build([]*Vote{votes[1], votes[3], votes[0], votes[4]})
-	qcInvalidReplica, _ := qc.Marshal()
+	qcInvalidValidator, _ := qc.Marshal()
 
 	qc = NewQuorumCert().Build([]*Vote{votes[2], votes[1], votes[4], invalidSigVote})
 	qcInvalidSig, _ := qc.Marshal()
@@ -81,7 +81,7 @@ func TestQuorumCert(t *testing.T) {
 		{"not enough sig", qcNotEnoughSig, true},
 		{"nil sig", qcNilSig, true},
 		{"duplicate key", qcDuplicateKey, true},
-		{"invalid replica", qcInvalidReplica, true},
+		{"invalid validator", qcInvalidValidator, true},
 		{"invalid sig", qcInvalidSig, true},
 	}
 	for _, tt := range tests {

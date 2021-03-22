@@ -65,7 +65,7 @@ func TestPeer_ReadWrite(t *testing.T) {
 	msg := []byte("hello")
 
 	mln := new(MockListener)
-	mln.On("cb", mock.Anything).Once()
+	mln.On("CB", mock.Anything).Once()
 
 	go func() {
 		for event := range sub.Events() {

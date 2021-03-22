@@ -21,7 +21,7 @@ type Vote struct {
 }
 
 // Validate vote
-func (vote *Vote) Validate(rs ReplicaStore) error {
+func (vote *Vote) Validate(vs ValidatorStore) error {
 	if vote.data == nil {
 		return ErrNilVote
 	}
@@ -29,8 +29,8 @@ func (vote *Vote) Validate(rs ReplicaStore) error {
 	if err != nil {
 		return err
 	}
-	if !rs.IsReplica(sig.PublicKey()) {
-		return ErrInvalidReplica
+	if !vs.IsValidator(sig.PublicKey()) {
+		return ErrInvalidValidator
 	}
 	if !sig.Verify(vote.data.BlockHash) {
 		return ErrInvalidSig

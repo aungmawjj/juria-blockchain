@@ -62,9 +62,9 @@ func (sigs sigList) hasDuplicate() bool {
 	return false
 }
 
-func (sigs sigList) hasInvalidReplica(rs ReplicaStore) bool {
+func (sigs sigList) hasInvalidValidator(vs ValidatorStore) bool {
 	for _, sig := range sigs {
-		if !rs.IsReplica(sig.PublicKey()) {
+		if !vs.IsValidator(sig.PublicKey()) {
 			return true
 		}
 	}

@@ -43,10 +43,10 @@ func TestBlock(t *testing.T) {
 	assertt.Equal([]byte{1}, blk.StateRoot())
 	assertt.Equal([][]byte{{1}}, blk.Transactions())
 
-	rs := new(MockReplicaStore)
-	rs.On("ReplicaCount").Return(1)
-	rs.On("IsReplica", privKey.PublicKey()).Return(true)
-	rs.On("IsReplica", mock.Anything).Return(false)
+	rs := new(MockValidatorStore)
+	rs.On("ValidatorCount").Return(1)
+	rs.On("IsValidator", privKey.PublicKey()).Return(true)
+	rs.On("IsValidator", mock.Anything).Return(false)
 
 	bOk, err := blk.Marshal()
 	assertt.NoError(err)
@@ -57,7 +57,7 @@ func TestBlock(t *testing.T) {
 	_, priv, _ = ed25519.GenerateKey(nil)
 	privKey1, _ := NewPrivateKey(priv)
 
-	bInvalidReplica, _ := blk.Sign(privKey1).Marshal()
+	bInvalidValidator, _ := blk.Sign(privKey1).Marshal()
 
 	bNilQC, _ := blk.
 		SetQuorumCert(NewQuorumCert()).
@@ -76,7 +76,7 @@ func TestBlock(t *testing.T) {
 		{"valid", bOk, false},
 		{"nil block", nil, true},
 		{"invalid sig", bInvalidSig, true},
-		{"invalid replica", bInvalidReplica, true},
+		{"invalid validator", bInvalidValidator, true},
 		{"nil qc", bNilQC, true},
 		{"invalid", bInvalidHash, true},
 	}
@@ -114,8 +114,8 @@ func TestBlock_Vote(t *testing.T) {
 	vote := blk.Vote(privKey)
 	assert.Equal(blk.Hash(), vote.BlockHash())
 
-	rs := new(MockReplicaStore)
-	rs.On("IsReplica", pubKey).Return(true)
+	rs := new(MockValidatorStore)
+	rs.On("IsValidator", pubKey).Return(true)
 
 	err = vote.Validate(rs)
 	assert.NoError(err)

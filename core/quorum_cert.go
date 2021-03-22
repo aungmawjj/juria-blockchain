@@ -12,12 +12,12 @@ import (
 
 // errors
 var (
-	ErrNilQC          = errors.New("nil qc")
-	ErrNilSig         = errors.New("nil signature")
-	ErrNotEnoughSig   = errors.New("not enough signatures in qc")
-	ErrDuplicateSig   = errors.New("duplicate signature in qc")
-	ErrInvalidSig     = errors.New("invalid signature")
-	ErrInvalidReplica = errors.New("voter is not a replica")
+	ErrNilQC            = errors.New("nil qc")
+	ErrNilSig           = errors.New("nil signature")
+	ErrNotEnoughSig     = errors.New("not enough signatures in qc")
+	ErrDuplicateSig     = errors.New("duplicate signature in qc")
+	ErrInvalidSig       = errors.New("invalid signature")
+	ErrInvalidValidator = errors.New("voter is not a validator")
 )
 
 // QuorumCert type
@@ -32,7 +32,7 @@ func NewQuorumCert() *QuorumCert {
 }
 
 // Validate godoc
-func (qc *QuorumCert) Validate(rs ReplicaStore) error {
+func (qc *QuorumCert) Validate(vs ValidatorStore) error {
 	if qc.data == nil {
 		return ErrNilQC
 	}
@@ -40,14 +40,14 @@ func (qc *QuorumCert) Validate(rs ReplicaStore) error {
 	if err != nil {
 		return err
 	}
-	if len(sigs) < MajorityCount(rs.ReplicaCount()) {
+	if len(sigs) < MajorityCount(vs.ValidatorCount()) {
 		return ErrNotEnoughSig
 	}
 	if sigs.hasDuplicate() {
 		return ErrDuplicateSig
 	}
-	if sigs.hasInvalidReplica(rs) {
-		return ErrInvalidReplica
+	if sigs.hasInvalidValidator(vs) {
+		return ErrInvalidValidator
 	}
 	if sigs.hasInvalidSig(qc.data.BlockHash) {
 		return ErrInvalidSig

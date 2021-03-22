@@ -88,7 +88,7 @@ func (s *state) addVote(v Vote) error {
 	if !s.proposal.Equal(v.Block()) {
 		return fmt.Errorf("not same block")
 	}
-	key := v.Replica()
+	key := v.Validator()
 	if _, found := s.votes[key]; found {
 		return fmt.Errorf("duplicate vote")
 	}

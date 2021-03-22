@@ -5,6 +5,7 @@ package p2p
 
 import (
 	"errors"
+	"sync/atomic"
 	"time"
 
 	"github.com/aungmawjj/juria-blockchain/core"
@@ -151,12 +152,12 @@ func (svc *MsgService) SetTxListReqHandler(handler func(hashList core.HashList) 
 }
 
 func (svc *MsgService) RequestBlock(pubKey *core.PublicKey, hash []byte) (*core.Block, error) {
-	svc.reqSeq++
+	seq := atomic.AddUint32(&svc.reqSeq, 1)
 	client := &reqClient{
 		peer:            svc.host.PeerStore().Load(pubKey),
 		reqData:         bytesType(hash),
 		reqType:         p2p_pb.Message_BlockReq,
-		seq:             svc.reqSeq,
+		seq:             seq,
 		timeoutDuration: 2 * time.Second,
 		unmarshalResp:   (interface{})(core.UnmarshalBlock).(unmarshalFunc),
 	}
@@ -168,12 +169,12 @@ func (svc *MsgService) RequestBlock(pubKey *core.PublicKey, hash []byte) (*core.
 }
 
 func (svc *MsgService) RequestTxList(pubKey *core.PublicKey, hashList core.HashList) (*core.TxList, error) {
-	svc.reqSeq++
+	seq := atomic.AddUint32(&svc.reqSeq, 1)
 	client := &reqClient{
 		peer:            svc.host.PeerStore().Load(pubKey),
 		reqData:         hashList,
 		reqType:         p2p_pb.Message_TxListReq,
-		seq:             svc.reqSeq,
+		seq:             seq,
 		timeoutDuration: 2 * time.Second,
 		unmarshalResp:   (interface{})(core.UnmarshalTxList).(unmarshalFunc),
 	}
