@@ -87,7 +87,7 @@ func (host *Host) reconnectLoop() {
 }
 
 func (host *Host) connectPeer(peer *Peer) {
-	if err := peer.SetConnecting(); err != nil {
+	if err := peer.SetConnecting(); err != nil { // prevent simultaneous connections from both hosts
 		return
 	}
 	s, err := host.newStream(peer)
