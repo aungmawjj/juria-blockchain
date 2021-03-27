@@ -111,10 +111,13 @@ func NewBlock(h crypto.Hash, tc *TreeCalc, store Store, parentPosition *Position
 }
 
 // Load loads the child nodes from the store
-func (b *Block) Load() *Block {
+func (b *Block) Load(rowNodeCount *big.Int) *Block {
 	offset := b.tc.FirstNodeOfBlock(b.parentPosition.Index())
 	for i := range b.nodes {
 		index := big.NewInt(0).Add(offset, big.NewInt(int64(i)))
+		if rowNodeCount.Cmp(index) != 1 {
+			break
+		}
 		p := NewPosition(b.parentPosition.level-1, index)
 
 		if data := b.store.GetNode(p); data != nil {

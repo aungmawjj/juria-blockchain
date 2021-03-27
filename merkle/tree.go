@@ -51,13 +51,14 @@ func (tree *Tree) Root() *Node {
 func (tree *Tree) Update(leaves []*Node, newLeafCount *big.Int) *UpdateResult {
 	res := &UpdateResult{newLeafCount, tree.calc.Height(newLeafCount), leaves, make([]*Node, 0)}
 	nodes := leaves
+	rowNodeCount := newLeafCount
 	for i := res.Height; i > 1; i-- {
 		bpmap, nbmap := tree.groupNodesByBlock(nodes)
 		blocks := tree.createBlocks(bpmap)
 		parents := make([]*Node, 0, len(blocks)) // parent nodes
 
 		for _, b := range blocks { // the body of the loop can run in parallel
-			b.Load() // load blocks from store
+			b.Load(rowNodeCount) // load blocks from store
 			for _, n := range nbmap[b.parentPosition.String()] {
 				b.SetNode(n) // set updated nodes in blocks
 			}
@@ -66,6 +67,7 @@ func (tree *Tree) Update(leaves []*Node, newLeafCount *big.Int) *UpdateResult {
 			res.Branches = append(res.Branches, p)
 		}
 		nodes = parents
+		rowNodeCount = tree.calc.BlockCount(rowNodeCount)
 	}
 	return res
 }

@@ -59,6 +59,8 @@ func TestTree_Root(t *testing.T) {
 }
 
 func TestTree_Update(t *testing.T) {
+	assert := assert.New(t)
+
 	store := NewMapStore()
 	tree := NewTree(store, TreeOptions{
 		BranchFactor: 3,
@@ -71,14 +73,14 @@ func TestTree_Update(t *testing.T) {
 	}
 
 	res := tree.Update(leaves, big.NewInt(7))
+	assert.EqualValues(3, res.Height)
+
 	store.CommitUpdate(res)
 
 	n10 := sha1Sum([]byte{0, 1, 2}) // level 0, index 1
 	n11 := sha1Sum([]byte{3, 4, 5})
 	n12 := sha1Sum([]byte{6})
 	n20 := sha1Sum(append(n10, append(n11, n12...)...))
-
-	assert := assert.New(t)
 
 	assert.Equal(11, len(store.nodes))
 	assert.Equal(n10, store.GetNode(NewPosition(1, big.NewInt(0))))
@@ -93,24 +95,42 @@ func TestTree_Update(t *testing.T) {
 		{NewPosition(0, big.NewInt(9)), []byte{1}},
 	}
 	res = tree.Update(upd, big.NewInt(10))
+	assert.EqualValues(4, res.Height)
+
 	store.CommitUpdate(res)
 
-	nn10 := sha1Sum([]byte{0, 1, 1})
-	nn11 := sha1Sum([]byte{3, 4, 1})
-	nn12 := sha1Sum([]byte{6, 1, 1})
-	nn13 := sha1Sum([]byte{1})
-	nn20 := sha1Sum(append(nn10, append(nn11, nn12...)...))
-	nn21 := sha1Sum(nn13)
-	nn30 := sha1Sum(append(nn20, nn21...))
+	n10 = sha1Sum([]byte{0, 1, 1})
+	n11 = sha1Sum([]byte{3, 4, 1})
+	n12 = sha1Sum([]byte{6, 1, 1})
+	n13 := sha1Sum([]byte{1})
+	n20 = sha1Sum(append(n10, append(n11, n12...)...))
+	n21 := sha1Sum(n13)
+	n30 := sha1Sum(append(n20, n21...))
 
 	assert.Equal(17, len(store.nodes))
-	assert.Equal(nn10, store.GetNode(NewPosition(1, big.NewInt(0))))
-	assert.Equal(nn11, store.GetNode(NewPosition(1, big.NewInt(1))))
-	assert.Equal(nn12, store.GetNode(NewPosition(1, big.NewInt(2))))
-	assert.Equal(nn13, store.GetNode(NewPosition(1, big.NewInt(3))))
-	assert.Equal(nn20, store.GetNode(NewPosition(2, big.NewInt(0))))
-	assert.Equal(nn21, store.GetNode(NewPosition(2, big.NewInt(1))))
-	assert.Equal(nn30, store.GetNode(NewPosition(3, big.NewInt(0))))
+	assert.Equal(n10, store.GetNode(NewPosition(1, big.NewInt(0))))
+	assert.Equal(n11, store.GetNode(NewPosition(1, big.NewInt(1))))
+	assert.Equal(n12, store.GetNode(NewPosition(1, big.NewInt(2))))
+	assert.Equal(n13, store.GetNode(NewPosition(1, big.NewInt(3))))
+	assert.Equal(n20, store.GetNode(NewPosition(2, big.NewInt(0))))
+	assert.Equal(n21, store.GetNode(NewPosition(2, big.NewInt(1))))
+	assert.Equal(n30, store.GetNode(NewPosition(3, big.NewInt(0))))
+
+	upd = []*Node{
+		{NewPosition(0, big.NewInt(6)), []byte{2}},
+	}
+
+	// delete last 3 nodes
+	res = tree.Update(upd, big.NewInt(7))
+	assert.EqualValues(3, res.Height)
+
+	store.CommitUpdate(res)
+
+	n12 = sha1Sum([]byte{2})
+	n20 = sha1Sum(append(n10, append(n11, n12...)...))
+
+	assert.Equal(n12, store.GetNode(NewPosition(1, big.NewInt(2))))
+	assert.Equal(n20, store.GetNode(NewPosition(2, big.NewInt(0))))
 }
 
 func TestTree_Verify(t *testing.T) {
