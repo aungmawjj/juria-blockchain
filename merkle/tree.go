@@ -49,9 +49,16 @@ func (tree *Tree) Root() *Node {
 // Update accepts new/modified tree leaves,
 // recompute the corresponding nodes until root node.
 func (tree *Tree) Update(leaves []*Node, newLeafCount *big.Int) *UpdateResult {
-	res := &UpdateResult{newLeafCount, tree.calc.Height(newLeafCount), leaves, make([]*Node, 0)}
+	res := &UpdateResult{
+		LeafCount: newLeafCount,
+		Height:    tree.calc.Height(newLeafCount),
+		Leaves:    leaves,
+		Branches:  make([]*Node, 0),
+	}
+
 	nodes := leaves
 	rowNodeCount := newLeafCount
+
 	for i := res.Height; i > 1; i-- {
 		bpmap, nbmap := tree.groupNodesByBlock(nodes)
 		blocks := tree.createBlocks(bpmap)
@@ -69,6 +76,13 @@ func (tree *Tree) Update(leaves []*Node, newLeafCount *big.Int) *UpdateResult {
 		nodes = parents
 		rowNodeCount = tree.calc.BlockCount(rowNodeCount)
 	}
+
+	if res.Height > 1 {
+		res.Root = res.Branches[len(res.Branches)-1]
+	} else {
+		res.Root = res.Leaves[0]
+	}
+
 	return res
 }
 
@@ -78,7 +92,13 @@ func (tree *Tree) Verify(leaves []*Node) bool {
 	if root == nil {
 		return false
 	}
+	if len(leaves) == 0 {
+		return false
+	}
 	leafCount := tree.store.GetLeafCount()
+	if leafCount.Cmp(big.NewInt(0)) == 0 {
+		return false
+	}
 	for _, n := range leaves {
 		if n.Position.Level() != 0 {
 			return false
@@ -88,11 +108,7 @@ func (tree *Tree) Verify(leaves []*Node) bool {
 		}
 	}
 	res := tree.Update(leaves, leafCount)
-	if len(res.Branches) < 1 {
-		return false
-	}
-	computedRoot := res.Branches[len(res.Branches)-1]
-	return bytes.Equal(root.Data, computedRoot.Data)
+	return bytes.Equal(root.Data, res.Root.Data)
 }
 
 func (tree *Tree) groupNodesByBlock(nodes []*Node) (map[string]*Position, map[string][]*Node) {

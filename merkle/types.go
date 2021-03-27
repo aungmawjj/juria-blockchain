@@ -173,4 +173,5 @@ type UpdateResult struct {
 	Height    uint8
 	Leaves    []*Node
 	Branches  []*Node
+	Root      *Node
 }
