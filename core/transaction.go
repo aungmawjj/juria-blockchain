@@ -102,34 +102,39 @@ func (tx *Transaction) Marshal() ([]byte, error) {
 }
 
 // UnmarshalTransaction decodes transaction from bytes
-func UnmarshalTransaction(b []byte) (*Transaction, error) {
+func (tx *Transaction) Unmarshal(b []byte) error {
 	data := new(core_pb.Transaction)
 	if err := proto.Unmarshal(b, data); err != nil {
-		return nil, err
+		return err
 	}
-	return NewTransaction().setData(data), nil
+	tx.setData(data)
+	return nil
 }
 
 type TxList []*Transaction
 
+func NewTxList() *TxList {
+	return new(TxList)
+}
+
 // UnmarshalTxList decodes tx list from bytes
-func UnmarshalTxList(b []byte) (TxList, error) {
+func (txs *TxList) Unmarshal(b []byte) error {
 	data := new(core_pb.TxList)
 	if err := proto.Unmarshal(b, data); err != nil {
-		return nil, err
+		return err
 	}
-	txs := make([]*Transaction, len(data.List))
+	*txs = make([]*Transaction, len(data.List))
 	for i, txData := range data.List {
-		txs[i] = NewTransaction().setData(txData)
+		(*txs)[i] = NewTransaction().setData(txData)
 	}
-	return txs, nil
+	return nil
 }
 
 // Marshal encodes tx list as bytes
-func (txs TxList) Marshal() ([]byte, error) {
+func (txs *TxList) Marshal() ([]byte, error) {
 	data := new(core_pb.TxList)
-	data.List = make([]*core_pb.Transaction, len(txs))
-	for i, tx := range txs {
+	data.List = make([]*core_pb.Transaction, len(*txs))
+	for i, tx := range *txs {
 		data.List[i] = tx.data
 	}
 	return proto.Marshal(data)
@@ -137,16 +142,21 @@ func (txs TxList) Marshal() ([]byte, error) {
 
 type HashList [][]byte
 
-func UnmarshalHashList(b []byte) (HashList, error) {
-	data := new(core_pb.HashList)
-	if err := proto.Unmarshal(b, data); err != nil {
-		return nil, err
-	}
-	return data.List, nil
+func NewHashList() *HashList {
+	return new(HashList)
 }
 
-func (hl HashList) Marshal() ([]byte, error) {
+func (hl *HashList) Unmarshal(b []byte) error {
 	data := new(core_pb.HashList)
-	data.List = hl
+	if err := proto.Unmarshal(b, data); err != nil {
+		return err
+	}
+	*hl = data.List
+	return nil
+}
+
+func (hl *HashList) Marshal() ([]byte, error) {
+	data := new(core_pb.HashList)
+	data.List = *hl
 	return proto.Marshal(data)
 }

@@ -43,7 +43,8 @@ func TestVote(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			assert := assert.New(t)
 
-			vote, err := UnmarshalVote(tt.b)
+			vote := NewVote()
+			err := vote.Unmarshal(tt.b)
 			assert.NoError(err)
 
 			rs := new(MockValidatorStore)

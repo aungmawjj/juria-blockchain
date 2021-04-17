@@ -20,6 +20,12 @@ type Vote struct {
 	data *core_pb.Vote
 }
 
+func NewVote() *Vote {
+	return &Vote{
+		data: new(core_pb.Vote),
+	}
+}
+
 // Validate vote
 func (vote *Vote) Validate(vs ValidatorStore) error {
 	if vote.data == nil {
@@ -46,11 +52,12 @@ func (vote *Vote) Marshal() ([]byte, error) {
 	return proto.Marshal(vote.data)
 }
 
-// UnmarshalVote decodes vote from bytes
-func UnmarshalVote(b []byte) (*Vote, error) {
+// Unmarshal decodes vote from bytes
+func (vote *Vote) Unmarshal(b []byte) error {
 	data := new(core_pb.Vote)
 	if err := proto.Unmarshal(b, data); err != nil {
-		return nil, err
+		return err
 	}
-	return &Vote{data}, nil
+	vote.data = data
+	return nil
 }

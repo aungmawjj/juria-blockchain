@@ -70,7 +70,6 @@ func TestBlock(t *testing.T) {
 		wantErr bool
 	}{
 		{"valid", bOk, false},
-		{"nil block", nil, true},
 		{"invalid sig", bInvalidSig, true},
 		{"invalid validator", bInvalidValidator, true},
 		{"nil qc", bNilQC, true},
@@ -80,7 +79,8 @@ func TestBlock(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			assert := assert.New(t)
 
-			blk, err := UnmarshalBlock(tt.b)
+			blk := NewBlock()
+			err := blk.Unmarshal(tt.b)
 			assert.NoError(err)
 
 			err = blk.Validate(rs)

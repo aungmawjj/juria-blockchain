@@ -86,7 +86,8 @@ func TestQuorumCert(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			assert := assert.New(t)
 
-			qc, err := UnmarshalQuorumCert(tt.b)
+			qc := NewQuorumCert()
+			err := qc.Unmarshal(tt.b)
 			assert.NoError(err)
 
 			err = qc.Validate(rs)

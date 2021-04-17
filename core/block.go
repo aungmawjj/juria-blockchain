@@ -87,7 +87,8 @@ func (blk *Block) Vote(priv *PrivateKey) *Vote {
 
 func (blk *Block) setData(data *core_pb.Block) *Block {
 	blk.data = data
-	blk.quorumCert = NewQuorumCert().setData(data.QuorumCert)
+	blk.quorumCert = NewQuorumCert()
+	blk.quorumCert.setData(data.QuorumCert)
 	blk.proposer, _ = NewPublicKey(blk.data.Proposer)
 	return blk
 }
@@ -146,10 +147,11 @@ func (blk *Block) Marshal() ([]byte, error) {
 }
 
 // UnmarshalBlock decodes block from bytes
-func UnmarshalBlock(b []byte) (*Block, error) {
+func (blk *Block) Unmarshal(b []byte) error {
 	data := new(core_pb.Block)
 	if err := proto.Unmarshal(b, data); err != nil {
-		return nil, err
+		return err
 	}
-	return NewBlock().setData(data), nil
+	blk.setData(data)
+	return nil
 }

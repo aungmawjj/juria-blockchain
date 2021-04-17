@@ -164,16 +164,16 @@ func TestMsgService_BroadcastTxList(t *testing.T) {
 
 	svc, raws, _ := setupMsgServiceWithLoopBackPeers(ReqHandlers{})
 	sub := svc.SubscribeTxList(5)
-	var recvTxs core.TxList
+	var recvTxs *core.TxList
 	var recvCount int
 	go func() {
 		for e := range sub.Events() {
 			recvCount++
-			recvTxs = e.(core.TxList)
+			recvTxs = e.(*core.TxList)
 		}
 	}()
 
-	txs := core.TxList{
+	txs := &core.TxList{
 		core.NewTransaction().SetNonce(1),
 		core.NewTransaction().SetNonce(2),
 	}
@@ -194,8 +194,8 @@ func TestMsgService_BroadcastTxList(t *testing.T) {
 
 	assert.Equal(2, recvCount)
 	if assert.NotNil(recvTxs) {
-		assert.Equal(txs[0].Nonce(), recvTxs[0].Nonce())
-		assert.Equal(txs[1].Nonce(), recvTxs[1].Nonce())
+		assert.Equal((*txs)[0].Nonce(), (*recvTxs)[0].Nonce())
+		assert.Equal((*txs)[1].Nonce(), (*recvTxs)[1].Nonce())
 	}
 }
 
@@ -225,11 +225,11 @@ func TestMsgService_RequestBlock(t *testing.T) {
 func TestMsgService_RequestTxList(t *testing.T) {
 	assert := assert.New(t)
 
-	var txs core.TxList = []*core.Transaction{
+	var txs = &core.TxList{
 		core.NewTransaction().SetNonce(1),
 		core.NewTransaction().SetNonce(2),
 	}
-	txListReqHandler := func(hashList core.HashList) (core.TxList, error) {
+	txListReqHandler := func(hashList *core.HashList) (*core.TxList, error) {
 		return txs, nil
 	}
 
@@ -237,9 +237,9 @@ func TestMsgService_RequestTxList(t *testing.T) {
 		TxListReqHandler: txListReqHandler,
 	})
 
-	recvTxs, err := svc.RequestTxList(peers[0].PublicKey(), core.HashList{[]byte{1}, []byte{2}})
+	recvTxs, err := svc.RequestTxList(peers[0].PublicKey(), &core.HashList{[]byte{1}, []byte{2}})
 	if assert.NoError(err) && assert.NotNil(recvTxs) {
-		assert.Equal(txs[0].Nonce(), recvTxs[0].Nonce())
-		assert.Equal(txs[1].Nonce(), recvTxs[1].Nonce())
+		assert.Equal((*txs)[0].Nonce(), (*recvTxs)[0].Nonce())
+		assert.Equal((*txs)[1].Nonce(), (*recvTxs)[1].Nonce())
 	}
 }

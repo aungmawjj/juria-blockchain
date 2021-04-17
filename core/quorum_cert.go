@@ -5,6 +5,7 @@ package core
 
 import (
 	"errors"
+	"fmt"
 
 	"github.com/aungmawjj/juria-blockchain/core/core_pb"
 	"google.golang.org/protobuf/proto"
@@ -41,6 +42,7 @@ func (qc *QuorumCert) Validate(vs ValidatorStore) error {
 		return err
 	}
 	if len(sigs) < MajorityCount(vs.ValidatorCount()) {
+		fmt.Println(len(sigs), MajorityCount(vs.ValidatorCount()))
 		return ErrNotEnoughSig
 	}
 	if sigs.hasDuplicate() {
@@ -77,11 +79,12 @@ func (qc *QuorumCert) Marshal() ([]byte, error) {
 	return proto.Marshal(qc.data)
 }
 
-// UnmarshalQuorumCert decodes quorum cert from bytes
-func UnmarshalQuorumCert(b []byte) (*QuorumCert, error) {
+// Unmarshal decodes quorum cert from bytes
+func (qc *QuorumCert) Unmarshal(b []byte) error {
 	data := new(core_pb.QuorumCert)
 	if err := proto.Unmarshal(b, data); err != nil {
-		return nil, err
+		return err
 	}
-	return NewQuorumCert().setData(data), nil
+	qc.setData(data)
+	return nil
 }

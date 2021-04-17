@@ -34,7 +34,8 @@ func TestTransaction(t *testing.T) {
 	b, err := tx.Marshal()
 	assert.NoError(err)
 
-	tx, err = UnmarshalTransaction(b)
+	tx = NewTransaction()
+	err = tx.Unmarshal(b)
 	assert.NoError(err)
 
 	assert.NoError(tx.Validate())
@@ -57,14 +58,15 @@ func TestTxList(t *testing.T) {
 
 	assert := assert.New(t)
 
-	var txs TxList = []*Transaction{tx1, tx2}
+	txs := &TxList{tx1, tx2}
 	b, err := txs.Marshal()
 	assert.NoError(err)
 
-	txs, err = UnmarshalTxList(b)
+	txs = NewTxList()
+	err = txs.Unmarshal(b)
 	assert.NoError(err)
 
-	assert.Equal(2, len(txs))
-	assert.Equal(tx1.Sum(), txs[0].Sum())
-	assert.Equal(tx2.Sum(), txs[1].Sum())
+	assert.Equal(2, len(*txs))
+	assert.Equal(tx1.Sum(), (*txs)[0].Sum())
+	assert.Equal(tx2.Sum(), (*txs)[1].Sum())
 }
