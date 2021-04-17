@@ -5,8 +5,6 @@ syntax = "proto3";
 
 package p2p.pb;
 
-import "core/core_pb/core.proto";
-
 message Message {
 	Type type = 1;
 	bytes data = 2;
@@ -29,12 +27,4 @@ message Message {
 		ReqBlock = 0;
 		ReqTxList = 1;
 	}
-}
-
-message TxList {
-	repeated core.pb.Transaction list = 1;
-}
-
-message HashList {
-	repeated bytes list = 1;
 }

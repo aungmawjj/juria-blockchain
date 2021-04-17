@@ -1,7 +1,7 @@
 
 all: core.pb.go
 
-core.pb.go: 
+core.pb.go: core.proto
 	protoc \
 	--proto_path=../..:. \
 	--go_out=./ \

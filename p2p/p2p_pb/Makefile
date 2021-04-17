@@ -1,7 +1,7 @@
 
 all: p2p.pb.go
 
-p2p.pb.go: 
+p2p.pb.go: p2p.proto
 	protoc \
 	--proto_path=../..:. \
 	--go_out=./ \
