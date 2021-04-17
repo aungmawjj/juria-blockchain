@@ -1,0 +1,40 @@
+// Copyright (C) 2020 Aung Maw
+// Licensed under the GNU General Public License v3.0
+
+syntax = "proto3";
+
+package p2p.pb;
+
+import "core/core_pb/core.proto";
+
+message Message {
+	Type type = 1;
+	bytes data = 2;
+
+	ReqType reqType = 3;
+	uint32 seq = 4;
+	string error  = 5;
+
+	enum Type {
+		Invalid = 0;
+		Proposal = 1;
+		Vote  = 2;
+		NewView = 3;
+		TxList = 4;
+		Request = 5;
+		Response = 6;
+	}
+
+	enum ReqType {
+		ReqBlock = 0;
+		ReqTxList = 1;
+	}
+}
+
+message TxList {
+	repeated core.pb.Transaction list = 1;
+}
+
+message HashList {
+	repeated bytes list = 1;
+}

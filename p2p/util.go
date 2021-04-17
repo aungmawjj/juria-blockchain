@@ -7,7 +7,7 @@ import (
 	"reflect"
 
 	"github.com/aungmawjj/juria-blockchain/core"
-	p2p_pb "github.com/aungmawjj/juria-blockchain/p2p/pb"
+	"github.com/aungmawjj/juria-blockchain/p2p/p2p_pb"
 	"google.golang.org/protobuf/proto"
 )
 

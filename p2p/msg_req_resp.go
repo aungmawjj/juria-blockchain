@@ -7,7 +7,7 @@ import (
 	"errors"
 	"time"
 
-	p2p_pb "github.com/aungmawjj/juria-blockchain/p2p/pb"
+	"github.com/aungmawjj/juria-blockchain/p2p/p2p_pb"
 	"github.com/aungmawjj/juria-blockchain/util/emitter"
 	"google.golang.org/protobuf/proto"
 )
@@ -17,10 +17,6 @@ type reqHandlerFunc func(request interface{}) (marshalable, error)
 type reqHandler struct {
 	unmarshalReq unmarshalFunc
 	handler      reqHandlerFunc
-}
-
-func (hdlr *reqHandler) msgHandlerFunc(peer *Peer, msg *p2p_pb.Message) {
-	go hdlr.handleRequest(peer, msg)
 }
 
 func (hdlr *reqHandler) handleRequest(peer *Peer, msg *p2p_pb.Message) {
@@ -51,7 +47,7 @@ func (hdlr *reqHandler) invokeHandler(peer *Peer, msg *p2p_pb.Message) ([]byte, 
 type reqClient struct {
 	peer            *Peer
 	reqData         marshalable
-	reqType         p2p_pb.Message_Type
+	reqType         p2p_pb.Message_ReqType
 	seq             uint32
 	timeoutDuration time.Duration
 	unmarshalResp   unmarshalFunc
@@ -64,9 +60,10 @@ func (client *reqClient) makeRequest() (interface{}, error) {
 
 	sub := client.peer.SubscribeMsg()
 	defer sub.Unsubscribe()
+	respCh := client.getResponse(sub)
 
 	client.sendRequest()
-	return client.waitResponse(sub)
+	return client.waitResponse(sub, respCh)
 }
 
 func (client *reqClient) sendRequest() error {
@@ -76,8 +73,9 @@ func (client *reqClient) sendRequest() error {
 	}
 
 	msg := new(p2p_pb.Message)
-	msg.Type = client.reqType
+	msg.Type = p2p_pb.Message_Request
 	msg.Data = b
+	msg.ReqType = client.reqType
 	msg.Seq = client.seq
 
 	msgB, err := proto.Marshal(msg)
@@ -87,26 +85,36 @@ func (client *reqClient) sendRequest() error {
 	return client.peer.WriteMsg(msgB)
 }
 
-func (client *reqClient) waitResponse(sub *emitter.Subscription) (interface{}, error) {
+func (client *reqClient) getResponse(sub *emitter.Subscription) <-chan *p2p_pb.Message {
+	ch := make(chan *p2p_pb.Message)
+	go func() {
+		for e := range sub.Events() {
+			msgB := e.([]byte)
+			resp := new(p2p_pb.Message)
+			if err := proto.Unmarshal(msgB, resp); err != nil {
+				continue
+			}
+			if !(resp.Type == p2p_pb.Message_Response && resp.Seq == client.seq) {
+				continue
+			}
+			ch <- resp
+		}
+	}()
+	return ch
+}
+
+func (client *reqClient) waitResponse(sub *emitter.Subscription, respCh <-chan *p2p_pb.Message) (interface{}, error) {
 	timeout := time.After(client.timeoutDuration)
 	for {
 		select {
 		case <-timeout:
 			return nil, errors.New("request timeout")
 
-		case e := <-sub.Events():
-			msgB := e.([]byte)
-			respMsg := new(p2p_pb.Message)
-			if err := proto.Unmarshal(msgB, respMsg); err != nil {
-				break
+		case resp := <-respCh:
+			if len(resp.Error) > 0 {
+				return nil, errors.New(resp.Error)
 			}
-			if !(respMsg.Type == p2p_pb.Message_Response && respMsg.Seq == client.seq) {
-				break
-			}
-			if len(respMsg.Error) > 0 {
-				return nil, errors.New(respMsg.Error)
-			}
-			return client.unmarshalResp(respMsg.Data)
+			return client.unmarshalResp(resp.Data)
 		}
 	}
 }

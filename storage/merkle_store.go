@@ -7,6 +7,7 @@ import (
 	"math/big"
 
 	"github.com/aungmawjj/juria-blockchain/merkle"
+	"github.com/aungmawjj/juria-blockchain/util"
 	"github.com/dgraph-io/badger"
 )
 
@@ -39,7 +40,7 @@ func (ms *MerkleStore) GetNode(p *merkle.Position) []byte {
 	return val
 }
 
-func (ms *MerkleStore) commitUpdate(upd *merkle.UpdateResult) []updateFunc {
+func (ms *MerkleStore) CommitUpdate(upd *merkle.UpdateResult) []updateFunc {
 	ret := ms.setNodes(upd)
 	ret = append(ret, ms.setLeafCount(upd))
 	ret = append(ret, ms.setHeight(upd))
@@ -76,5 +77,5 @@ func (ms *MerkleStore) setNode(n *merkle.Node) updateFunc {
 }
 
 func (ms *MerkleStore) nodeKey(p *merkle.Position) []byte {
-	return concatBytes([]byte{keyMerkleNode}, p.Bytes())
+	return util.ConcatBytes([]byte{keyMerkleNode}, p.Bytes())
 }

@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/aungmawjj/juria-blockchain/core"
-	p2p_pb "github.com/aungmawjj/juria-blockchain/p2p/pb"
+	"github.com/aungmawjj/juria-blockchain/p2p/p2p_pb"
 	"github.com/aungmawjj/juria-blockchain/util/emitter"
 	"google.golang.org/protobuf/proto"
 )
@@ -31,13 +31,18 @@ type MsgService struct {
 	newViewEmitter  *emitter.Emitter
 	txListEmitter   *emitter.Emitter
 
-	reqSeq uint32
+	reqHandlers map[p2p_pb.Message_ReqType]*reqHandler
+	reqSeq      uint32
 }
 
-func NewMsgService(host *Host) *MsgService {
+type ReqHandlers struct {
+	BlockReqHandler  func(hash []byte) (*core.Block, error)
+	TxListReqHandler func(hashList core.HashList) (core.TxList, error)
+}
+
+func NewMsgService(host *Host, reqHandlers ReqHandlers) *MsgService {
 	svc := new(MsgService)
 	svc.host = host
-	svc.handlers = make(map[p2p_pb.Message_Type]msgHandlerFunc)
 	svc.host.SetPeerAddedHandler(svc.onAddedPeer)
 
 	svc.proposalEmitter = emitter.New()
@@ -45,15 +50,30 @@ func NewMsgService(host *Host) *MsgService {
 	svc.newViewEmitter = emitter.New()
 	svc.txListEmitter = emitter.New()
 
-	svc.setReceiverHandlers()
+	svc.setRequestHandlers(reqHandlers)
+	svc.setMessageHandlers()
 	return svc
 }
 
-func (svc *MsgService) setReceiverHandlers() {
+func (svc *MsgService) setRequestHandlers(hdlrs ReqHandlers) {
+	svc.reqHandlers = make(map[p2p_pb.Message_ReqType]*reqHandler)
+	svc.reqHandlers[p2p_pb.Message_ReqBlock] = &reqHandler{
+		unmarshalReq: unmarshalBytesTypeCast,
+		handler:      castReqHandlerFunc(hdlrs.BlockReqHandler),
+	}
+	svc.reqHandlers[p2p_pb.Message_ReqTxList] = &reqHandler{
+		unmarshalReq: unmarshalHashList,
+		handler:      castReqHandlerFunc(hdlrs.TxListReqHandler),
+	}
+}
+
+func (svc *MsgService) setMessageHandlers() {
+	svc.handlers = make(map[p2p_pb.Message_Type]msgHandlerFunc)
 	svc.handlers[p2p_pb.Message_Proposal] = svc.receiverHandlerFunc(unmarshalBlock, svc.proposalEmitter)
 	svc.handlers[p2p_pb.Message_Vote] = svc.receiverHandlerFunc(unmarshalVote, svc.voteEmitter)
 	svc.handlers[p2p_pb.Message_NewView] = svc.receiverHandlerFunc(unmarshalQuorumCert, svc.newViewEmitter)
 	svc.handlers[p2p_pb.Message_TxList] = svc.receiverHandlerFunc(unmarshalTxList, svc.txListEmitter)
+	svc.handlers[p2p_pb.Message_Request] = svc.handleMessageRequest
 }
 
 func (svc *MsgService) receiverHandlerFunc(unmarshal unmarshalFunc, emitter *emitter.Emitter) msgHandlerFunc {
@@ -63,6 +83,12 @@ func (svc *MsgService) receiverHandlerFunc(unmarshal unmarshalFunc, emitter *emi
 			return
 		}
 		emitter.Emit(data)
+	}
+}
+
+func (svc *MsgService) handleMessageRequest(peer *Peer, msg *p2p_pb.Message) {
+	if hdlr, ok := svc.reqHandlers[msg.ReqType]; ok {
+		go hdlr.handleRequest(peer, msg)
 	}
 }
 
@@ -139,28 +165,12 @@ func (svc *MsgService) sendData(pubKey *core.PublicKey, msgType p2p_pb.Message_T
 	return peer.WriteMsg(msgB)
 }
 
-func (svc *MsgService) SetBlockReqHandler(handler func(hash []byte) (*core.Block, error)) {
-	blkReqHandler := &reqHandler{
-		unmarshalReq: unmarshalBytesTypeCast,
-		handler:      castReqHandlerFunc(handler),
-	}
-	svc.handlers[p2p_pb.Message_BlockReq] = blkReqHandler.msgHandlerFunc
-}
-
-func (svc *MsgService) SetTxListReqHandler(handler func(hashList core.HashList) (core.TxList, error)) {
-	txListReqHandler := &reqHandler{
-		unmarshalReq: unmarshalHashList,
-		handler:      castReqHandlerFunc(handler),
-	}
-	svc.handlers[p2p_pb.Message_TxListReq] = txListReqHandler.msgHandlerFunc
-}
-
 func (svc *MsgService) RequestBlock(pubKey *core.PublicKey, hash []byte) (*core.Block, error) {
 	seq := atomic.AddUint32(&svc.reqSeq, 1)
 	client := &reqClient{
 		peer:            svc.host.PeerStore().Load(pubKey),
 		reqData:         bytesType(hash),
-		reqType:         p2p_pb.Message_BlockReq,
+		reqType:         p2p_pb.Message_ReqBlock,
 		seq:             seq,
 		timeoutDuration: 2 * time.Second,
 		unmarshalResp:   unmarshalBlock,
@@ -177,7 +187,7 @@ func (svc *MsgService) RequestTxList(pubKey *core.PublicKey, hashList core.HashL
 	client := &reqClient{
 		peer:            svc.host.PeerStore().Load(pubKey),
 		reqData:         hashList,
-		reqType:         p2p_pb.Message_TxListReq,
+		reqType:         p2p_pb.Message_ReqTxList,
 		seq:             seq,
 		timeoutDuration: 2 * time.Second,
 		unmarshalResp:   unmarshalTxList,

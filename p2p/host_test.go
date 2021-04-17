@@ -39,7 +39,7 @@ func TestHost(t *testing.T) {
 
 	host1.AddPeer(NewPeer(priv2.PublicKey(), addr2))
 
-	time.Sleep(5 * time.Millisecond)
+	time.Sleep(10 * time.Millisecond)
 
 	assert.Equal(2, addedPeerCalls)
 
@@ -68,7 +68,7 @@ func TestHost(t *testing.T) {
 	msg := []byte("hello")
 	p2.WriteMsg(msg)
 
-	time.Sleep(5 * time.Millisecond)
+	time.Sleep(10 * time.Millisecond)
 
 	assert.Equal(msg, recv1)
 
@@ -84,7 +84,7 @@ func TestHost(t *testing.T) {
 	// send message from host2
 	p1.WriteMsg(msg)
 
-	time.Sleep(5 * time.Millisecond)
+	time.Sleep(10 * time.Millisecond)
 
 	assert.Equal(msg, recv2)
 
@@ -101,7 +101,7 @@ func TestHost(t *testing.T) {
 	addr3, _ := multiaddr.NewMultiaddr("/ip4/127.0.0.1/tcp/25003")
 	host2.AddPeer(NewPeer(priv3.PublicKey(), addr3)) // not reachable host
 
-	time.Sleep(5 * time.Millisecond)
+	time.Sleep(10 * time.Millisecond)
 
 	p4 := host2.PeerStore().Load(priv3.PublicKey())
 	if assert.NotNil(p4) {

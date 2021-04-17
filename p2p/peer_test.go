@@ -4,6 +4,7 @@
 package p2p
 
 import (
+	"bytes"
 	"io"
 	"testing"
 	"time"
@@ -14,14 +15,63 @@ import (
 )
 
 type rwcLoopBack struct {
-	io.Reader
-	io.Writer
-	io.Closer
+	buf      *bytes.Buffer
+	closedCh chan struct{}
+	inCh     chan struct{}
 }
 
 func newRWCLoopBack() *rwcLoopBack {
-	r, w := io.Pipe()
-	return &rwcLoopBack{r, w, r}
+	return &rwcLoopBack{
+		buf:      bytes.NewBuffer(nil),
+		closedCh: make(chan struct{}),
+		inCh:     make(chan struct{}, 2),
+	}
+}
+
+func (rwc *rwcLoopBack) Read(b []byte) (n int, err error) {
+	select {
+	case <-rwc.closedCh:
+		return 0, io.EOF
+	default:
+		n, err = rwc.readBuf(b)
+		if err == io.EOF {
+			select {
+			case <-rwc.closedCh:
+			case <-rwc.inCh:
+				return rwc.Read(b)
+			}
+		}
+		return n, err
+	}
+}
+
+func (rwc *rwcLoopBack) readBuf(b []byte) (int, error) {
+	return rwc.buf.Read(b)
+}
+
+func (rwc *rwcLoopBack) Write(b []byte) (n int, err error) {
+	select {
+	case <-rwc.closedCh:
+		return 0, io.ErrClosedPipe
+	default:
+	}
+	n, err = rwc.buf.Write(b)
+	select {
+	case rwc.inCh <- struct{}{}:
+	default:
+	}
+	return n, err
+}
+
+func (rwc *rwcLoopBack) Close() error {
+	select {
+	case <-rwc.closedCh:
+		return io.ErrClosedPipe
+	default:
+		close(rwc.closedCh)
+		rwc.buf.Reset()
+		return nil
+	}
 }
 
 func TestRWCLoopBack(t *testing.T) {

@@ -6,7 +6,7 @@ package core
 import (
 	"errors"
 
-	core_pb "github.com/aungmawjj/juria-blockchain/core/pb"
+	"github.com/aungmawjj/juria-blockchain/core/core_pb"
 	"google.golang.org/protobuf/proto"
 )
 

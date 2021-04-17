@@ -7,7 +7,7 @@ import (
 	"bytes"
 	"errors"
 
-	core_pb "github.com/aungmawjj/juria-blockchain/core/pb"
+	"github.com/aungmawjj/juria-blockchain/core/core_pb"
 	"golang.org/x/crypto/sha3"
 	"google.golang.org/protobuf/proto"
 )

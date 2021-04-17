@@ -6,7 +6,7 @@ package core
 import (
 	"testing"
 
-	core_pb "github.com/aungmawjj/juria-blockchain/core/pb"
+	"github.com/aungmawjj/juria-blockchain/core/core_pb"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )

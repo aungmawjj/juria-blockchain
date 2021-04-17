@@ -33,15 +33,3 @@ func getValue(db *badger.DB, key []byte) ([]byte, error) {
 	})
 	return val, err
 }
-
-func concatBytes(srcs ...[]byte) []byte {
-	size := 0
-	for _, src := range srcs {
-		size += len(src)
-	}
-	dst := make([]byte, 0, size)
-	for _, src := range srcs {
-		dst = append(dst, src...)
-	}
-	return dst
-}

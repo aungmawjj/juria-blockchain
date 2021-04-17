@@ -10,12 +10,12 @@ import (
 	"time"
 
 	"github.com/aungmawjj/juria-blockchain/core"
-	p2p_pb "github.com/aungmawjj/juria-blockchain/p2p/pb"
+	"github.com/aungmawjj/juria-blockchain/p2p/p2p_pb"
 	"github.com/stretchr/testify/assert"
 	"google.golang.org/protobuf/proto"
 )
 
-func setupMsgServiceWithLoopBackPeers() (*MsgService, [][]byte, []*Peer) {
+func setupMsgServiceWithLoopBackPeers(reqHandlers ReqHandlers) (*MsgService, [][]byte, []*Peer) {
 	peers := make([]*Peer, 2)
 	peers[0] = NewPeer(core.GenerateKey(nil).PublicKey(), nil)
 	peers[1] = NewPeer(core.GenerateKey(nil).PublicKey(), nil)
@@ -40,7 +40,7 @@ func setupMsgServiceWithLoopBackPeers() (*MsgService, [][]byte, []*Peer) {
 	host := new(Host)
 	host.peerStore = NewPeerStore()
 
-	svc := NewMsgService(host)
+	svc := NewMsgService(host, reqHandlers)
 
 	peers[0].OnConnected(newRWCLoopBack())
 	peers[1].OnConnected(newRWCLoopBack())
@@ -49,13 +49,14 @@ func setupMsgServiceWithLoopBackPeers() (*MsgService, [][]byte, []*Peer) {
 	go host.onAddedPeer(peers[0])
 	go host.onAddedPeer(peers[1])
 
+	time.Sleep(time.Millisecond)
 	return svc, raws, peers
 }
 
 func TestMsgService_BroadcastProposal(t *testing.T) {
 	assert := assert.New(t)
 
-	svc, raws, _ := setupMsgServiceWithLoopBackPeers()
+	svc, raws, _ := setupMsgServiceWithLoopBackPeers(ReqHandlers{})
 	sub := svc.SubscribeProposal(5)
 	var recvBlk *core.Block
 	var recvCount int
@@ -91,7 +92,7 @@ func TestMsgService_BroadcastProposal(t *testing.T) {
 func TestMsgService_SendVote(t *testing.T) {
 	assert := assert.New(t)
 
-	svc, raws, peers := setupMsgServiceWithLoopBackPeers()
+	svc, raws, peers := setupMsgServiceWithLoopBackPeers(ReqHandlers{})
 
 	sub := svc.SubscribeVote(5)
 	var recvVote *core.Vote
@@ -126,7 +127,7 @@ func TestMsgService_SendVote(t *testing.T) {
 func TestMsgService_SendNewView(t *testing.T) {
 	assert := assert.New(t)
 
-	svc, raws, peers := setupMsgServiceWithLoopBackPeers()
+	svc, raws, peers := setupMsgServiceWithLoopBackPeers(ReqHandlers{})
 
 	sub := svc.SubscribeNewView(5)
 	var recvQC *core.QuorumCert
@@ -161,7 +162,7 @@ func TestMsgService_SendNewView(t *testing.T) {
 func TestMsgService_BroadcastTxList(t *testing.T) {
 	assert := assert.New(t)
 
-	svc, raws, _ := setupMsgServiceWithLoopBackPeers()
+	svc, raws, _ := setupMsgServiceWithLoopBackPeers(ReqHandlers{})
 	sub := svc.SubscribeTxList(5)
 	var recvTxs core.TxList
 	var recvCount int
@@ -201,8 +202,6 @@ func TestMsgService_BroadcastTxList(t *testing.T) {
 func TestMsgService_RequestBlock(t *testing.T) {
 	assert := assert.New(t)
 
-	svc, _, peers := setupMsgServiceWithLoopBackPeers()
-
 	blk := core.NewBlock().SetHeight(10).Sign(core.GenerateKey(nil))
 	blkReqHandler := func(hash []byte) (*core.Block, error) {
 		if bytes.Equal(blk.Hash(), hash) {
@@ -210,7 +209,9 @@ func TestMsgService_RequestBlock(t *testing.T) {
 		}
 		return nil, errors.New("block not found")
 	}
-	svc.SetBlockReqHandler(blkReqHandler)
+	svc, _, peers := setupMsgServiceWithLoopBackPeers(ReqHandlers{
+		BlockReqHandler: blkReqHandler,
+	})
 
 	recvBlk, err := svc.RequestBlock(peers[0].PublicKey(), blk.Hash())
 	if assert.NoError(err) && assert.NotNil(recvBlk) {
@@ -224,8 +225,6 @@ func TestMsgService_RequestBlock(t *testing.T) {
 func TestMsgService_RequestTxList(t *testing.T) {
 	assert := assert.New(t)
 
-	svc, _, peers := setupMsgServiceWithLoopBackPeers()
-
 	var txs core.TxList = []*core.Transaction{
 		core.NewTransaction().SetNonce(1),
 		core.NewTransaction().SetNonce(2),
@@ -233,7 +232,10 @@ func TestMsgService_RequestTxList(t *testing.T) {
 	txListReqHandler := func(hashList core.HashList) (core.TxList, error) {
 		return txs, nil
 	}
-	svc.SetTxListReqHandler(txListReqHandler)
+
+	svc, _, peers := setupMsgServiceWithLoopBackPeers(ReqHandlers{
+		TxListReqHandler: txListReqHandler,
+	})
 
 	recvTxs, err := svc.RequestTxList(peers[0].PublicKey(), core.HashList{[]byte{1}, []byte{2}})
 	if assert.NoError(err) && assert.NotNil(recvTxs) {

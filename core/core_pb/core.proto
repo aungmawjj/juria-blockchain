@@ -5,7 +5,7 @@ syntax = "proto3";
 
 package core.pb;
 
-option go_package = ".;core_pb";
+// option go_package = ".;core_pb";
 
 message Block {
 	bytes hash = 1;
@@ -17,6 +17,14 @@ message Block {
 	bytes stateRoot = 7;
 	repeated bytes transactions = 8; // transaction hashes
 	bytes signature = 9; // signature of proposer
+}
+
+message BlockCommit {
+	bytes hash = 1;
+	repeated bytes transactions = 2;
+	repeated StateChange stateChanges = 3;
+	bytes leafCount = 4;
+	bytes stateRoot = 5;
 }
 
 message Signature {
@@ -41,14 +49,14 @@ message Transaction {
 	bytes sender = 4;
 	bytes codeAddr = 5;
 	bytes input = 6;
-	Commit commit = 7;
+}
 
-	message Commit {
-		bytes blockHash = 1;
-		uint64 blockHeight = 2;
-		string error = 3;
-		uint64 elapsed = 4;
-	}
+message TxCommit {
+	bytes hash = 1;
+	bytes blockHash = 2;
+	uint64 blockHeight = 3;
+	string error = 4;
+	uint64 elapsed = 5;
 }
 
 message TxList {
@@ -57,4 +65,12 @@ message TxList {
 
 message HashList {
   	repeated bytes list = 1;
+}
+
+message StateChange {
+	bytes key = 1;
+	bytes value = 2;
+	bytes prevValue = 3;
+	bytes treeIndex = 4;
+	bytes prevTreeIndex = 5;
 }
