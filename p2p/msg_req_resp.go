@@ -13,17 +13,15 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-type reqHandlerFunc func(request interface{}) (core.Marshaler, error)
-
-type reqHandler struct {
+type reqMsgHandler struct {
 	reqFactory unmarshalerFactory
-	handler    reqHandlerFunc
+	reqHandler reqHandler
 }
 
-func (hdlr *reqHandler) handleRequest(peer *Peer, msg *p2p_pb.Message) {
+func (hdlr *reqMsgHandler) handleReqMsg(peer *Peer, msg *p2p_pb.Message) {
 	respMsg := new(p2p_pb.Message)
 	respMsg.Seq = msg.Seq
-	b, err := hdlr.invokeHandler(peer, msg)
+	b, err := hdlr.invokeReqHandler(peer, msg)
 	if err != nil {
 		respMsg.Error = err.Error()
 	}
@@ -33,16 +31,16 @@ func (hdlr *reqHandler) handleRequest(peer *Peer, msg *p2p_pb.Message) {
 	peer.WriteMsg(msgB)
 }
 
-func (hdlr *reqHandler) invokeHandler(peer *Peer, msg *p2p_pb.Message) ([]byte, error) {
+func (hdlr *reqMsgHandler) invokeReqHandler(peer *Peer, msg *p2p_pb.Message) ([]byte, error) {
 	var req interface{} = msg.Data
 	if hdlr.reqFactory != nil {
-		reqObj := hdlr.reqFactory()
+		reqObj := hdlr.reqFactory.Instance()
 		if err := reqObj.Unmarshal(msg.Data); err != nil {
 			return nil, err
 		}
 		req = reqObj
 	}
-	resp, err := hdlr.handler(req)
+	resp, err := hdlr.reqHandler.handleReq(req)
 	if err != nil {
 		return nil, err
 	}

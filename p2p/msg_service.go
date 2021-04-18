@@ -14,10 +14,6 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-type msgHandlerFunc func(peer *Peer, msg *p2p_pb.Message)
-
-type unmarshalerFactory func() core.Unmarshaler
-
 type MsgService struct {
 	host     *Host
 	handlers map[p2p_pb.Message_Type]msgHandlerFunc
@@ -27,16 +23,11 @@ type MsgService struct {
 	newViewEmitter  *emitter.Emitter
 	txListEmitter   *emitter.Emitter
 
-	reqHandlers map[p2p_pb.Message_ReqType]*reqHandler
+	reqHandlers map[p2p_pb.Message_ReqType]*reqMsgHandler
 	reqSeq      uint32
 }
 
-type ReqHandlers struct {
-	BlockReqHandler  func(hash []byte) (*core.Block, error)
-	TxListReqHandler func(hashList *core.HashList) (*core.TxList, error)
-}
-
-func NewMsgService(host *Host, reqHandlers ReqHandlers) *MsgService {
+func NewMsgService(host *Host, hdlrs ReqHandlerFuncs) *MsgService {
 	svc := new(MsgService)
 	svc.host = host
 	svc.host.SetPeerAddedHandler(svc.onAddedPeer)
@@ -46,34 +37,34 @@ func NewMsgService(host *Host, reqHandlers ReqHandlers) *MsgService {
 	svc.newViewEmitter = emitter.New()
 	svc.txListEmitter = emitter.New()
 
-	svc.setRequestHandlers(reqHandlers)
+	svc.setRequestHandlers(hdlrs)
 	svc.setMessageHandlers()
 	return svc
 }
 
-func (svc *MsgService) setRequestHandlers(hdlrs ReqHandlers) {
-	svc.reqHandlers = make(map[p2p_pb.Message_ReqType]*reqHandler)
-	svc.reqHandlers[p2p_pb.Message_ReqBlock] = &reqHandler{
-		handler: castReqHandlerFunc(hdlrs.BlockReqHandler),
+func (svc *MsgService) setRequestHandlers(hdlrs ReqHandlerFuncs) {
+	svc.reqHandlers = make(map[p2p_pb.Message_ReqType]*reqMsgHandler)
+	svc.reqHandlers[p2p_pb.Message_ReqBlock] = &reqMsgHandler{
+		reqHandler: &blockReqHandler{hdlrs.BlockReqHandler},
 	}
-	svc.reqHandlers[p2p_pb.Message_ReqTxList] = &reqHandler{
-		reqFactory: unmarshalerHashList,
-		handler:    castReqHandlerFunc(hdlrs.TxListReqHandler),
+	svc.reqHandlers[p2p_pb.Message_ReqTxList] = &reqMsgHandler{
+		reqFactory: hashListFactory{},
+		reqHandler: &txListReqHandler{hdlrs.TxListReqHandler},
 	}
 }
 
 func (svc *MsgService) setMessageHandlers() {
 	svc.handlers = make(map[p2p_pb.Message_Type]msgHandlerFunc)
-	svc.handlers[p2p_pb.Message_Proposal] = svc.receiverHandlerFunc(unmarshalerBlock, svc.proposalEmitter)
-	svc.handlers[p2p_pb.Message_Vote] = svc.receiverHandlerFunc(unmarshalerVote, svc.voteEmitter)
-	svc.handlers[p2p_pb.Message_NewView] = svc.receiverHandlerFunc(unmarshalerQuorumCert, svc.newViewEmitter)
-	svc.handlers[p2p_pb.Message_TxList] = svc.receiverHandlerFunc(unmarshalerTxList, svc.txListEmitter)
+	svc.handlers[p2p_pb.Message_Proposal] = svc.receiverHandlerFunc(blockFactory{}, svc.proposalEmitter)
+	svc.handlers[p2p_pb.Message_Vote] = svc.receiverHandlerFunc(voteFactory{}, svc.voteEmitter)
+	svc.handlers[p2p_pb.Message_NewView] = svc.receiverHandlerFunc(quorumCertFactory{}, svc.newViewEmitter)
+	svc.handlers[p2p_pb.Message_TxList] = svc.receiverHandlerFunc(txListFactory{}, svc.txListEmitter)
 	svc.handlers[p2p_pb.Message_Request] = svc.handleMessageRequest
 }
 
-func (svc *MsgService) receiverHandlerFunc(unmarshalerFactory func() core.Unmarshaler, emitter *emitter.Emitter) msgHandlerFunc {
+func (svc *MsgService) receiverHandlerFunc(factory unmarshalerFactory, emitter *emitter.Emitter) msgHandlerFunc {
 	return func(peer *Peer, msg *p2p_pb.Message) {
-		obj := unmarshalerFactory()
+		obj := factory.Instance()
 		err := obj.Unmarshal(msg.Data)
 		if err != nil {
 			return
@@ -84,7 +75,7 @@ func (svc *MsgService) receiverHandlerFunc(unmarshalerFactory func() core.Unmars
 
 func (svc *MsgService) handleMessageRequest(peer *Peer, msg *p2p_pb.Message) {
 	if hdlr, ok := svc.reqHandlers[msg.ReqType]; ok {
-		go hdlr.handleRequest(peer, msg)
+		go hdlr.handleReqMsg(peer, msg)
 	}
 }
 

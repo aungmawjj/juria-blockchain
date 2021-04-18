@@ -15,7 +15,7 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-func setupMsgServiceWithLoopBackPeers(reqHandlers ReqHandlers) (*MsgService, [][]byte, []*Peer) {
+func setupMsgServiceWithLoopBackPeers(ReqHandlerFuncs ReqHandlerFuncs) (*MsgService, [][]byte, []*Peer) {
 	peers := make([]*Peer, 2)
 	peers[0] = NewPeer(core.GenerateKey(nil).PublicKey(), nil)
 	peers[1] = NewPeer(core.GenerateKey(nil).PublicKey(), nil)
@@ -40,7 +40,7 @@ func setupMsgServiceWithLoopBackPeers(reqHandlers ReqHandlers) (*MsgService, [][
 	host := new(Host)
 	host.peerStore = NewPeerStore()
 
-	svc := NewMsgService(host, reqHandlers)
+	svc := NewMsgService(host, ReqHandlerFuncs)
 
 	peers[0].OnConnected(newRWCLoopBack())
 	peers[1].OnConnected(newRWCLoopBack())
@@ -56,7 +56,7 @@ func setupMsgServiceWithLoopBackPeers(reqHandlers ReqHandlers) (*MsgService, [][
 func TestMsgService_BroadcastProposal(t *testing.T) {
 	assert := assert.New(t)
 
-	svc, raws, _ := setupMsgServiceWithLoopBackPeers(ReqHandlers{})
+	svc, raws, _ := setupMsgServiceWithLoopBackPeers(ReqHandlerFuncs{})
 	sub := svc.SubscribeProposal(5)
 	var recvBlk *core.Block
 	var recvCount int
@@ -92,7 +92,7 @@ func TestMsgService_BroadcastProposal(t *testing.T) {
 func TestMsgService_SendVote(t *testing.T) {
 	assert := assert.New(t)
 
-	svc, raws, peers := setupMsgServiceWithLoopBackPeers(ReqHandlers{})
+	svc, raws, peers := setupMsgServiceWithLoopBackPeers(ReqHandlerFuncs{})
 
 	sub := svc.SubscribeVote(5)
 	var recvVote *core.Vote
@@ -127,7 +127,7 @@ func TestMsgService_SendVote(t *testing.T) {
 func TestMsgService_SendNewView(t *testing.T) {
 	assert := assert.New(t)
 
-	svc, raws, peers := setupMsgServiceWithLoopBackPeers(ReqHandlers{})
+	svc, raws, peers := setupMsgServiceWithLoopBackPeers(ReqHandlerFuncs{})
 
 	sub := svc.SubscribeNewView(5)
 	var recvQC *core.QuorumCert
@@ -162,7 +162,7 @@ func TestMsgService_SendNewView(t *testing.T) {
 func TestMsgService_BroadcastTxList(t *testing.T) {
 	assert := assert.New(t)
 
-	svc, raws, _ := setupMsgServiceWithLoopBackPeers(ReqHandlers{})
+	svc, raws, _ := setupMsgServiceWithLoopBackPeers(ReqHandlerFuncs{})
 	sub := svc.SubscribeTxList(5)
 	var recvTxs *core.TxList
 	var recvCount int
@@ -209,7 +209,7 @@ func TestMsgService_RequestBlock(t *testing.T) {
 		}
 		return nil, errors.New("block not found")
 	}
-	svc, _, peers := setupMsgServiceWithLoopBackPeers(ReqHandlers{
+	svc, _, peers := setupMsgServiceWithLoopBackPeers(ReqHandlerFuncs{
 		BlockReqHandler: blkReqHandler,
 	})
 
@@ -233,7 +233,7 @@ func TestMsgService_RequestTxList(t *testing.T) {
 		return txs, nil
 	}
 
-	svc, _, peers := setupMsgServiceWithLoopBackPeers(ReqHandlers{
+	svc, _, peers := setupMsgServiceWithLoopBackPeers(ReqHandlerFuncs{
 		TxListReqHandler: txListReqHandler,
 	})
 
