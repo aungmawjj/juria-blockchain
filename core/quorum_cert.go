@@ -5,7 +5,6 @@ package core
 
 import (
 	"errors"
-	"fmt"
 
 	"github.com/aungmawjj/juria-blockchain/core/core_pb"
 	"google.golang.org/protobuf/proto"
@@ -42,7 +41,6 @@ func (qc *QuorumCert) Validate(vs ValidatorStore) error {
 		return err
 	}
 	if len(sigs) < MajorityCount(vs.ValidatorCount()) {
-		fmt.Println(len(sigs), MajorityCount(vs.ValidatorCount()))
 		return ErrNotEnoughSig
 	}
 	if sigs.hasDuplicate() {

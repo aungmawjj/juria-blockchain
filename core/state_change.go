@@ -62,10 +62,11 @@ func (sc *StateChange) Deleted() bool {
 	return len(sc.Value()) == 0
 }
 
-func UnmarshalStateChange(b []byte) (*StateChange, error) {
+func (sc *StateChange) Unmarshal(b []byte) error {
 	data := new(core_pb.StateChange)
 	if err := proto.Unmarshal(b, data); err != nil {
-		return nil, err
+		return err
 	}
-	return NewStateChange().setData(data), nil
+	sc.setData(data)
+	return nil
 }
