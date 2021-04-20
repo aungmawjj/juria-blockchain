@@ -36,11 +36,16 @@ func (f txListFactory) Instance() core.Unmarshaler     { return core.NewTxList()
 func (f hashListFactory) Instance() core.Unmarshaler   { return core.NewHashList() }
 
 type reqHandler interface {
+	reqObjFactory() unmarshalerFactory
 	handleReq(req interface{}) (core.Marshaler, error)
 }
 
 type blockReqHandler struct {
 	fn BlockReqHandlerFunc
+}
+
+func (hdlr *blockReqHandler) reqObjFactory() unmarshalerFactory {
+	return nil
 }
 
 func (hdlr *blockReqHandler) handleReq(req interface{}) (core.Marshaler, error) {
@@ -49,6 +54,10 @@ func (hdlr *blockReqHandler) handleReq(req interface{}) (core.Marshaler, error) 
 
 type txListReqHandler struct {
 	fn TxListReqHandlerFunc
+}
+
+func (hdlr *txListReqHandler) reqObjFactory() unmarshalerFactory {
+	return hashListFactory{}
 }
 
 func (hdlr *txListReqHandler) handleReq(req interface{}) (core.Marshaler, error) {

@@ -44,13 +44,8 @@ func NewMsgService(host *Host, hdlrs ReqHandlerFuncs) *MsgService {
 
 func (svc *MsgService) setRequestHandlers(hdlrs ReqHandlerFuncs) {
 	svc.reqHandlers = make(map[p2p_pb.Message_ReqType]*reqMsgHandler)
-	svc.reqHandlers[p2p_pb.Message_ReqBlock] = &reqMsgHandler{
-		reqHandler: &blockReqHandler{hdlrs.BlockReqHandler},
-	}
-	svc.reqHandlers[p2p_pb.Message_ReqTxList] = &reqMsgHandler{
-		reqFactory: hashListFactory{},
-		reqHandler: &txListReqHandler{hdlrs.TxListReqHandler},
-	}
+	svc.reqHandlers[p2p_pb.Message_ReqBlock] = newReqMsgHandler(&blockReqHandler{hdlrs.BlockReqHandler})
+	svc.reqHandlers[p2p_pb.Message_ReqTxList] = newReqMsgHandler(&txListReqHandler{hdlrs.TxListReqHandler})
 }
 
 func (svc *MsgService) setMessageHandlers() {

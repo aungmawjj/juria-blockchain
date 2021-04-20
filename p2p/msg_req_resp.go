@@ -14,8 +14,11 @@ import (
 )
 
 type reqMsgHandler struct {
-	reqFactory unmarshalerFactory
 	reqHandler reqHandler
+}
+
+func newReqMsgHandler(reqHandler reqHandler) *reqMsgHandler {
+	return &reqMsgHandler{reqHandler}
 }
 
 func (hdlr *reqMsgHandler) handleReqMsg(peer *Peer, msg *p2p_pb.Message) {
@@ -33,8 +36,8 @@ func (hdlr *reqMsgHandler) handleReqMsg(peer *Peer, msg *p2p_pb.Message) {
 
 func (hdlr *reqMsgHandler) invokeReqHandler(peer *Peer, msg *p2p_pb.Message) ([]byte, error) {
 	var req interface{} = msg.Data
-	if hdlr.reqFactory != nil {
-		reqObj := hdlr.reqFactory.Instance()
+	if hdlr.reqHandler.reqObjFactory() != nil {
+		reqObj := hdlr.reqHandler.reqObjFactory().Instance()
 		if err := reqObj.Unmarshal(msg.Data); err != nil {
 			return nil, err
 		}
