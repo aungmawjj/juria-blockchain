@@ -5,9 +5,11 @@ package core
 
 import (
 	"bytes"
+	"encoding/binary"
 	"errors"
 
 	"github.com/aungmawjj/juria-blockchain/core/core_pb"
+	"github.com/aungmawjj/juria-blockchain/util"
 	"golang.org/x/crypto/sha3"
 	"google.golang.org/protobuf/proto"
 )
@@ -34,13 +36,13 @@ func NewBlock() *Block {
 // Sum returns sha3 sum of block
 func (blk *Block) Sum() []byte {
 	h := sha3.New256()
-	h.Write(uint64ToBytes(blk.data.Height))
+	binary.Write(h, util.ByteOrder, blk.data.Height)
 	h.Write(blk.data.ParentHash)
 	h.Write(blk.data.Proposer)
 	if blk.data.QuorumCert != nil {
 		h.Write(blk.data.QuorumCert.BlockHash) // qc reference block hash
 	}
-	h.Write(uint64ToBytes(blk.data.ExecHeight))
+	binary.Write(h, util.ByteOrder, blk.data.ExecHeight)
 	h.Write(blk.data.StateRoot)
 	for _, txHash := range blk.data.Transactions {
 		h.Write(txHash)
@@ -153,5 +155,46 @@ func (blk *Block) Unmarshal(b []byte) error {
 		return err
 	}
 	blk.setData(data)
+	return nil
+}
+
+type BlockCommit struct {
+	data *core_pb.BlockCommit
+}
+
+func NewBlockCommit() *BlockCommit {
+	return &BlockCommit{
+		data: new(core_pb.BlockCommit),
+	}
+}
+
+func (bcm *BlockCommit) Hash() []byte           { return bcm.data.Hash }
+func (bcm *BlockCommit) Transactions() [][]byte { return bcm.data.Transactions }
+func (bcm *BlockCommit) StateRoot() []byte      { return bcm.data.StateRoot }
+
+func (bcm *BlockCommit) StateChanges() []*StateChange {
+	scList := make([]*StateChange, len(bcm.data.StateChanges))
+	for i, scData := range bcm.data.StateChanges {
+		scList[i] = NewStateChange().setData(scData)
+	}
+	return scList
+}
+
+func (bcm *BlockCommit) setData(data *core_pb.BlockCommit) *BlockCommit {
+	bcm.data = data
+	return bcm
+}
+
+func (bcm *BlockCommit) Marshal() ([]byte, error) {
+	return proto.Marshal(bcm.data)
+}
+
+func (bcm *BlockCommit) Unmarshal(b []byte) error {
+	data := new(core_pb.BlockCommit)
+	err := proto.Unmarshal(b, data)
+	if err != nil {
+		return err
+	}
+	bcm.setData(data)
 	return nil
 }

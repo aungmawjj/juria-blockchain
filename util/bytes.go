@@ -3,14 +3,25 @@
 
 package util
 
+import (
+	"bytes"
+	"encoding/base64"
+	"encoding/binary"
+)
+
+var ByteOrder binary.ByteOrder = binary.BigEndian
+
 func ConcatBytes(srcs ...[]byte) []byte {
-	size := 0
+	buf := bytes.NewBuffer(nil)
 	for _, src := range srcs {
-		size += len(src)
+		buf.Grow(len(src))
 	}
-	dst := make([]byte, 0, size)
 	for _, src := range srcs {
-		dst = append(dst, src...)
+		buf.Write(src)
 	}
-	return dst
+	return buf.Bytes()
+}
+
+func Base64String(b []byte) string {
+	return base64.StdEncoding.EncodeToString(b)
 }

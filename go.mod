@@ -12,4 +12,5 @@ require (
 	go.uber.org/zap v1.16.0
 	golang.org/x/crypto v0.0.0-20200423211502-4bdfaf469ed5
 	google.golang.org/protobuf v1.25.0
+	gotest.tools v2.2.0+incompatible
 )

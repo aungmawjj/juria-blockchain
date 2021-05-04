@@ -5,9 +5,11 @@ package core
 
 import (
 	"bytes"
+	"encoding/binary"
 	"errors"
 
 	"github.com/aungmawjj/juria-blockchain/core/core_pb"
+	"github.com/aungmawjj/juria-blockchain/util"
 	"golang.org/x/crypto/sha3"
 	"google.golang.org/protobuf/proto"
 )
@@ -33,7 +35,7 @@ func NewTransaction() *Transaction {
 // Sum returns sha3 sum of transaction
 func (tx *Transaction) Sum() []byte {
 	h := sha3.New256()
-	h.Write(uint64ToBytes(tx.data.Nonce))
+	binary.Write(h, util.ByteOrder, tx.data.Nonce)
 	h.Write(tx.data.Sender)
 	h.Write(tx.data.CodeAddr)
 	h.Write(tx.data.Input)

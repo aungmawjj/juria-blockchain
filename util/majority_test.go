@@ -1,12 +1,9 @@
-// Copyright (C) 2021 Aung Maw
-// Licensed under the GNU General Public License v3.0
-
-package core
+package util
 
 import (
 	"testing"
 
-	"github.com/stretchr/testify/assert"
+	"gotest.tools/assert"
 )
 
 func TestMajorityCount(t *testing.T) {

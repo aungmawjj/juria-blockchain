@@ -9,6 +9,7 @@ import (
 	"io"
 
 	"github.com/aungmawjj/juria-blockchain/core/core_pb"
+	"github.com/aungmawjj/juria-blockchain/util"
 )
 
 // errors
@@ -29,7 +30,7 @@ func NewPublicKey(b []byte) (*PublicKey, error) {
 	}
 	return &PublicKey{
 		key:    b,
-		keyStr: toBase64(b),
+		keyStr: util.Base64String(b),
 	}, nil
 }
 
