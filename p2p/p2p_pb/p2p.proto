@@ -5,26 +5,24 @@ syntax = "proto3";
 
 package p2p.pb;
 
-message Message {
+message Request {
 	Type type = 1;
 	bytes data = 2;
-
-	ReqType reqType = 3;
-	uint32 seq = 4;
-	string error  = 5;
+	uint32 seq = 3;
 
 	enum Type {
 		Invalid = 0;
-		Proposal = 1;
-		Vote  = 2;
-		NewView = 3;
-		TxList = 4;
-		Request = 5;
-		Response = 6;
+		Block = 1;
+		TxList = 2;
 	}
+}
 
-	enum ReqType {
-		ReqBlock = 0;
-		ReqTxList = 1;
-	}
+message Response {
+	uint32 seq = 1;
+	bytes data = 2;
+	string error = 3;
+}
+
+message HashList {
+	repeated bytes list = 1;
 }

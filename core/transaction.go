@@ -141,24 +141,3 @@ func (txs *TxList) Marshal() ([]byte, error) {
 	}
 	return proto.Marshal(data)
 }
-
-type HashList [][]byte
-
-func NewHashList() *HashList {
-	return new(HashList)
-}
-
-func (hl *HashList) Unmarshal(b []byte) error {
-	data := new(core_pb.HashList)
-	if err := proto.Unmarshal(b, data); err != nil {
-		return err
-	}
-	*hl = data.List
-	return nil
-}
-
-func (hl *HashList) Marshal() ([]byte, error) {
-	data := new(core_pb.HashList)
-	data.List = *hl
-	return proto.Marshal(data)
-}

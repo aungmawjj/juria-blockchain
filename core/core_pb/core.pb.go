@@ -583,53 +583,6 @@ func (x *TxList) GetList() []*Transaction {
 	return nil
 }
 
-type HashList struct {
-	state         protoimpl.MessageState
-	sizeCache     protoimpl.SizeCache
-	unknownFields protoimpl.UnknownFields
-
-	List [][]byte `protobuf:"bytes,1,rep,name=list,proto3" json:"list,omitempty"`
-}
-
-func (x *HashList) Reset() {
-	*x = HashList{}
-	if protoimpl.UnsafeEnabled {
-		mi := &file_core_proto_msgTypes[8]
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		ms.StoreMessageInfo(mi)
-	}
-}
-
-func (x *HashList) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*HashList) ProtoMessage() {}
-
-func (x *HashList) ProtoReflect() protoreflect.Message {
-	mi := &file_core_proto_msgTypes[8]
-	if protoimpl.UnsafeEnabled && x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use HashList.ProtoReflect.Descriptor instead.
-func (*HashList) Descriptor() ([]byte, []int) {
-	return file_core_proto_rawDescGZIP(), []int{8}
-}
-
-func (x *HashList) GetList() [][]byte {
-	if x != nil {
-		return x.List
-	}
-	return nil
-}
-
 type StateChange struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -645,7 +598,7 @@ type StateChange struct {
 func (x *StateChange) Reset() {
 	*x = StateChange{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_core_proto_msgTypes[9]
+		mi := &file_core_proto_msgTypes[8]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -658,7 +611,7 @@ func (x *StateChange) String() string {
 func (*StateChange) ProtoMessage() {}
 
 func (x *StateChange) ProtoReflect() protoreflect.Message {
-	mi := &file_core_proto_msgTypes[9]
+	mi := &file_core_proto_msgTypes[8]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -671,7 +624,7 @@ func (x *StateChange) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use StateChange.ProtoReflect.Descriptor instead.
 func (*StateChange) Descriptor() ([]byte, []int) {
-	return file_core_proto_rawDescGZIP(), []int{9}
+	return file_core_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *StateChange) GetKey() []byte {
@@ -779,8 +732,6 @@ var file_core_proto_rawDesc = []byte{
 	0x65, 0x64, 0x22, 0x32, 0x0a, 0x06, 0x54, 0x78, 0x4c, 0x69, 0x73, 0x74, 0x12, 0x28, 0x0a, 0x04,
 	0x6c, 0x69, 0x73, 0x74, 0x18, 0x01, 0x20, 0x03, 0x28, 0x0b, 0x32, 0x14, 0x2e, 0x63, 0x6f, 0x72,
 	0x65, 0x2e, 0x70, 0x62, 0x2e, 0x54, 0x72, 0x61, 0x6e, 0x73, 0x61, 0x63, 0x74, 0x69, 0x6f, 0x6e,
-	0x52, 0x04, 0x6c, 0x69, 0x73, 0x74, 0x22, 0x1e, 0x0a, 0x08, 0x48, 0x61, 0x73, 0x68, 0x4c, 0x69,
-	0x73, 0x74, 0x12, 0x12, 0x0a, 0x04, 0x6c, 0x69, 0x73, 0x74, 0x18, 0x01, 0x20, 0x03, 0x28, 0x0c,
 	0x52, 0x04, 0x6c, 0x69, 0x73, 0x74, 0x22, 0x97, 0x01, 0x0a, 0x0b, 0x53, 0x74, 0x61, 0x74, 0x65,
 	0x43, 0x68, 0x61, 0x6e, 0x67, 0x65, 0x12, 0x10, 0x0a, 0x03, 0x6b, 0x65, 0x79, 0x18, 0x01, 0x20,
 	0x01, 0x28, 0x0c, 0x52, 0x03, 0x6b, 0x65, 0x79, 0x12, 0x14, 0x0a, 0x05, 0x76, 0x61, 0x6c, 0x75,
@@ -806,7 +757,7 @@ func file_core_proto_rawDescGZIP() []byte {
 	return file_core_proto_rawDescData
 }
 
-var file_core_proto_msgTypes = make([]protoimpl.MessageInfo, 10)
+var file_core_proto_msgTypes = make([]protoimpl.MessageInfo, 9)
 var file_core_proto_goTypes = []interface{}{
 	(*Block)(nil),       // 0: core.pb.Block
 	(*BlockCommit)(nil), // 1: core.pb.BlockCommit
@@ -816,12 +767,11 @@ var file_core_proto_goTypes = []interface{}{
 	(*Transaction)(nil), // 5: core.pb.Transaction
 	(*TxCommit)(nil),    // 6: core.pb.TxCommit
 	(*TxList)(nil),      // 7: core.pb.TxList
-	(*HashList)(nil),    // 8: core.pb.HashList
-	(*StateChange)(nil), // 9: core.pb.StateChange
+	(*StateChange)(nil), // 8: core.pb.StateChange
 }
 var file_core_proto_depIdxs = []int32{
 	3, // 0: core.pb.Block.quorumCert:type_name -> core.pb.QuorumCert
-	9, // 1: core.pb.BlockCommit.stateChanges:type_name -> core.pb.StateChange
+	8, // 1: core.pb.BlockCommit.stateChanges:type_name -> core.pb.StateChange
 	2, // 2: core.pb.QuorumCert.signatures:type_name -> core.pb.Signature
 	2, // 3: core.pb.Vote.signature:type_name -> core.pb.Signature
 	5, // 4: core.pb.TxList.list:type_name -> core.pb.Transaction
@@ -935,18 +885,6 @@ func file_core_proto_init() {
 			}
 		}
 		file_core_proto_msgTypes[8].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*HashList); i {
-			case 0:
-				return &v.state
-			case 1:
-				return &v.sizeCache
-			case 2:
-				return &v.unknownFields
-			default:
-				return nil
-			}
-		}
-		file_core_proto_msgTypes[9].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*StateChange); i {
 			case 0:
 				return &v.state
@@ -965,7 +903,7 @@ func file_core_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: file_core_proto_rawDesc,
 			NumEnums:      0,
-			NumMessages:   10,
+			NumMessages:   9,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

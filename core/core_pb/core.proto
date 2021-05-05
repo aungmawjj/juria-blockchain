@@ -62,10 +62,6 @@ message TxList {
   	repeated Transaction list = 1;
 }
 
-message HashList {
-  	repeated bytes list = 1;
-}
-
 message StateChange {
 	bytes key = 1;
 	bytes value = 2;
