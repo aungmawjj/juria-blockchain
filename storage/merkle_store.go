@@ -19,7 +19,7 @@ var _ merkle.Store = (*MerkleStore)(nil)
 
 func (ms *MerkleStore) GetLeafCount() *big.Int {
 	count := big.NewInt(0)
-	val, err := getValue(ms.db, []byte{keyMerkleLeafCount})
+	val, err := getValue(ms.db, []byte{colMerkleLeafCount})
 	if err == nil {
 		count.SetBytes(val)
 	}
@@ -28,7 +28,7 @@ func (ms *MerkleStore) GetLeafCount() *big.Int {
 
 func (ms *MerkleStore) GetHeight() uint8 {
 	var height uint8
-	val, _ := getValue(ms.db, []byte{keyMerkleHeight})
+	val, _ := getValue(ms.db, []byte{colMerkleTreeHeight})
 	if len(val) > 0 {
 		height = val[0]
 	}
@@ -60,13 +60,13 @@ func (ms *MerkleStore) setNodes(upd *merkle.UpdateResult) []updateFunc {
 
 func (ms *MerkleStore) setLeafCount(upd *merkle.UpdateResult) updateFunc {
 	return func(txn *badger.Txn) error {
-		return txn.Set([]byte{keyMerkleLeafCount}, upd.LeafCount.Bytes())
+		return txn.Set([]byte{colMerkleLeafCount}, upd.LeafCount.Bytes())
 	}
 }
 
 func (ms *MerkleStore) setHeight(upd *merkle.UpdateResult) updateFunc {
 	return func(txn *badger.Txn) error {
-		return txn.Set([]byte{keyMerkleHeight}, []byte{upd.Height})
+		return txn.Set([]byte{colMerkleTreeHeight}, []byte{upd.Height})
 	}
 }
 
@@ -77,5 +77,5 @@ func (ms *MerkleStore) setNode(n *merkle.Node) updateFunc {
 }
 
 func (ms *MerkleStore) nodeKey(p *merkle.Position) []byte {
-	return util.ConcatBytes([]byte{keyMerkleNode}, p.Bytes())
+	return util.ConcatBytes([]byte{colMerkleNodeByPosition}, p.Bytes())
 }

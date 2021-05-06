@@ -14,7 +14,7 @@ type ChainStore struct {
 }
 
 func (cs *ChainStore) LoadBlock(hash []byte) (*core.Block, error) {
-	b, err := getValue(cs.db, util.ConcatBytes([]byte{keyBlock}, hash))
+	b, err := getValue(cs.db, util.ConcatBytes([]byte{colBlockByHash}, hash))
 	if err != nil {
 		return nil, err
 	}
@@ -23,7 +23,7 @@ func (cs *ChainStore) LoadBlock(hash []byte) (*core.Block, error) {
 }
 
 func (cs *ChainStore) LoadBlockHeight() (uint64, error) {
-	b, err := getValue(cs.db, []byte{keyBlockHeight})
+	b, err := getValue(cs.db, []byte{colBlockHeight})
 	if err != nil {
 		return 0, err
 	}
@@ -32,7 +32,7 @@ func (cs *ChainStore) LoadBlockHeight() (uint64, error) {
 
 func (cs *ChainStore) LoadBlockHashByHeight(height uint64) ([]byte, error) {
 	key := bytes.NewBuffer(nil)
-	key.WriteByte(keyBlockByHeight)
+	key.WriteByte(colBlockByHeight)
 	binary.Write(key, util.ByteOrder, height)
 	return getValue(cs.db, key.Bytes())
 }
@@ -50,7 +50,7 @@ func (cs *ChainStore) LoadLastBlock() (*core.Block, error) {
 }
 
 func (cs *ChainStore) LoadBlockCommit(hash []byte) (*core.BlockCommit, error) {
-	b, err := getValue(cs.db, util.ConcatBytes([]byte{keyBlockCommit}, hash))
+	b, err := getValue(cs.db, util.ConcatBytes([]byte{colBlockCommitByHash}, hash))
 	if err != nil {
 		return nil, err
 	}
@@ -59,7 +59,7 @@ func (cs *ChainStore) LoadBlockCommit(hash []byte) (*core.BlockCommit, error) {
 }
 
 func (cs *ChainStore) LoadTx(hash []byte) (*core.Transaction, error) {
-	b, err := getValue(cs.db, util.ConcatBytes([]byte{keyTx}, hash))
+	b, err := getValue(cs.db, util.ConcatBytes([]byte{colTxByHash}, hash))
 	if err != nil {
 		return nil, err
 	}
@@ -68,5 +68,5 @@ func (cs *ChainStore) LoadTx(hash []byte) (*core.Transaction, error) {
 }
 
 func (cs *ChainStore) HasTx(hash []byte) bool {
-	return hasKey(cs.db, util.ConcatBytes([]byte{keyTx}, hash))
+	return hasKey(cs.db, util.ConcatBytes([]byte{colTxByHash}, hash))
 }

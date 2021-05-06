@@ -5,19 +5,19 @@ package storage
 
 import "github.com/dgraph-io/badger"
 
-// key prefixes for different data collections
+// data collection prefixes for different data collections
 const (
-	_                  byte = iota
-	keyBlock                // block by hash
-	keyBlockHeight          // last block height
-	keyBlockByHeight        // block hash by height
-	keyBlockCommit          // block commit by hash
-	keyTx                   // transaction by hash
-	keyState                // state value by state key
-	keyMerkleLeafIndex      // tree leaf index by state key
-	keyMerkleHeight         // tree height
-	keyMerkleLeafCount      // tree leaf count
-	keyMerkleNode           // tree node value by position
+	_                        byte = iota
+	colBlockByHash                // block by hash
+	colBlockByHeight              // block hash by height
+	colBlockHeight                // last block height
+	colBlockCommitByHash          // block commit by hash
+	colTxByHash                   // transaction by hash
+	colStateValueByKey            // state value by state key
+	colMerkleIndexByStateKey      // tree leaf index by state key
+	colMerkleTreeHeight           // tree height
+	colMerkleLeafCount            // tree leaf count
+	colMerkleNodeByPosition       // tree node value by position
 )
 
 type updateFunc func(txn *badger.Txn) error

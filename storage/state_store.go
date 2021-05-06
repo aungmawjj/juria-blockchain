@@ -14,7 +14,7 @@ type StateStore struct {
 }
 
 func (ss *StateStore) GetState(codeAddr, key []byte) ([]byte, error) {
-	return getValue(ss.db, util.ConcatBytes([]byte{keyState}, codeAddr, key))
+	return getValue(ss.db, util.ConcatBytes([]byte{colStateValueByKey}, codeAddr, key))
 }
 
 func (ss *StateStore) CommitUpdate(stateChanges []*core.StateChange) []updateFunc {
@@ -27,7 +27,7 @@ func (ss *StateStore) CommitUpdate(stateChanges []*core.StateChange) []updateFun
 
 func (ss *StateStore) updateState(sc *core.StateChange) updateFunc {
 	return func(txn *badger.Txn) error {
-		key := util.ConcatBytes([]byte{keyState}, sc.Key())
+		key := util.ConcatBytes([]byte{colStateValueByKey}, sc.Key())
 		if sc.Deleted() {
 			return txn.Delete(key)
 		}
