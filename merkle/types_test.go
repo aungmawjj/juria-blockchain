@@ -19,8 +19,8 @@ func TestPosition(t *testing.T) {
 		index *big.Int
 		want  []byte
 	}{
-		{"level 0, index 0", 0, big.NewInt(0), []byte{0}},
-		{"index 0", 1, big.NewInt(0), []byte{1}},
+		{"level 0, index 0", 0, big.NewInt(0), []byte{0, 0}},
+		{"index 0", 1, big.NewInt(0), []byte{1, 0}},
 		{"index max 8 bit", 1, big.NewInt(255), []byte{1, 255}},
 		{"index first 16 bit", 1, big.NewInt(256), []byte{1, 1, 0}},
 	}
@@ -35,7 +35,7 @@ func TestPosition(t *testing.T) {
 			p1 := UnmarshalPosition(p.Bytes())
 
 			assert.Equal(p.Level(), p1.Level())
-			assert.Equal(p.Index(), p1.Index())
+			assert.Equal(0, p.Index().Cmp(p1.Index()))
 		})
 	}
 }

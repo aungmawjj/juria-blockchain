@@ -21,10 +21,7 @@ func UnmarshalPosition(b []byte) *Position {
 	p := new(Position)
 	p.bytes = b
 	p.level = b[0]
-	p.index = big.NewInt(0)
-	if len(b) > 1 {
-		p.index.SetBytes(b[1:])
-	}
+	p.index = big.NewInt(0).SetBytes(b[1:])
 	p.setString()
 	return p
 }
@@ -41,6 +38,9 @@ func NewPosition(level uint8, index *big.Int) *Position {
 
 func (p *Position) setBytes() {
 	ib := p.index.Bytes()
+	if len(ib) == 0 {
+		ib = []byte{0}
+	}
 	p.bytes = make([]byte, 0, 1+len(ib))
 	p.bytes = append(p.bytes, p.level)
 	p.bytes = append(p.bytes, ib...)
