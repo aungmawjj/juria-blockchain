@@ -3,7 +3,7 @@
 
 package storage
 
-import "github.com/dgraph-io/badger"
+import "github.com/dgraph-io/badger/v3"
 
 // data collection prefixes for different data collections
 const (
@@ -40,4 +40,15 @@ func hasKey(db *badger.DB, key []byte) bool {
 		return err
 	})
 	return err == nil
+}
+
+func updateDB(db *badger.DB, fns []updateFunc) error {
+	return db.Update(func(txn *badger.Txn) error {
+		for _, fn := range fns {
+			if err := fn(txn); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
 }

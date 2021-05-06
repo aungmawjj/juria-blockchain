@@ -8,7 +8,7 @@ import (
 
 	"github.com/aungmawjj/juria-blockchain/merkle"
 	"github.com/aungmawjj/juria-blockchain/util"
-	"github.com/dgraph-io/badger"
+	"github.com/dgraph-io/badger/v3"
 )
 
 type MerkleStore struct {
