@@ -55,7 +55,7 @@ message TxCommit {
 	bytes blockHash = 2;
 	uint64 blockHeight = 3;
 	string error = 4;
-	uint64 elapsed = 5;
+	int64 elapsed = 5;
 }
 
 message TxList {

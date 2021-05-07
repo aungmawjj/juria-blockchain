@@ -7,7 +7,6 @@ import (
 	"errors"
 
 	"github.com/aungmawjj/juria-blockchain/core/core_pb"
-	"github.com/aungmawjj/juria-blockchain/util"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -41,7 +40,7 @@ func (qc *QuorumCert) Validate(vs ValidatorStore) error {
 	if err != nil {
 		return err
 	}
-	if len(sigs) < util.MajorityCount(vs.ValidatorCount()) {
+	if len(sigs) < MajorityCount(vs.ValidatorCount()) {
 		return ErrNotEnoughSig
 	}
 	if sigs.hasDuplicate() {

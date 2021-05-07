@@ -9,7 +9,6 @@ import (
 	"errors"
 
 	"github.com/aungmawjj/juria-blockchain/core/core_pb"
-	"github.com/aungmawjj/juria-blockchain/util"
 	"golang.org/x/crypto/sha3"
 	"google.golang.org/protobuf/proto"
 )
@@ -35,7 +34,7 @@ func NewTransaction() *Transaction {
 // Sum returns sha3 sum of transaction
 func (tx *Transaction) Sum() []byte {
 	h := sha3.New256()
-	binary.Write(h, util.ByteOrder, tx.data.Nonce)
+	binary.Write(h, binary.BigEndian, tx.data.Nonce)
 	h.Write(tx.data.Sender)
 	h.Write(tx.data.CodeAddr)
 	h.Write(tx.data.Input)
@@ -84,6 +83,11 @@ func (tx *Transaction) SetInput(val []byte) *Transaction {
 	return tx
 }
 
+func (tx *Transaction) SetHash(val []byte) *Transaction {
+	tx.data.Hash = val
+	return tx
+}
+
 func (tx *Transaction) Sign(priv *PrivateKey) *Transaction {
 	tx.sender = priv.PublicKey()
 	tx.data.Sender = priv.PublicKey().key
@@ -110,6 +114,60 @@ func (tx *Transaction) Unmarshal(b []byte) error {
 		return err
 	}
 	tx.setData(data)
+	return nil
+}
+
+type TxCommit struct {
+	data *core_pb.TxCommit
+}
+
+func NewTxCommit() *TxCommit {
+	return &TxCommit{
+		data: new(core_pb.TxCommit),
+	}
+}
+
+func (txc *TxCommit) Hash() []byte        { return txc.data.Hash }
+func (txc *TxCommit) BlockHash() []byte   { return txc.data.BlockHash }
+func (txc *TxCommit) BlockHeight() uint64 { return txc.data.BlockHeight }
+func (txc *TxCommit) Elapsed() int64      { return txc.data.Elapsed }
+func (txc *TxCommit) Error() string       { return txc.data.Error }
+
+func (txc *TxCommit) SetHash(val []byte) *TxCommit {
+	txc.data.Hash = val
+	return txc
+}
+
+func (txc *TxCommit) SetBlockHash(val []byte) *TxCommit {
+	txc.data.BlockHash = val
+	return txc
+}
+
+func (txc *TxCommit) SetBlockHeight(val uint64) *TxCommit {
+	txc.data.BlockHeight = val
+	return txc
+}
+
+func (txc *TxCommit) SetElapsed(val int64) *TxCommit {
+	txc.data.Elapsed = val
+	return txc
+}
+
+func (txc *TxCommit) SetError(val string) *TxCommit {
+	txc.data.Error = val
+	return txc
+}
+
+func (txc *TxCommit) Marshal() ([]byte, error) {
+	return proto.Marshal(txc.data)
+}
+
+func (txc *TxCommit) Unmarshal(b []byte) error {
+	data := new(core_pb.TxCommit)
+	if err := proto.Unmarshal(b, data); err != nil {
+		return err
+	}
+	txc.data = data
 	return nil
 }
 

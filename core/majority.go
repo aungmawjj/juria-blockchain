@@ -1,6 +1,8 @@
-package util
+package core
 
-import "math"
+import (
+	"math"
+)
 
 // MajorityCount returns 2f + 1 members
 func MajorityCount(validatorCount int) int {

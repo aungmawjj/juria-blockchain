@@ -31,8 +31,4 @@ func TestStateChange(t *testing.T) {
 	assert.Equal([]byte("prevValue"), sc.PrevValue())
 	assert.Equal([]byte{1}, sc.TreeIndex())
 	assert.Nil(sc.PrevTreeIndex())
-	assert.False(sc.Deleted())
-
-	sc.SetValue(nil)
-	assert.True(sc.Deleted())
 }

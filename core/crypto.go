@@ -5,11 +5,11 @@ package core
 
 import (
 	"crypto/ed25519"
+	"encoding/base64"
 	"errors"
 	"io"
 
 	"github.com/aungmawjj/juria-blockchain/core/core_pb"
-	"github.com/aungmawjj/juria-blockchain/util"
 )
 
 // errors
@@ -30,7 +30,7 @@ func NewPublicKey(b []byte) (*PublicKey, error) {
 	}
 	return &PublicKey{
 		key:    b,
-		keyStr: util.Base64String(b),
+		keyStr: base64.StdEncoding.EncodeToString(b),
 	}, nil
 }
 

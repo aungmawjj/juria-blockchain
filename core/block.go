@@ -9,7 +9,6 @@ import (
 	"errors"
 
 	"github.com/aungmawjj/juria-blockchain/core/core_pb"
-	"github.com/aungmawjj/juria-blockchain/util"
 	"golang.org/x/crypto/sha3"
 	"google.golang.org/protobuf/proto"
 )
@@ -36,13 +35,13 @@ func NewBlock() *Block {
 // Sum returns sha3 sum of block
 func (blk *Block) Sum() []byte {
 	h := sha3.New256()
-	binary.Write(h, util.ByteOrder, blk.data.Height)
+	binary.Write(h, binary.BigEndian, blk.data.Height)
 	h.Write(blk.data.ParentHash)
 	h.Write(blk.data.Proposer)
 	if blk.data.QuorumCert != nil {
 		h.Write(blk.data.QuorumCert.BlockHash) // qc reference block hash
 	}
-	binary.Write(h, util.ByteOrder, blk.data.ExecHeight)
+	binary.Write(h, binary.BigEndian, blk.data.ExecHeight)
 	h.Write(blk.data.StateRoot)
 	for _, txHash := range blk.data.Transactions {
 		h.Write(txHash)
@@ -126,6 +125,11 @@ func (blk *Block) SetTransactions(val [][]byte) *Block {
 	return blk
 }
 
+func (blk *Block) SetHash(val []byte) *Block {
+	blk.data.Hash = val
+	return blk
+}
+
 func (blk *Block) Sign(priv *PrivateKey) *Block {
 	blk.proposer = priv.PublicKey()
 	blk.data.Proposer = priv.PublicKey().key
@@ -166,6 +170,30 @@ func NewBlockCommit() *BlockCommit {
 	return &BlockCommit{
 		data: new(core_pb.BlockCommit),
 	}
+}
+
+func (bcm *BlockCommit) SetHash(val []byte) *BlockCommit {
+	bcm.data.Hash = val
+	return bcm
+}
+
+func (bcm *BlockCommit) SetTransactions(val [][]byte) *BlockCommit {
+	bcm.data.Transactions = val
+	return bcm
+}
+
+func (bcm *BlockCommit) SetStateRoot(val []byte) *BlockCommit {
+	bcm.data.StateRoot = val
+	return bcm
+}
+
+func (bcm *BlockCommit) SetStateChanges(val []*StateChange) *BlockCommit {
+	scpb := make([]*core_pb.StateChange, len(val))
+	for i, sc := range val {
+		scpb[i] = sc.data
+	}
+	bcm.data.StateChanges = scpb
+	return bcm
 }
 
 func (bcm *BlockCommit) Hash() []byte           { return bcm.data.Hash }

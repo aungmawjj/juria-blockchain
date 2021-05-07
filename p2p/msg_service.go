@@ -10,8 +10,8 @@ import (
 	"time"
 
 	"github.com/aungmawjj/juria-blockchain/core"
+	"github.com/aungmawjj/juria-blockchain/emitter"
 	"github.com/aungmawjj/juria-blockchain/p2p/p2p_pb"
-	"github.com/aungmawjj/juria-blockchain/util/emitter"
 	"google.golang.org/protobuf/proto"
 )
 

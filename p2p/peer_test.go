@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aungmawjj/juria-blockchain/util/emitter"
+	"github.com/aungmawjj/juria-blockchain/emitter"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
