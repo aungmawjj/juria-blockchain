@@ -39,7 +39,7 @@ func TestMerkleStore(t *testing.T) {
 		},
 	}
 
-	updFuncs := ms.CommitUpdate(upd)
+	updFuncs := ms.commitUpdate(upd)
 	updateDB(db, updFuncs)
 
 	assert.Equal(upd.Height, ms.GetHeight())

@@ -5,7 +5,6 @@ import (
 	"encoding/binary"
 
 	"github.com/aungmawjj/juria-blockchain/core"
-	"github.com/aungmawjj/juria-blockchain/util"
 	"github.com/dgraph-io/badger/v3"
 )
 
@@ -14,7 +13,7 @@ type ChainStore struct {
 }
 
 func (cs *ChainStore) LoadBlock(hash []byte) (*core.Block, error) {
-	b, err := getValue(cs.db, util.ConcatBytes([]byte{colBlockByHash}, hash))
+	b, err := getValue(cs.db, concatBytes([]byte{colBlockByHash}, hash))
 	if err != nil {
 		return nil, err
 	}
@@ -22,27 +21,26 @@ func (cs *ChainStore) LoadBlock(hash []byte) (*core.Block, error) {
 	return blk, blk.Unmarshal(b)
 }
 
-func (cs *ChainStore) LoadBlockHeight() (uint64, error) {
-	b, err := getValue(cs.db, []byte{colBlockHeight})
-	if err != nil {
-		return 0, err
-	}
-	return util.ByteOrder.Uint64(b), nil
-}
-
-func (cs *ChainStore) LoadBlockHashByHeight(height uint64) ([]byte, error) {
-	key := bytes.NewBuffer(nil)
-	key.WriteByte(colBlockByHeight)
-	binary.Write(key, util.ByteOrder, height)
-	return getValue(cs.db, key.Bytes())
-}
-
 func (cs *ChainStore) LoadLastBlock() (*core.Block, error) {
 	height, err := cs.LoadBlockHeight()
 	if err != nil {
 		return nil, err
 	}
-	hash, err := cs.LoadBlockHashByHeight(height)
+	return cs.LoadBlockByHeight(height)
+}
+
+func (cs *ChainStore) LoadBlockHeight() (uint64, error) {
+	b, err := getValue(cs.db, []byte{colBlockHeight})
+	if err != nil {
+		return 0, err
+	}
+	return binary.BigEndian.Uint64(b), nil
+}
+
+func (cs *ChainStore) LoadBlockByHeight(height uint64) (*core.Block, error) {
+	hash, err := getValue(
+		cs.db, concatBytes([]byte{colBlockByHeight}, uint64BEBytes(height)),
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -50,7 +48,7 @@ func (cs *ChainStore) LoadLastBlock() (*core.Block, error) {
 }
 
 func (cs *ChainStore) LoadBlockCommit(hash []byte) (*core.BlockCommit, error) {
-	b, err := getValue(cs.db, util.ConcatBytes([]byte{colBlockCommitByHash}, hash))
+	b, err := getValue(cs.db, concatBytes([]byte{colBlockCommitByHash}, hash))
 	if err != nil {
 		return nil, err
 	}
@@ -59,7 +57,7 @@ func (cs *ChainStore) LoadBlockCommit(hash []byte) (*core.BlockCommit, error) {
 }
 
 func (cs *ChainStore) LoadTx(hash []byte) (*core.Transaction, error) {
-	b, err := getValue(cs.db, util.ConcatBytes([]byte{colTxByHash}, hash))
+	b, err := getValue(cs.db, concatBytes([]byte{colTxByHash}, hash))
 	if err != nil {
 		return nil, err
 	}
@@ -68,5 +66,81 @@ func (cs *ChainStore) LoadTx(hash []byte) (*core.Transaction, error) {
 }
 
 func (cs *ChainStore) HasTx(hash []byte) bool {
-	return hasKey(cs.db, util.ConcatBytes([]byte{colTxByHash}, hash))
+	return hasKey(cs.db, concatBytes([]byte{colTxByHash}, hash))
+}
+
+func (cs *ChainStore) LoadTxCommit(hash []byte) (*core.TxCommit, error) {
+	val, err := getValue(cs.db, concatBytes([]byte{colTxCommitByHash}, hash))
+	if err != nil {
+		return nil, err
+	}
+	txc := core.NewTxCommit()
+	return txc, txc.Unmarshal(val)
+}
+
+func (cs *ChainStore) storeBlockHeight(height uint64) updateFunc {
+	return func(txn *badger.Txn) error {
+		return txn.Set([]byte{colBlockHeight}, uint64BEBytes(height))
+	}
+}
+
+func (cs *ChainStore) storeBlock(block *core.Block) updateFunc {
+	return func(txn *badger.Txn) error {
+		val, err := block.Marshal()
+		if err != nil {
+			return err
+		}
+		err = txn.Set(
+			concatBytes([]byte{colBlockByHash}, block.Hash()), val,
+		)
+		if err != nil {
+			return err
+		}
+		return txn.Set(
+			concatBytes([]byte{colBlockByHeight}, uint64BEBytes(block.Height())),
+			block.Hash(),
+		)
+	}
+}
+
+func (cs *ChainStore) storeBlockCommit(bcm *core.BlockCommit) updateFunc {
+	return func(txn *badger.Txn) error {
+		val, err := bcm.Marshal()
+		if err != nil {
+			return err
+		}
+		return txn.Set(
+			concatBytes([]byte{colBlockCommitByHash}, bcm.Hash()), val,
+		)
+	}
+}
+
+func (cs *ChainStore) storeTx(tx *core.Transaction) updateFunc {
+	return func(txn *badger.Txn) error {
+		val, err := tx.Marshal()
+		if err != nil {
+			return err
+		}
+		return txn.Set(
+			concatBytes([]byte{colTxByHash}, tx.Hash()), val,
+		)
+	}
+}
+
+func (cs *ChainStore) storeTxCommit(txc *core.TxCommit) updateFunc {
+	return func(txn *badger.Txn) error {
+		val, err := txc.Marshal()
+		if err != nil {
+			return err
+		}
+		return txn.Set(
+			concatBytes([]byte{colTxCommitByHash}, txc.Hash()), val,
+		)
+	}
+}
+
+func uint64BEBytes(val uint64) []byte {
+	buf := bytes.NewBuffer(nil)
+	binary.Write(buf, binary.BigEndian, val)
+	return buf.Bytes()
 }

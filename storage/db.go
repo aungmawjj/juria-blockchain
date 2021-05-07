@@ -3,7 +3,11 @@
 
 package storage
 
-import "github.com/dgraph-io/badger/v3"
+import (
+	"bytes"
+
+	"github.com/dgraph-io/badger/v3"
+)
 
 // data collection prefixes for different data collections
 const (
@@ -11,8 +15,9 @@ const (
 	colBlockByHash                // block by hash
 	colBlockByHeight              // block hash by height
 	colBlockHeight                // last block height
-	colBlockCommitByHash          // block commit by hash
-	colTxByHash                   // transaction by hash
+	colBlockCommitByHash          // block commit by block hash
+	colTxByHash                   // tx by hash
+	colTxCommitByHash             // tx commit info by tx hash
 	colStateValueByKey            // state value by state key
 	colMerkleIndexByStateKey      // tree leaf index by state key
 	colMerkleTreeHeight           // tree height
@@ -51,4 +56,15 @@ func updateDB(db *badger.DB, fns []updateFunc) error {
 		}
 		return nil
 	})
+}
+
+func concatBytes(srcs ...[]byte) []byte {
+	buf := bytes.NewBuffer(nil)
+	for _, src := range srcs {
+		buf.Grow(len(src))
+	}
+	for _, src := range srcs {
+		buf.Write(src)
+	}
+	return buf.Bytes()
 }

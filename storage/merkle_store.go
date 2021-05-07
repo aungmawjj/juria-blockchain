@@ -7,7 +7,6 @@ import (
 	"math/big"
 
 	"github.com/aungmawjj/juria-blockchain/merkle"
-	"github.com/aungmawjj/juria-blockchain/util"
 	"github.com/dgraph-io/badger/v3"
 )
 
@@ -36,46 +35,41 @@ func (ms *MerkleStore) GetHeight() uint8 {
 }
 
 func (ms *MerkleStore) GetNode(p *merkle.Position) []byte {
-	val, _ := getValue(ms.db, ms.nodeKey(p))
+	val, _ := getValue(
+		ms.db, concatBytes([]byte{colMerkleNodeByPosition}, p.Bytes()),
+	)
 	return val
 }
 
-func (ms *MerkleStore) CommitUpdate(upd *merkle.UpdateResult) []updateFunc {
-	ret := ms.setNodes(upd)
-	ret = append(ret, ms.setLeafCount(upd))
-	ret = append(ret, ms.setHeight(upd))
-	return ret
-}
-
-func (ms *MerkleStore) setNodes(upd *merkle.UpdateResult) []updateFunc {
-	ret := make([]updateFunc, 0, len(upd.Branches)+len(upd.Leaves))
+func (ms *MerkleStore) commitUpdate(upd *merkle.UpdateResult) []updateFunc {
+	ret := make([]updateFunc, 0)
 	for _, n := range upd.Leaves {
-		ret = append(ret, ms.setNode(n))
+		ret = append(ret, ms.storeNode(n))
 	}
 	for _, n := range upd.Branches {
-		ret = append(ret, ms.setNode(n))
+		ret = append(ret, ms.storeNode(n))
 	}
+	ret = append(ret, ms.storeCount(upd))
+	ret = append(ret, ms.storeTreeHeight(upd))
 	return ret
 }
 
-func (ms *MerkleStore) setLeafCount(upd *merkle.UpdateResult) updateFunc {
+func (ms *MerkleStore) storeCount(upd *merkle.UpdateResult) updateFunc {
 	return func(txn *badger.Txn) error {
 		return txn.Set([]byte{colMerkleLeafCount}, upd.LeafCount.Bytes())
 	}
 }
 
-func (ms *MerkleStore) setHeight(upd *merkle.UpdateResult) updateFunc {
+func (ms *MerkleStore) storeTreeHeight(upd *merkle.UpdateResult) updateFunc {
 	return func(txn *badger.Txn) error {
 		return txn.Set([]byte{colMerkleTreeHeight}, []byte{upd.Height})
 	}
 }
 
-func (ms *MerkleStore) setNode(n *merkle.Node) updateFunc {
+func (ms *MerkleStore) storeNode(n *merkle.Node) updateFunc {
 	return func(txn *badger.Txn) error {
-		return txn.Set(ms.nodeKey(n.Position), n.Data)
+		return txn.Set(
+			concatBytes([]byte{colMerkleNodeByPosition}, n.Position.Bytes()), n.Data,
+		)
 	}
-}
-
-func (ms *MerkleStore) nodeKey(p *merkle.Position) []byte {
-	return util.ConcatBytes([]byte{colMerkleNodeByPosition}, p.Bytes())
 }

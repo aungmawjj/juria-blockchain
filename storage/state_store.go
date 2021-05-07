@@ -4,8 +4,9 @@
 package storage
 
 import (
+	"bytes"
+
 	"github.com/aungmawjj/juria-blockchain/core"
-	"github.com/aungmawjj/juria-blockchain/util"
 	"github.com/dgraph-io/badger/v3"
 )
 
@@ -13,24 +14,27 @@ type StateStore struct {
 	db *badger.DB
 }
 
-func (ss *StateStore) GetState(codeAddr, key []byte) ([]byte, error) {
-	return getValue(ss.db, util.ConcatBytes([]byte{colStateValueByKey}, codeAddr, key))
+func (ss *StateStore) GetState(key []byte) ([]byte, error) {
+	return getValue(ss.db, concatBytes([]byte{colStateValueByKey}, key))
 }
 
-func (ss *StateStore) CommitUpdate(stateChanges []*core.StateChange) []updateFunc {
-	ret := make([]updateFunc, 0, len(stateChanges))
-	for _, sc := range stateChanges {
-		ret = append(ret, ss.updateState(sc))
-	}
-	return ret
+func (ss *StateStore) getMerkleIndex(key []byte) ([]byte, error) {
+	return getValue(ss.db, concatBytes([]byte{colMerkleIndexByStateKey}, key))
 }
 
 func (ss *StateStore) updateState(sc *core.StateChange) updateFunc {
 	return func(txn *badger.Txn) error {
-		key := util.ConcatBytes([]byte{colStateValueByKey}, sc.Key())
-		if sc.Deleted() {
-			return txn.Delete(key)
+		err := txn.Set(
+			concatBytes([]byte{colStateValueByKey}, sc.Key()), sc.Value(),
+		)
+		if err != nil {
+			return err
 		}
-		return txn.Set(key, sc.Value())
+		if bytes.Equal(sc.TreeIndex(), sc.PrevTreeIndex()) {
+			return nil
+		}
+		return txn.Set(
+			concatBytes([]byte{colMerkleIndexByStateKey}, sc.Key()), sc.TreeIndex(),
+		)
 	}
 }
