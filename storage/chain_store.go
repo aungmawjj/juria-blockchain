@@ -125,6 +125,22 @@ func (cs *chainStore) setBlockCommit(bcm *core.BlockCommit) updateFunc {
 	}
 }
 
+func (cs *chainStore) setTxs(txs []*core.Transaction) []updateFunc {
+	ret := make([]updateFunc, len(txs))
+	for i, tx := range txs {
+		ret[i] = cs.setTx(tx)
+	}
+	return ret
+}
+
+func (cs *chainStore) setTxCommits(txCommits []*core.TxCommit) []updateFunc {
+	ret := make([]updateFunc, len(txCommits))
+	for i, txc := range txCommits {
+		ret[i] = cs.setTxCommit(txc)
+	}
+	return ret
+}
+
 func (cs *chainStore) setTx(tx *core.Transaction) updateFunc {
 	return func(setter setter) error {
 		val, err := tx.Marshal()

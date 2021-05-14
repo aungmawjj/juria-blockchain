@@ -28,7 +28,7 @@ func TestBlock(t *testing.T) {
 		SetParentHash([]byte{1}).
 		SetExecHeight(0).
 		SetQuorumCert(qc).
-		SetStateRoot([]byte{1}).
+		SetMerkleRoot([]byte{1}).
 		SetTransactions([][]byte{{1}}).
 		Sign(privKey)
 
@@ -38,7 +38,7 @@ func TestBlock(t *testing.T) {
 	assertt.Equal(privKey.PublicKey().Bytes(), blk.data.Proposer)
 	assertt.Equal(uint64(0), blk.ExecHeight())
 	assertt.Equal(qc, blk.QuorumCert())
-	assertt.Equal([]byte{1}, blk.StateRoot())
+	assertt.Equal([]byte{1}, blk.MerkleRoot())
 	assertt.Equal([][]byte{{1}}, blk.Transactions())
 
 	rs := new(MockValidatorStore)

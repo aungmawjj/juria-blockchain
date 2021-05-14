@@ -48,14 +48,11 @@ func TestStateStore_updateState(t *testing.T) {
 		SetValue([]byte{2}).
 		SetTreeIndex([]byte{1})
 
-	_, err := ss.getState(upd.Key())
-	assert.Error(err)
+	assert.Nil(ss.getState(upd.Key()))
 
 	updateBadgerDB(db, ss.commitStateChange(upd))
 
-	val, err := ss.getState(upd.Key())
-	assert.NoError(err)
-	assert.Equal(upd.Value(), val)
+	assert.Equal(upd.Value(), ss.getState(upd.Key()))
 
 	idx, err := ss.getMerkleIndex(upd.Key())
 	assert.NoError(err)
@@ -102,7 +99,7 @@ func TestStateStore_setNewTreeIndexes(t *testing.T) {
 	}
 
 	ss := new(stateStore)
-	newLeafCount := ss.setNewTreeIndexes(leafCount, scList)
+	newLeafCount := ss.setNewTreeIndexes(scList, leafCount)
 
 	assert.Equal(big.NewInt(13).Bytes(), newLeafCount.Bytes())
 	assert.Equal(scList[0].PrevTreeIndex(), scList[0].TreeIndex())

@@ -4,6 +4,7 @@
 package storage
 
 import (
+	"bytes"
 	"math/big"
 
 	"github.com/aungmawjj/juria-blockchain/core"
@@ -17,11 +18,7 @@ type stateStore struct {
 
 func (ss *stateStore) loadPrevValues(scList []*core.StateChange) error {
 	for _, sc := range scList {
-		val, err := ss.getState(sc.Key())
-		if err != nil {
-			return err
-		}
-		sc.SetPrevValue(val)
+		sc.SetPrevValue(ss.getState(sc.Key()))
 	}
 	return nil
 }
@@ -37,7 +34,7 @@ func (ss *stateStore) loadPrevTreeIndexes(scList []*core.StateChange) error {
 	return nil
 }
 
-func (ss *stateStore) setNewTreeIndexes(leafCount *big.Int, scList []*core.StateChange) *big.Int {
+func (ss *stateStore) setNewTreeIndexes(scList []*core.StateChange, leafCount *big.Int) *big.Int {
 	lc := big.NewInt(0).Set(leafCount)
 	for _, sc := range scList {
 		if sc.PrevTreeIndex() == nil {
@@ -67,15 +64,29 @@ func (ss *stateStore) sumStateValue(value []byte) []byte {
 	return h.Sum(nil)
 }
 
-func (ss *stateStore) commitStateChange(sc *core.StateChange) []updateFunc {
-	ret := make([]updateFunc, 0)
-	ret = append(ret, ss.setState(sc.Key(), sc.Value()))
-	ret = append(ret, ss.setTreeIndex(sc.Key(), sc.TreeIndex()))
+func (ss *stateStore) commitStateChanges(scList []*core.StateChange) []updateFunc {
+	ret := make([]updateFunc, 0, len(scList))
+	for _, sc := range scList {
+		ret = append(ret, ss.commitStateChange(sc)...)
+	}
 	return ret
 }
 
-func (ss *stateStore) getState(key []byte) ([]byte, error) {
-	return ss.getter.Get(concatBytes([]byte{colStateValueByKey}, key))
+func (ss *stateStore) commitStateChange(sc *core.StateChange) []updateFunc {
+	ret := make([]updateFunc, 0)
+	ret = append(ret, ss.setState(sc.Key(), sc.Value()))
+	if sc.PrevTreeIndex() == nil || !bytes.Equal(sc.PrevTreeIndex(), sc.TreeIndex()) {
+		ret = append(ret, ss.setTreeIndex(sc.Key(), sc.TreeIndex()))
+	}
+	return ret
+}
+
+func (ss *stateStore) getState(key []byte) []byte {
+	val, err := ss.getter.Get(concatBytes([]byte{colStateValueByKey}, key))
+	if err != nil {
+		return nil
+	}
+	return val
 }
 
 func (ss *stateStore) getMerkleIndex(key []byte) ([]byte, error) {

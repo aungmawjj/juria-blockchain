@@ -14,17 +14,16 @@ message Block {
 	bytes proposer = 4;
 	QuorumCert quorumCert = 5;
 	uint64 execHeight = 6;
-	bytes stateRoot = 7;
+	bytes merkleRoot = 7;
 	repeated bytes transactions = 8; // transaction hashes
 	bytes signature = 9; // signature of proposer
 }
 
 message BlockCommit {
 	bytes hash = 1;
-	repeated bytes transactions = 2;
-	repeated StateChange stateChanges = 3;
-	bytes leafCount = 4;
-	bytes stateRoot = 5;
+	repeated StateChange stateChanges = 2;
+	bytes leafCount = 3;
+	bytes merkleRoot = 4;
 }
 
 message Signature {

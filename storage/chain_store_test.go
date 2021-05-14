@@ -18,7 +18,7 @@ func TestChainStore(t *testing.T) {
 
 	bcm := core.NewBlockCommit().
 		SetHash(blk.Hash()).
-		SetStateRoot([]byte{1})
+		SetMerkleRoot([]byte{1})
 
 	tx := core.NewTransaction().
 		SetNonce(1)
@@ -66,7 +66,7 @@ func TestChainStore(t *testing.T) {
 
 	bcm1, err := cs.getBlockCommit(bcm.Hash())
 	assert.NoError(err)
-	assert.Equal(bcm.StateRoot(), bcm1.StateRoot())
+	assert.Equal(bcm.MerkleRoot(), bcm1.MerkleRoot())
 
 	tx1, err := cs.getTx(tx.Hash())
 	assert.NoError(err)

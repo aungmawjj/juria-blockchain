@@ -42,7 +42,7 @@ func (blk *Block) Sum() []byte {
 		h.Write(blk.data.QuorumCert.BlockHash) // qc reference block hash
 	}
 	binary.Write(h, binary.BigEndian, blk.data.ExecHeight)
-	h.Write(blk.data.StateRoot)
+	h.Write(blk.data.MerkleRoot)
 	for _, txHash := range blk.data.Transactions {
 		h.Write(txHash)
 	}
@@ -115,8 +115,8 @@ func (blk *Block) SetExecHeight(val uint64) *Block {
 	return blk
 }
 
-func (blk *Block) SetStateRoot(val []byte) *Block {
-	blk.data.StateRoot = val
+func (blk *Block) SetMerkleRoot(val []byte) *Block {
+	blk.data.MerkleRoot = val
 	return blk
 }
 
@@ -144,7 +144,7 @@ func (blk *Block) ParentHash() []byte      { return blk.data.ParentHash }
 func (blk *Block) Proposer() *PublicKey    { return blk.proposer }
 func (blk *Block) QuorumCert() *QuorumCert { return blk.quorumCert }
 func (blk *Block) ExecHeight() uint64      { return blk.data.ExecHeight }
-func (blk *Block) StateRoot() []byte       { return blk.data.StateRoot }
+func (blk *Block) MerkleRoot() []byte      { return blk.data.MerkleRoot }
 func (blk *Block) Transactions() [][]byte  { return blk.data.Transactions }
 
 // Marshal encodes blk as bytes
@@ -177,18 +177,13 @@ func (bcm *BlockCommit) SetHash(val []byte) *BlockCommit {
 	return bcm
 }
 
-func (bcm *BlockCommit) SetTransactions(val [][]byte) *BlockCommit {
-	bcm.data.Transactions = val
-	return bcm
-}
-
 func (bcm *BlockCommit) SetLeafCount(val []byte) *BlockCommit {
 	bcm.data.LeafCount = val
 	return bcm
 }
 
-func (bcm *BlockCommit) SetStateRoot(val []byte) *BlockCommit {
-	bcm.data.StateRoot = val
+func (bcm *BlockCommit) SetMerkleRoot(val []byte) *BlockCommit {
+	bcm.data.MerkleRoot = val
 	return bcm
 }
 
@@ -201,10 +196,9 @@ func (bcm *BlockCommit) SetStateChanges(val []*StateChange) *BlockCommit {
 	return bcm
 }
 
-func (bcm *BlockCommit) Hash() []byte           { return bcm.data.Hash }
-func (bcm *BlockCommit) Transactions() [][]byte { return bcm.data.Transactions }
-func (bcm *BlockCommit) LeafCount() []byte      { return bcm.data.LeafCount }
-func (bcm *BlockCommit) StateRoot() []byte      { return bcm.data.StateRoot }
+func (bcm *BlockCommit) Hash() []byte       { return bcm.data.Hash }
+func (bcm *BlockCommit) LeafCount() []byte  { return bcm.data.LeafCount }
+func (bcm *BlockCommit) MerkleRoot() []byte { return bcm.data.MerkleRoot }
 
 func (bcm *BlockCommit) StateChanges() []*StateChange {
 	scList := make([]*StateChange, len(bcm.data.StateChanges))
