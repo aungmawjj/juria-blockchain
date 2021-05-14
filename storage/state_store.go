@@ -38,9 +38,7 @@ func (ss *stateStore) loadPrevTreeIndexes(scList []*core.StateChange) error {
 	return nil
 }
 
-func (ss *stateStore) setNewTreeIndexes(
-	leafCount *big.Int, scList []*core.StateChange,
-) *big.Int {
+func (ss *stateStore) setNewTreeIndexes(leafCount *big.Int, scList []*core.StateChange) *big.Int {
 	lc := big.NewInt(0).Set(leafCount)
 	for _, sc := range scList {
 		if sc.PrevTreeIndex() == nil {
@@ -70,7 +68,7 @@ func (ss *stateStore) sumStateValue(value []byte) []byte {
 	return h.Sum(nil)
 }
 
-func (ss *stateStore) updateState(sc *core.StateChange) []updateFunc {
+func (ss *stateStore) commitStateChange(sc *core.StateChange) []updateFunc {
 	ret := make([]updateFunc, 0)
 	ret = append(ret, ss.setState(sc.Key(), sc.Value()))
 	ret = append(ret, ss.setTreeIndex(sc.Key(), sc.TreeIndex()))
@@ -86,16 +84,16 @@ func (ss *stateStore) getMerkleIndex(key []byte) ([]byte, error) {
 }
 
 func (ss *stateStore) setState(key, value []byte) updateFunc {
-	return func(txn *badger.Txn) error {
-		return txn.Set(
+	return func(setter setter) error {
+		return setter.Set(
 			concatBytes([]byte{colStateValueByKey}, key), value,
 		)
 	}
 }
 
 func (ss *stateStore) setTreeIndex(key, idx []byte) updateFunc {
-	return func(txn *badger.Txn) error {
-		return txn.Set(
+	return func(setter setter) error {
+		return setter.Set(
 			concatBytes([]byte{colMerkleIndexByStateKey}, key), idx,
 		)
 	}

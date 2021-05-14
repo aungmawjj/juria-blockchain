@@ -25,7 +25,11 @@ const (
 	colMerkleNodeByPosition       // tree node value by position
 )
 
-type updateFunc func(txn *badger.Txn) error
+type setter interface {
+	Set(key, value []byte) error
+}
+
+type updateFunc func(setter setter) error
 
 func getValue(db *badger.DB, key []byte) ([]byte, error) {
 	var val []byte

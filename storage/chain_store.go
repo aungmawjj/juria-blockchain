@@ -83,8 +83,8 @@ func (cs *chainStore) getTxCommit(hash []byte) (*core.TxCommit, error) {
 }
 
 func (cs *chainStore) setBlockHeight(height uint64) updateFunc {
-	return func(txn *badger.Txn) error {
-		return txn.Set([]byte{colBlockHeight}, uint64BEBytes(height))
+	return func(setter setter) error {
+		return setter.Set([]byte{colBlockHeight}, uint64BEBytes(height))
 	}
 }
 
@@ -96,20 +96,20 @@ func (cs *chainStore) setBlock(blk *core.Block) []updateFunc {
 }
 
 func (cs *chainStore) setBlockByHash(blk *core.Block) updateFunc {
-	return func(txn *badger.Txn) error {
+	return func(setter setter) error {
 		val, err := blk.Marshal()
 		if err != nil {
 			return err
 		}
-		return txn.Set(
+		return setter.Set(
 			concatBytes([]byte{colBlockByHash}, blk.Hash()), val,
 		)
 	}
 }
 
 func (cs *chainStore) setBlockHashByHeight(blk *core.Block) updateFunc {
-	return func(txn *badger.Txn) error {
-		return txn.Set(
+	return func(setter setter) error {
+		return setter.Set(
 			concatBytes([]byte{colBlockHashByHeight}, uint64BEBytes(blk.Height())),
 			blk.Hash(),
 		)
@@ -117,36 +117,36 @@ func (cs *chainStore) setBlockHashByHeight(blk *core.Block) updateFunc {
 }
 
 func (cs *chainStore) setBlockCommit(bcm *core.BlockCommit) updateFunc {
-	return func(txn *badger.Txn) error {
+	return func(setter setter) error {
 		val, err := bcm.Marshal()
 		if err != nil {
 			return err
 		}
-		return txn.Set(
+		return setter.Set(
 			concatBytes([]byte{colBlockCommitByHash}, bcm.Hash()), val,
 		)
 	}
 }
 
 func (cs *chainStore) setTx(tx *core.Transaction) updateFunc {
-	return func(txn *badger.Txn) error {
+	return func(setter setter) error {
 		val, err := tx.Marshal()
 		if err != nil {
 			return err
 		}
-		return txn.Set(
+		return setter.Set(
 			concatBytes([]byte{colTxByHash}, tx.Hash()), val,
 		)
 	}
 }
 
 func (cs *chainStore) setTxCommit(txc *core.TxCommit) updateFunc {
-	return func(txn *badger.Txn) error {
+	return func(setter setter) error {
 		val, err := txc.Marshal()
 		if err != nil {
 			return err
 		}
-		return txn.Set(
+		return setter.Set(
 			concatBytes([]byte{colTxCommitByHash}, txc.Hash()), val,
 		)
 	}

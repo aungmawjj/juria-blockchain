@@ -71,21 +71,21 @@ func (ms *merkleStore) setNodes(nodes []*merkle.Node) []updateFunc {
 }
 
 func (ms *merkleStore) setNode(n *merkle.Node) updateFunc {
-	return func(txn *badger.Txn) error {
-		return txn.Set(
+	return func(setter setter) error {
+		return setter.Set(
 			concatBytes([]byte{colMerkleNodeByPosition}, n.Position.Bytes()), n.Data,
 		)
 	}
 }
 
 func (ms *merkleStore) setLeafCount(leafCount *big.Int) updateFunc {
-	return func(txn *badger.Txn) error {
-		return txn.Set([]byte{colMerkleLeafCount}, leafCount.Bytes())
+	return func(setter setter) error {
+		return setter.Set([]byte{colMerkleLeafCount}, leafCount.Bytes())
 	}
 }
 
 func (ms *merkleStore) setTreeHeight(height uint8) updateFunc {
-	return func(txn *badger.Txn) error {
-		return txn.Set([]byte{colMerkleTreeHeight}, []byte{height})
+	return func(setter setter) error {
+		return setter.Set([]byte{colMerkleTreeHeight}, []byte{height})
 	}
 }

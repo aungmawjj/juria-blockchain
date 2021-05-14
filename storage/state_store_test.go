@@ -12,7 +12,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestStateStore_loadPrevValuesAndIndexes(t *testing.T) {
+func TestStateStore_loadPrevValuesAndTreeIndexes(t *testing.T) {
 	assert := assert.New(t)
 
 	db := createOnMemoryDB()
@@ -51,7 +51,7 @@ func TestStateStore_updateState(t *testing.T) {
 	_, err := ss.getState(upd.Key())
 	assert.Error(err)
 
-	updateDB(db, ss.updateState(upd))
+	updateDB(db, ss.commitStateChange(upd))
 
 	val, err := ss.getState(upd.Key())
 	assert.NoError(err)
