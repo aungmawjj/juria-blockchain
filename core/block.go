@@ -182,6 +182,11 @@ func (bcm *BlockCommit) SetTransactions(val [][]byte) *BlockCommit {
 	return bcm
 }
 
+func (bcm *BlockCommit) SetLeafCount(val []byte) *BlockCommit {
+	bcm.data.LeafCount = val
+	return bcm
+}
+
 func (bcm *BlockCommit) SetStateRoot(val []byte) *BlockCommit {
 	bcm.data.StateRoot = val
 	return bcm
@@ -198,6 +203,7 @@ func (bcm *BlockCommit) SetStateChanges(val []*StateChange) *BlockCommit {
 
 func (bcm *BlockCommit) Hash() []byte           { return bcm.data.Hash }
 func (bcm *BlockCommit) Transactions() [][]byte { return bcm.data.Transactions }
+func (bcm *BlockCommit) LeafCount() []byte      { return bcm.data.LeafCount }
 func (bcm *BlockCommit) StateRoot() []byte      { return bcm.data.StateRoot }
 
 func (bcm *BlockCommit) StateChanges() []*StateChange {

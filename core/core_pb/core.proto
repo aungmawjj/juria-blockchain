@@ -23,7 +23,8 @@ message BlockCommit {
 	bytes hash = 1;
 	repeated bytes transactions = 2;
 	repeated StateChange stateChanges = 3;
-	bytes stateRoot = 4;
+	bytes leafCount = 4;
+	bytes stateRoot = 5;
 }
 
 message Signature {
