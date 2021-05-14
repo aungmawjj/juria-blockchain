@@ -13,7 +13,7 @@ import (
 const (
 	_                        byte = iota
 	colBlockByHash                // block by hash
-	colBlockByHeight              // block hash by height
+	colBlockHashByHeight          // block hash by height
 	colBlockHeight                // last block height
 	colBlockCommitByHash          // block commit by block hash
 	colTxByHash                   // tx by hash

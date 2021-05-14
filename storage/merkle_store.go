@@ -10,13 +10,41 @@ import (
 	"github.com/dgraph-io/badger/v3"
 )
 
-type MerkleStore struct {
+type merkleStore struct {
 	db *badger.DB
 }
 
-var _ merkle.Store = (*MerkleStore)(nil)
+var _ merkle.Store = (*merkleStore)(nil)
 
-func (ms *MerkleStore) GetLeafCount() *big.Int {
+func (ms *merkleStore) GetLeafCount() *big.Int {
+	return ms.getLeafCount()
+}
+
+func (ms *merkleStore) GetHeight() uint8 {
+	return ms.getHeight()
+}
+
+func (ms *merkleStore) GetNode(p *merkle.Position) []byte {
+	return ms.getNode(p)
+}
+
+func (ms *merkleStore) commitUpdate(upd *merkle.UpdateResult) []updateFunc {
+	ret := make([]updateFunc, 0)
+	ret = append(ret, ms.setNodes(upd.Leaves)...)
+	ret = append(ret, ms.setNodes(upd.Branches)...)
+	ret = append(ret, ms.setLeafCount(upd.LeafCount))
+	ret = append(ret, ms.setTreeHeight(upd.Height))
+	return ret
+}
+
+func (ms *merkleStore) getNode(p *merkle.Position) []byte {
+	val, _ := getValue(
+		ms.db, concatBytes([]byte{colMerkleNodeByPosition}, p.Bytes()),
+	)
+	return val
+}
+
+func (ms *merkleStore) getLeafCount() *big.Int {
 	count := big.NewInt(0)
 	val, err := getValue(ms.db, []byte{colMerkleLeafCount})
 	if err == nil {
@@ -25,7 +53,7 @@ func (ms *MerkleStore) GetLeafCount() *big.Int {
 	return count
 }
 
-func (ms *MerkleStore) GetHeight() uint8 {
+func (ms *merkleStore) getHeight() uint8 {
 	var height uint8
 	val, _ := getValue(ms.db, []byte{colMerkleTreeHeight})
 	if len(val) > 0 {
@@ -34,42 +62,30 @@ func (ms *MerkleStore) GetHeight() uint8 {
 	return height
 }
 
-func (ms *MerkleStore) GetNode(p *merkle.Position) []byte {
-	val, _ := getValue(
-		ms.db, concatBytes([]byte{colMerkleNodeByPosition}, p.Bytes()),
-	)
-	return val
-}
-
-func (ms *MerkleStore) commitUpdate(upd *merkle.UpdateResult) []updateFunc {
-	ret := make([]updateFunc, 0)
-	for _, n := range upd.Leaves {
-		ret = append(ret, ms.storeNode(n))
+func (ms *merkleStore) setNodes(nodes []*merkle.Node) []updateFunc {
+	ret := make([]updateFunc, len(nodes))
+	for i, n := range nodes {
+		ret[i] = ms.setNode(n)
 	}
-	for _, n := range upd.Branches {
-		ret = append(ret, ms.storeNode(n))
-	}
-	ret = append(ret, ms.storeCount(upd))
-	ret = append(ret, ms.storeTreeHeight(upd))
 	return ret
 }
 
-func (ms *MerkleStore) storeCount(upd *merkle.UpdateResult) updateFunc {
-	return func(txn *badger.Txn) error {
-		return txn.Set([]byte{colMerkleLeafCount}, upd.LeafCount.Bytes())
-	}
-}
-
-func (ms *MerkleStore) storeTreeHeight(upd *merkle.UpdateResult) updateFunc {
-	return func(txn *badger.Txn) error {
-		return txn.Set([]byte{colMerkleTreeHeight}, []byte{upd.Height})
-	}
-}
-
-func (ms *MerkleStore) storeNode(n *merkle.Node) updateFunc {
+func (ms *merkleStore) setNode(n *merkle.Node) updateFunc {
 	return func(txn *badger.Txn) error {
 		return txn.Set(
 			concatBytes([]byte{colMerkleNodeByPosition}, n.Position.Bytes()), n.Data,
 		)
+	}
+}
+
+func (ms *merkleStore) setLeafCount(leafCount *big.Int) updateFunc {
+	return func(txn *badger.Txn) error {
+		return txn.Set([]byte{colMerkleLeafCount}, leafCount.Bytes())
+	}
+}
+
+func (ms *merkleStore) setTreeHeight(height uint8) updateFunc {
+	return func(txn *badger.Txn) error {
+		return txn.Set([]byte{colMerkleTreeHeight}, []byte{height})
 	}
 }
