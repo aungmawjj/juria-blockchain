@@ -29,7 +29,7 @@ func NewStorage(db *badger.DB, treeOpts merkle.TreeOptions) *Storage {
 	strg.db = db
 	getter := &badgerGetter{db}
 	strg.chainStore = &chainStore{getter}
-	strg.stateStore = &stateStore{getter}
+	strg.stateStore = &stateStore{getter, treeOpts.HashFunc}
 	strg.merkleStore = &merkleStore{getter}
 	strg.merkleTree = merkle.NewTree(strg.merkleStore, treeOpts)
 	return strg

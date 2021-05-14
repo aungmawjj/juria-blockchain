@@ -5,15 +5,16 @@ package storage
 
 import (
 	"bytes"
+	"crypto"
 	"math/big"
 
 	"github.com/aungmawjj/juria-blockchain/core"
 	"github.com/aungmawjj/juria-blockchain/merkle"
-	"golang.org/x/crypto/sha3"
 )
 
 type stateStore struct {
-	getter getter
+	getter   getter
+	hashFunc crypto.Hash
 }
 
 func (ss *stateStore) loadPrevValues(scList []*core.StateChange) error {
@@ -37,11 +38,15 @@ func (ss *stateStore) loadPrevTreeIndexes(scList []*core.StateChange) error {
 func (ss *stateStore) setNewTreeIndexes(scList []*core.StateChange, leafCount *big.Int) *big.Int {
 	lc := big.NewInt(0).Set(leafCount)
 	for _, sc := range scList {
-		if sc.PrevTreeIndex() == nil {
-			sc.SetTreeIndex(lc.Bytes())
-			lc.Add(lc, big.NewInt(1))
-		} else {
+		if sc.PrevTreeIndex() != nil {
 			sc.SetTreeIndex(sc.PrevTreeIndex())
+		} else {
+			idxB := lc.Bytes()
+			if len(idxB) == 0 {
+				idxB = []byte{0}
+			}
+			sc.SetTreeIndex(idxB)
+			lc.Add(lc, big.NewInt(1))
 		}
 	}
 	return lc
@@ -59,7 +64,7 @@ func (ss *stateStore) computeUpdatedTreeNodes(scList []*core.StateChange) []*mer
 }
 
 func (ss *stateStore) sumStateValue(value []byte) []byte {
-	h := sha3.New256()
+	h := ss.hashFunc.New()
 	h.Write(value)
 	return h.Sum(nil)
 }

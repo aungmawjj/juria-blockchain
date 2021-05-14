@@ -4,19 +4,23 @@
 package storage
 
 import (
+	"crypto"
 	"math/big"
 	"testing"
 
 	"github.com/aungmawjj/juria-blockchain/core"
 	"github.com/aungmawjj/juria-blockchain/merkle"
 	"github.com/stretchr/testify/assert"
+	_ "golang.org/x/crypto/sha3"
 )
+
+const hashFunc = crypto.SHA3_256
 
 func TestStateStore_loadPrevValuesAndTreeIndexes(t *testing.T) {
 	assert := assert.New(t)
 
 	db := createOnMemoryDB()
-	ss := &stateStore{&badgerGetter{db}}
+	ss := &stateStore{&badgerGetter{db}, hashFunc}
 
 	updfns := make([]updateFunc, 3)
 	updfns[0] = ss.setState([]byte{1}, []byte{100})
@@ -41,7 +45,7 @@ func TestStateStore_updateState(t *testing.T) {
 	assert := assert.New(t)
 
 	db := createOnMemoryDB()
-	ss := &stateStore{&badgerGetter{db}}
+	ss := &stateStore{&badgerGetter{db}, hashFunc}
 
 	upd := core.NewStateChange().
 		SetKey([]byte{1}).
@@ -69,7 +73,9 @@ func TestStateStore_computeUpdatedTreeNodes(t *testing.T) {
 			SetKey([]byte{2}).SetValue([]byte{20}).SetTreeIndex([]byte{12}),
 	}
 
-	ss := new(stateStore)
+	ss := &stateStore{
+		hashFunc: hashFunc,
+	}
 	nodes := ss.computeUpdatedTreeNodes(scList)
 
 	p0 := merkle.NewPosition(0, big.NewInt(9))
@@ -97,8 +103,9 @@ func TestStateStore_setNewTreeIndexes(t *testing.T) {
 		core.NewStateChange().
 			SetKey([]byte{2}).SetValue([]byte{20}),
 	}
-
-	ss := new(stateStore)
+	ss := &stateStore{
+		hashFunc: hashFunc,
+	}
 	newLeafCount := ss.setNewTreeIndexes(scList, leafCount)
 
 	assert.Equal(big.NewInt(13).Bytes(), newLeafCount.Bytes())
