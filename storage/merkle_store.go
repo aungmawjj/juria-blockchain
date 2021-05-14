@@ -7,11 +7,10 @@ import (
 	"math/big"
 
 	"github.com/aungmawjj/juria-blockchain/merkle"
-	"github.com/dgraph-io/badger/v3"
 )
 
 type merkleStore struct {
-	db *badger.DB
+	getter getter
 }
 
 var _ merkle.Store = (*merkleStore)(nil)
@@ -38,15 +37,13 @@ func (ms *merkleStore) commitUpdate(upd *merkle.UpdateResult) []updateFunc {
 }
 
 func (ms *merkleStore) getNode(p *merkle.Position) []byte {
-	val, _ := getValue(
-		ms.db, concatBytes([]byte{colMerkleNodeByPosition}, p.Bytes()),
-	)
+	val, _ := ms.getter.Get(concatBytes([]byte{colMerkleNodeByPosition}, p.Bytes()))
 	return val
 }
 
 func (ms *merkleStore) getLeafCount() *big.Int {
 	count := big.NewInt(0)
-	val, err := getValue(ms.db, []byte{colMerkleLeafCount})
+	val, err := ms.getter.Get([]byte{colMerkleLeafCount})
 	if err == nil {
 		count.SetBytes(val)
 	}
@@ -55,7 +52,7 @@ func (ms *merkleStore) getLeafCount() *big.Int {
 
 func (ms *merkleStore) getHeight() uint8 {
 	var height uint8
-	val, _ := getValue(ms.db, []byte{colMerkleTreeHeight})
+	val, _ := ms.getter.Get([]byte{colMerkleTreeHeight})
 	if len(val) > 0 {
 		height = val[0]
 	}

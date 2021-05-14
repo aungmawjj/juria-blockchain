@@ -10,7 +10,7 @@ import (
 func TestChainStore(t *testing.T) {
 	assert := assert.New(t)
 	db := createOnMemoryDB()
-	cs := &chainStore{db}
+	cs := &chainStore{&badgerGetter{db}}
 
 	blk := core.NewBlock().
 		SetHeight(10)
@@ -50,7 +50,7 @@ func TestChainStore(t *testing.T) {
 	updfns = append(updfns, cs.setTx(tx))
 	updfns = append(updfns, cs.setTxCommit(txc))
 
-	updateDB(db, updfns)
+	updateBadgerDB(db, updfns)
 
 	blk1, err := cs.getBlock(blk.Hash())
 	assert.NoError(err)

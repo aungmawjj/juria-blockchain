@@ -5,11 +5,10 @@ import (
 	"encoding/binary"
 
 	"github.com/aungmawjj/juria-blockchain/core"
-	"github.com/dgraph-io/badger/v3"
 )
 
 type chainStore struct {
-	db *badger.DB
+	getter getter
 }
 
 func (cs *chainStore) getLastBlock() (*core.Block, error) {
@@ -21,7 +20,7 @@ func (cs *chainStore) getLastBlock() (*core.Block, error) {
 }
 
 func (cs *chainStore) getBlockHeight() (uint64, error) {
-	b, err := getValue(cs.db, []byte{colBlockHeight})
+	b, err := cs.getter.Get([]byte{colBlockHeight})
 	if err != nil {
 		return 0, err
 	}
@@ -37,13 +36,11 @@ func (cs *chainStore) getBlockByHeight(height uint64) (*core.Block, error) {
 }
 
 func (cs *chainStore) getBlockHashByHeight(height uint64) ([]byte, error) {
-	return getValue(
-		cs.db, concatBytes([]byte{colBlockHashByHeight}, uint64BEBytes(height)),
-	)
+	return cs.getter.Get(concatBytes([]byte{colBlockHashByHeight}, uint64BEBytes(height)))
 }
 
 func (cs *chainStore) getBlock(hash []byte) (*core.Block, error) {
-	b, err := getValue(cs.db, concatBytes([]byte{colBlockByHash}, hash))
+	b, err := cs.getter.Get(concatBytes([]byte{colBlockByHash}, hash))
 	if err != nil {
 		return nil, err
 	}
@@ -52,7 +49,7 @@ func (cs *chainStore) getBlock(hash []byte) (*core.Block, error) {
 }
 
 func (cs *chainStore) getBlockCommit(hash []byte) (*core.BlockCommit, error) {
-	b, err := getValue(cs.db, concatBytes([]byte{colBlockCommitByHash}, hash))
+	b, err := cs.getter.Get(concatBytes([]byte{colBlockCommitByHash}, hash))
 	if err != nil {
 		return nil, err
 	}
@@ -61,7 +58,7 @@ func (cs *chainStore) getBlockCommit(hash []byte) (*core.BlockCommit, error) {
 }
 
 func (cs *chainStore) getTx(hash []byte) (*core.Transaction, error) {
-	b, err := getValue(cs.db, concatBytes([]byte{colTxByHash}, hash))
+	b, err := cs.getter.Get(concatBytes([]byte{colTxByHash}, hash))
 	if err != nil {
 		return nil, err
 	}
@@ -70,11 +67,11 @@ func (cs *chainStore) getTx(hash []byte) (*core.Transaction, error) {
 }
 
 func (cs *chainStore) hasTx(hash []byte) bool {
-	return hasKey(cs.db, concatBytes([]byte{colTxByHash}, hash))
+	return cs.getter.HasKey(concatBytes([]byte{colTxByHash}, hash))
 }
 
 func (cs *chainStore) getTxCommit(hash []byte) (*core.TxCommit, error) {
-	val, err := getValue(cs.db, concatBytes([]byte{colTxCommitByHash}, hash))
+	val, err := cs.getter.Get(concatBytes([]byte{colTxCommitByHash}, hash))
 	if err != nil {
 		return nil, err
 	}

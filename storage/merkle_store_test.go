@@ -21,7 +21,7 @@ func TestMerkleStore(t *testing.T) {
 	assert := assert.New(t)
 
 	db := createOnMemoryDB()
-	ms := &merkleStore{db}
+	ms := &merkleStore{&badgerGetter{db}}
 	assert.Equal(uint8(0), ms.GetHeight())
 	assert.Equal(big.NewInt(0), ms.GetLeafCount())
 
@@ -39,7 +39,7 @@ func TestMerkleStore(t *testing.T) {
 		},
 	}
 
-	updateDB(db, ms.commitUpdate(upd))
+	updateBadgerDB(db, ms.commitUpdate(upd))
 
 	assert.Equal(upd.Height, ms.GetHeight())
 	assert.Equal(upd.LeafCount, ms.GetLeafCount())

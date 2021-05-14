@@ -31,9 +31,18 @@ type setter interface {
 
 type updateFunc func(setter setter) error
 
-func getValue(db *badger.DB, key []byte) ([]byte, error) {
+type getter interface {
+	Get(key []byte) ([]byte, error)
+	HasKey(key []byte) bool
+}
+
+type badgerGetter struct {
+	db *badger.DB
+}
+
+func (bg *badgerGetter) Get(key []byte) ([]byte, error) {
 	var val []byte
-	err := db.View(func(txn *badger.Txn) error {
+	err := bg.db.View(func(txn *badger.Txn) error {
 		item, err := txn.Get(key)
 		if err == nil {
 			val, err = item.ValueCopy(nil)
@@ -43,15 +52,15 @@ func getValue(db *badger.DB, key []byte) ([]byte, error) {
 	return val, err
 }
 
-func hasKey(db *badger.DB, key []byte) bool {
-	err := db.View(func(txn *badger.Txn) error {
+func (bg *badgerGetter) HasKey(key []byte) bool {
+	err := bg.db.View(func(txn *badger.Txn) error {
 		_, err := txn.Get(key)
 		return err
 	})
 	return err == nil
 }
 
-func updateDB(db *badger.DB, fns []updateFunc) error {
+func updateBadgerDB(db *badger.DB, fns []updateFunc) error {
 	return db.Update(func(txn *badger.Txn) error {
 		for _, fn := range fns {
 			if err := fn(txn); err != nil {

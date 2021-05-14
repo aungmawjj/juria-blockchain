@@ -16,13 +16,13 @@ func TestStateStore_loadPrevValuesAndTreeIndexes(t *testing.T) {
 	assert := assert.New(t)
 
 	db := createOnMemoryDB()
-	ss := &stateStore{db}
+	ss := &stateStore{&badgerGetter{db}}
 
 	updfns := make([]updateFunc, 3)
 	updfns[0] = ss.setState([]byte{1}, []byte{100})
 	updfns[1] = ss.setState([]byte{2}, []byte{200})
 	updfns[2] = ss.setTreeIndex([]byte{1}, big.NewInt(9).Bytes())
-	updateDB(db, updfns)
+	updateBadgerDB(db, updfns)
 
 	scList := []*core.StateChange{
 		core.NewStateChange().SetKey([]byte{1}),
@@ -41,7 +41,7 @@ func TestStateStore_updateState(t *testing.T) {
 	assert := assert.New(t)
 
 	db := createOnMemoryDB()
-	ss := &stateStore{db}
+	ss := &stateStore{&badgerGetter{db}}
 
 	upd := core.NewStateChange().
 		SetKey([]byte{1}).
@@ -51,7 +51,7 @@ func TestStateStore_updateState(t *testing.T) {
 	_, err := ss.getState(upd.Key())
 	assert.Error(err)
 
-	updateDB(db, ss.commitStateChange(upd))
+	updateBadgerDB(db, ss.commitStateChange(upd))
 
 	val, err := ss.getState(upd.Key())
 	assert.NoError(err)

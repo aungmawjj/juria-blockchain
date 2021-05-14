@@ -8,12 +8,11 @@ import (
 
 	"github.com/aungmawjj/juria-blockchain/core"
 	"github.com/aungmawjj/juria-blockchain/merkle"
-	"github.com/dgraph-io/badger/v3"
 	"golang.org/x/crypto/sha3"
 )
 
 type stateStore struct {
-	db *badger.DB
+	getter getter
 }
 
 func (ss *stateStore) loadPrevValues(scList []*core.StateChange) error {
@@ -76,11 +75,11 @@ func (ss *stateStore) commitStateChange(sc *core.StateChange) []updateFunc {
 }
 
 func (ss *stateStore) getState(key []byte) ([]byte, error) {
-	return getValue(ss.db, concatBytes([]byte{colStateValueByKey}, key))
+	return ss.getter.Get(concatBytes([]byte{colStateValueByKey}, key))
 }
 
 func (ss *stateStore) getMerkleIndex(key []byte) ([]byte, error) {
-	return getValue(ss.db, concatBytes([]byte{colMerkleIndexByStateKey}, key))
+	return ss.getter.Get(concatBytes([]byte{colMerkleIndexByStateKey}, key))
 }
 
 func (ss *stateStore) setState(key, value []byte) updateFunc {
