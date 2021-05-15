@@ -73,9 +73,11 @@ func updateBadgerDB(db *badger.DB, fns []updateFunc) error {
 
 func concatBytes(srcs ...[]byte) []byte {
 	buf := bytes.NewBuffer(nil)
+	size := 0
 	for _, src := range srcs {
-		buf.Grow(len(src))
+		size += len(src)
 	}
+	buf.Grow(size)
 	for _, src := range srcs {
 		buf.Write(src)
 	}
