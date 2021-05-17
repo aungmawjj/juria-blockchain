@@ -16,10 +16,9 @@ func TestJuriaCoin_Init(t *testing.T) {
 	state := chaincode.NewMockState()
 	jrc := new(JuriaCoin)
 
-	wc := &chaincode.MockWriteContext{
-		MockSender: []byte{1, 1, 1},
-		State:      state,
-	}
+	wc := new(chaincode.MockWriteContext)
+	wc.MockSender = []byte{1, 1, 1}
+	wc.State = state
 	err := jrc.Init(wc)
 
 	assert.NoError(err)
@@ -28,10 +27,9 @@ func TestJuriaCoin_Init(t *testing.T) {
 		Method: "minter",
 	}
 	b, _ := json.Marshal(input)
-	rc := &chaincode.MockReadContext{
-		MockInput: b,
-		State:     state,
-	}
+	rc := new(chaincode.MockReadContext)
+	rc.MockInput = b
+	rc.State = state
 	minter, err := jrc.Query(rc)
 
 	assert.NoError(err)
@@ -47,10 +45,9 @@ func TestJuriaCoin_SetMinter(t *testing.T) {
 	state := chaincode.NewMockState()
 	jrc := new(JuriaCoin)
 
-	wc := &chaincode.MockWriteContext{
-		MockSender: []byte{1, 1, 1},
-		State:      state,
-	}
+	wc := new(chaincode.MockWriteContext)
+	wc.MockSender = []byte{1, 1, 1}
+	wc.State = state
 	jrc.Init(wc)
 
 	input := &Input{
@@ -71,10 +68,9 @@ func TestJuriaCoin_SetMinter(t *testing.T) {
 		Method: "minter",
 	}
 	b, _ = json.Marshal(input)
-	rc := &chaincode.MockReadContext{
-		State:     state,
-		MockInput: b,
-	}
+	rc := new(chaincode.MockReadContext)
+	rc.State = state
+	rc.MockInput = b
 	minter, err := jrc.Query(rc)
 
 	assert.NoError(err)
@@ -86,10 +82,9 @@ func TestJuriaCoin_Mint(t *testing.T) {
 	state := chaincode.NewMockState()
 	jrc := new(JuriaCoin)
 
-	wc := &chaincode.MockWriteContext{
-		MockSender: []byte{1, 1, 1},
-		State:      state,
-	}
+	wc := new(chaincode.MockWriteContext)
+	wc.MockSender = []byte{1, 1, 1}
+	wc.State = state
 	jrc.Init(wc)
 
 	input := &Input{
@@ -112,10 +107,9 @@ func TestJuriaCoin_Mint(t *testing.T) {
 		Method: "total",
 	}
 	b, _ = json.Marshal(input)
-	rc := &chaincode.MockReadContext{
-		State:     state,
-		MockInput: b,
-	}
+	rc := new(chaincode.MockReadContext)
+	rc.State = state
+	rc.MockInput = b
 	b, err = jrc.Query(rc)
 
 	assert.NoError(err)
@@ -146,10 +140,9 @@ func TestJuriaCoin_Transfer(t *testing.T) {
 	state := chaincode.NewMockState()
 	jrc := new(JuriaCoin)
 
-	wc := &chaincode.MockWriteContext{
-		MockSender: []byte{1, 1, 1},
-		State:      state,
-	}
+	wc := new(chaincode.MockWriteContext)
+	wc.MockSender = []byte{1, 1, 1}
+	wc.State = state
 	jrc.Init(wc)
 
 	input := &Input{
@@ -184,10 +177,9 @@ func TestJuriaCoin_Transfer(t *testing.T) {
 
 	input.Method = "total"
 	b, _ = json.Marshal(input)
-	rc := &chaincode.MockReadContext{
-		State:     state,
-		MockInput: b,
-	}
+	rc := new(chaincode.MockReadContext)
+	rc.State = state
+	rc.MockInput = b
 	b, _ = jrc.Query(rc)
 	var balance int64
 	json.Unmarshal(b, &balance)

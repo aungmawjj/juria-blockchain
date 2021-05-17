@@ -3,17 +3,22 @@
 
 package chaincode
 
-type ReadContext interface {
+type CallContext interface {
+	Sender() []byte
+	BlockHash() []byte
+	BlockHeight() uint64
 	Input() []byte
+}
+
+type ReadContext interface {
+	CallContext
+
 	// GetState returns state value verified with merkle root
 	GetState(key []byte) ([]byte, error)
 }
 
 type WriteContext interface {
-	Sender() []byte
-	BlockHash() []byte
-	BlockHeight() uint64
-	Input() []byte
+	CallContext
 
 	GetState(key []byte) []byte
 	SetState(key, value []byte)

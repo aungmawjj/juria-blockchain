@@ -21,8 +21,31 @@ func (ms *MockState) SetState(key, value []byte) {
 	ms.StateMap[string(key)] = value
 }
 
+type MockCallContext struct {
+	MockSender      []byte
+	MockBlockHeight uint64
+	MockBlockHash   []byte
+	MockInput       []byte
+}
+
+func (wc *MockCallContext) Sender() []byte {
+	return wc.MockSender
+}
+
+func (wc *MockCallContext) BlockHash() []byte {
+	return wc.MockBlockHash
+}
+
+func (wc *MockCallContext) BlockHeight() uint64 {
+	return wc.MockBlockHeight
+}
+
+func (wc *MockCallContext) Input() []byte {
+	return wc.MockInput
+}
+
 type MockReadContext struct {
-	MockInput     []byte
+	MockCallContext
 	GetStateError error
 	State         *MockState
 }
@@ -41,27 +64,8 @@ func (rc *MockReadContext) GetState(key []byte) ([]byte, error) {
 }
 
 type MockWriteContext struct {
-	MockSender      []byte
-	MockBlockHeight uint64
-	MockBlockHash   []byte
-	MockInput       []byte
-	State           *MockState
-}
-
-func (wc *MockWriteContext) Sender() []byte {
-	return wc.MockSender
-}
-
-func (wc *MockWriteContext) BlockHash() []byte {
-	return wc.MockBlockHash
-}
-
-func (wc *MockWriteContext) BlockHeight() uint64 {
-	return wc.MockBlockHeight
-}
-
-func (wc *MockWriteContext) Input() []byte {
-	return wc.MockInput
+	MockCallContext
+	State *MockState
 }
 
 func (wc *MockWriteContext) GetState(key []byte) []byte {

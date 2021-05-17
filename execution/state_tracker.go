@@ -83,7 +83,7 @@ func (trk *StateTracker) GetStateChanges() []*StateChange {
 }
 
 func (trk *StateTracker) getState(key []byte) []byte {
-	key = ConcatBytes(trk.keyPrefix, key)
+	key = concatBytes(trk.keyPrefix, key)
 	if value, ok := trk.changes[string(key)]; ok {
 		return value
 	}
@@ -91,7 +91,7 @@ func (trk *StateTracker) getState(key []byte) []byte {
 }
 
 func (trk *StateTracker) setState(key, value []byte) {
-	key = ConcatBytes(trk.keyPrefix, key)
+	key = concatBytes(trk.keyPrefix, key)
 	keyStr := string(key)
 	_, tracked := trk.changes[keyStr]
 	trk.changes[keyStr] = value
@@ -100,7 +100,7 @@ func (trk *StateTracker) setState(key, value []byte) {
 	}
 }
 
-func ConcatBytes(srcs ...[]byte) []byte {
+func concatBytes(srcs ...[]byte) []byte {
 	buf := bytes.NewBuffer(nil)
 	size := 0
 	for _, src := range srcs {

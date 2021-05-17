@@ -78,14 +78,14 @@ func (hs *Hotstuff) CheckLivenessRule(bNew Block) bool {
 func (hs *Hotstuff) Update(bNew Block) {
 	b, b1, b2 := GetJustifyBlocks(bNew)
 	hs.UpdateQCHigh(bNew.Justify()) // precommit phase for b2
+
 	if CmpBlockHeight(b1, hs.GetBLock()) == 1 {
 		hs.setBLock(b1) // commit phase for b1
-	} else {
-		return
-	}
-	if IsThreeChain(b, b1, b2) {
-		hs.onCommit(b) // decide phase for b
-		hs.setBExec(b)
+
+		if IsThreeChain(b, b1, b2) {
+			hs.onCommit(b) // decide phase for b
+			hs.setBExec(b)
+		}
 	}
 }
 
