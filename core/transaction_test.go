@@ -13,7 +13,7 @@ import (
 func TestTransaction(t *testing.T) {
 	privKey := GenerateKey(nil)
 
-	nonce := uint64(time.Now().UnixNano())
+	nonce := time.Now().UnixNano()
 
 	tx := NewTransaction().
 		SetNonce(nonce).
@@ -45,13 +45,13 @@ func TestTxList(t *testing.T) {
 	privKey := GenerateKey(nil)
 
 	tx1 := NewTransaction().
-		SetNonce(uint64(time.Now().UnixNano())).
+		SetNonce(time.Now().UnixNano()).
 		SetCodeAddr([]byte{1}).
 		SetInput([]byte{2}).
 		Sign(privKey)
 
 	tx2 := NewTransaction().
-		SetNonce(uint64(time.Now().UnixNano())).
+		SetNonce(time.Now().UnixNano()).
 		SetCodeAddr([]byte{2}).
 		SetInput([]byte{2}).
 		Sign(privKey)

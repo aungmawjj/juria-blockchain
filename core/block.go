@@ -43,6 +43,7 @@ func (blk *Block) Sum() []byte {
 	}
 	binary.Write(h, binary.BigEndian, blk.data.ExecHeight)
 	h.Write(blk.data.MerkleRoot)
+	binary.Write(h, binary.BigEndian, blk.data.Timestamp)
 	for _, txHash := range blk.data.Transactions {
 		h.Write(txHash)
 	}
@@ -120,6 +121,11 @@ func (blk *Block) SetMerkleRoot(val []byte) *Block {
 	return blk
 }
 
+func (blk *Block) SetTimestamp(val int64) *Block {
+	blk.data.Timestamp = val
+	return blk
+}
+
 func (blk *Block) SetTransactions(val [][]byte) *Block {
 	blk.data.Transactions = val
 	return blk
@@ -145,6 +151,7 @@ func (blk *Block) Proposer() *PublicKey    { return blk.proposer }
 func (blk *Block) QuorumCert() *QuorumCert { return blk.quorumCert }
 func (blk *Block) ExecHeight() uint64      { return blk.data.ExecHeight }
 func (blk *Block) MerkleRoot() []byte      { return blk.data.MerkleRoot }
+func (blk *Block) Timestamp() int64        { return blk.data.Timestamp }
 func (blk *Block) Transactions() [][]byte  { return blk.data.Transactions }
 
 // Marshal encodes blk as bytes

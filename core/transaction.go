@@ -68,7 +68,7 @@ func (tx *Transaction) setData(data *core_pb.Transaction) *Transaction {
 	return tx
 }
 
-func (tx *Transaction) SetNonce(val uint64) *Transaction {
+func (tx *Transaction) SetNonce(val int64) *Transaction {
 	tx.data.Nonce = val
 	return tx
 }
@@ -97,7 +97,7 @@ func (tx *Transaction) Sign(priv *PrivateKey) *Transaction {
 }
 
 func (tx *Transaction) Hash() []byte       { return tx.data.Hash }
-func (tx *Transaction) Nonce() uint64      { return tx.data.Nonce }
+func (tx *Transaction) Nonce() int64       { return tx.data.Nonce }
 func (tx *Transaction) Sender() *PublicKey { return tx.sender }
 func (tx *Transaction) CodeAddr() []byte   { return tx.data.CodeAddr }
 func (tx *Transaction) Input() []byte      { return tx.data.Input }

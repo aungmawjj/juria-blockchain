@@ -15,8 +15,9 @@ message Block {
 	QuorumCert quorumCert = 5;
 	uint64 execHeight = 6;
 	bytes merkleRoot = 7;
-	repeated bytes transactions = 8; // transaction hashes
-	bytes signature = 9; // signature of proposer
+	int64 timestamp = 8;
+	repeated bytes transactions = 9; // transaction hashes
+	bytes signature = 10; // signature of proposer
 }
 
 message BlockCommit {
@@ -44,7 +45,7 @@ message Vote {
 message Transaction {
 	bytes hash = 1;
 	bytes signature = 2;
-	uint64 nonce = 3;
+	int64 nonce = 3;
 	bytes sender = 4;
 	bytes codeAddr = 5;
 	bytes input = 6;
