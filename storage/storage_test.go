@@ -35,12 +35,15 @@ func TestStorage_Commit(t *testing.T) {
 	strg := newTestStorage()
 	priv := core.GenerateKey(nil)
 	b0 := core.NewBlock().SetHeight(0).Sign(priv)
-	data := &CommitData{
-		Block: b0,
-		StateChanges: []*core.StateChange{
+	bcmInput := core.NewBlockCommit().
+		SetHash(b0.Hash()).
+		SetStateChanges([]*core.StateChange{
 			core.NewStateChange().SetKey([]byte{1}).SetValue([]byte{10}),
 			core.NewStateChange().SetKey([]byte{2}).SetValue([]byte{20}),
-		},
+		})
+	data := &CommitData{
+		Block:       b0,
+		BlockCommit: bcmInput,
 	}
 	err := strg.Commit(data)
 	assert.NoError(err)
@@ -90,11 +93,9 @@ func TestStorage_Commit(t *testing.T) {
 	txc1 := core.NewTxCommit().SetHash(tx1.Hash())
 	txc2 := core.NewTxCommit().SetHash(tx2.Hash())
 
-	data = &CommitData{
-		Block:        b1,
-		Transactions: []*core.Transaction{tx1, tx2},
-		TxCommits:    []*core.TxCommit{txc1, txc2},
-		StateChanges: []*core.StateChange{
+	bcmInput = core.NewBlockCommit().
+		SetHash(b1.Hash()).
+		SetStateChanges([]*core.StateChange{
 			core.NewStateChange().SetKey([]byte{1}).SetValue([]byte{20}),
 
 			// new key, leaf index -> 2, increase leaf count -> 3
@@ -102,7 +103,12 @@ func TestStorage_Commit(t *testing.T) {
 
 			// new key, leaf index -> 3, increase leaf count -> 4
 			core.NewStateChange().SetKey([]byte{3}).SetValue([]byte{50}),
-		},
+		})
+	data = &CommitData{
+		Block:        b1,
+		Transactions: []*core.Transaction{tx1, tx2},
+		TxCommits:    []*core.TxCommit{txc1, txc2},
+		BlockCommit:  bcmInput,
 	}
 	err = strg.Commit(data)
 	assert.NoError(err)

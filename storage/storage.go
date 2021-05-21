@@ -4,6 +4,8 @@
 package storage
 
 import (
+	"time"
+
 	"github.com/aungmawjj/juria-blockchain/core"
 	"github.com/aungmawjj/juria-blockchain/merkle"
 	"github.com/dgraph-io/badger/v3"
@@ -12,10 +14,8 @@ import (
 type CommitData struct {
 	Block        *core.Block
 	Transactions []*core.Transaction
+	BlockCommit  *core.BlockCommit
 	TxCommits    []*core.TxCommit
-	StateChanges []*core.StateChange
-
-	blockCommit  *core.BlockCommit
 	merkleUpdate *merkle.UpdateResult
 }
 
@@ -87,8 +87,13 @@ func (strg *Storage) GetMerkleRoot() []byte {
 }
 
 func (strg *Storage) commit(data *CommitData) error {
-	strg.setMerkleUpdate(data)
-	strg.setBlockCommit(data)
+	start := time.Now()
+	strg.computeMerkleUpdate(data)
+	data.BlockCommit.
+		SetLeafCount(data.merkleUpdate.LeafCount.Bytes()).
+		SetMerkleRoot(data.merkleUpdate.Root.Data).
+		SetElapsedMerkle(time.Since(start).Seconds())
+
 	return strg.storeCommitData(data)
 }
 
@@ -105,21 +110,13 @@ func (strg *Storage) storeCommitData(data *CommitData) error {
 	return strg.setCommitedBlockHeight(data.Block.Height())
 }
 
-func (strg *Storage) setMerkleUpdate(data *CommitData) {
-	strg.stateStore.loadPrevValues(data.StateChanges)
-	strg.stateStore.loadPrevTreeIndexes(data.StateChanges)
+func (strg *Storage) computeMerkleUpdate(data *CommitData) {
+	strg.stateStore.loadPrevValues(data.BlockCommit.StateChanges())
+	strg.stateStore.loadPrevTreeIndexes(data.BlockCommit.StateChanges())
 	prevLeafCount := strg.merkleStore.getLeafCount()
-	leafCount := strg.stateStore.setNewTreeIndexes(data.StateChanges, prevLeafCount)
-	nodes := strg.stateStore.computeUpdatedTreeNodes(data.StateChanges)
+	leafCount := strg.stateStore.setNewTreeIndexes(data.BlockCommit.StateChanges(), prevLeafCount)
+	nodes := strg.stateStore.computeUpdatedTreeNodes(data.BlockCommit.StateChanges())
 	data.merkleUpdate = strg.merkleTree.Update(nodes, leafCount)
-}
-
-func (strg *Storage) setBlockCommit(data *CommitData) {
-	data.blockCommit = core.NewBlockCommit().
-		SetHash(data.Block.Hash()).
-		SetLeafCount(data.merkleUpdate.LeafCount.Bytes()).
-		SetStateChanges(data.StateChanges).
-		SetMerkleRoot(data.merkleUpdate.Root.Data)
 }
 
 func (strg *Storage) storeChainData(data *CommitData) error {
@@ -131,13 +128,13 @@ func (strg *Storage) storeChainData(data *CommitData) error {
 }
 
 func (strg *Storage) storeBlockCommit(data *CommitData) error {
-	updFn := strg.chainStore.setBlockCommit(data.blockCommit)
+	updFn := strg.chainStore.setBlockCommit(data.BlockCommit)
 	return updateBadgerDB(strg.db, []updateFunc{updFn})
 }
 
 // commit state values and merkle tree in one transaction
 func (strg *Storage) commitStateMerkleTree(data *CommitData) error {
-	updFns := strg.stateStore.commitStateChanges(data.StateChanges)
+	updFns := strg.stateStore.commitStateChanges(data.BlockCommit.StateChanges())
 	updFns = append(updFns, strg.merkleStore.commitUpdate(data.merkleUpdate)...)
 	return updateBadgerDB(strg.db, updFns)
 }

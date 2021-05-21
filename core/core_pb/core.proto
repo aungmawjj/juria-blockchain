@@ -24,7 +24,6 @@ message BlockCommit {
 	bytes hash = 1;
 	double elapsedExec = 2;
 	double elapsedMerkle = 3;
-	double elapsedWrite = 4;
 	repeated bytes oldBlockTxs = 5;
 	repeated StateChange stateChanges = 6;
 	bytes leafCount = 7;
