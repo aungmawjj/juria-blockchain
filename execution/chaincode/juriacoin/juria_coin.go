@@ -26,105 +26,105 @@ var (
 // JuriaCoin chaincode
 type JuriaCoin struct{}
 
-var _ chaincode.ChainCode = (*JuriaCoin)(nil)
+var _ chaincode.Chaincode = (*JuriaCoin)(nil)
 
-func (jrc *JuriaCoin) Init(wc chaincode.WriteContext) error {
-	wc.SetState(keyMinter, wc.Sender())
+func (jctx *JuriaCoin) Init(ctx chaincode.CallContext) error {
+	ctx.SetState(keyMinter, ctx.Sender())
 	return nil
 }
 
-func (jrc *JuriaCoin) Invoke(wc chaincode.WriteContext) error {
-	input, err := parseInput(wc.Input())
+func (jctx *JuriaCoin) Invoke(ctx chaincode.CallContext) error {
+	input, err := parseInput(ctx.Input())
 	if err != nil {
 		return err
 	}
 	switch input.Method {
 
 	case "setMinter":
-		return invokeSetMinter(wc, input)
+		return invokeSetMinter(ctx, input)
 
 	case "mint":
-		return invokeMint(wc, input)
+		return invokeMint(ctx, input)
 
 	case "transfer":
-		return invokeTransfer(wc, input)
+		return invokeTransfer(ctx, input)
 
 	default:
 		return errors.New("method not found")
 	}
 }
 
-func (jrc *JuriaCoin) Query(rc chaincode.ReadContext) ([]byte, error) {
-	input, err := parseInput(rc.Input())
+func (jctx *JuriaCoin) Query(ctx chaincode.CallContext) ([]byte, error) {
+	input, err := parseInput(ctx.Input())
 	if err != nil {
 		return nil, err
 	}
 	switch input.Method {
 
 	case "minter":
-		return rc.GetState(keyMinter)
+		return ctx.VerifyState(keyMinter)
 
 	case "total":
-		return queryTotal(rc)
+		return queryTotal(ctx)
 
 	case "balance":
-		return queryBalance(rc, input)
+		return queryBalance(ctx, input)
 
 	default:
 		return nil, errors.New("method not found")
 	}
 }
 
-func invokeSetMinter(wc chaincode.WriteContext, input *Input) error {
-	minter := wc.GetState(keyMinter)
-	if !bytes.Equal(minter, wc.Sender()) {
+func invokeSetMinter(ctx chaincode.CallContext, input *Input) error {
+	minter := ctx.GetState(keyMinter)
+	if !bytes.Equal(minter, ctx.Sender()) {
 		return errors.New("sender must be minter")
 	}
-	wc.SetState(keyMinter, input.Dest)
+	ctx.SetState(keyMinter, input.Dest)
 	return nil
 }
 
-func invokeMint(wc chaincode.WriteContext, input *Input) error {
-	minter := wc.GetState(keyMinter)
-	if !bytes.Equal(minter, wc.Sender()) {
+func invokeMint(ctx chaincode.CallContext, input *Input) error {
+	minter := ctx.GetState(keyMinter)
+	if !bytes.Equal(minter, ctx.Sender()) {
 		return errors.New("sender must be minter")
 	}
-	total := decodeBalance(wc.GetState(keyTotal))
-	balance := decodeBalance(wc.GetState(input.Dest))
+	total := decodeBalance(ctx.GetState(keyTotal))
+	balance := decodeBalance(ctx.GetState(input.Dest))
 
 	total += input.Value
 	balance += input.Value
 
-	wc.SetState(keyTotal, encodeBalance(total))
-	wc.SetState(input.Dest, encodeBalance(balance))
+	ctx.SetState(keyTotal, encodeBalance(total))
+	ctx.SetState(input.Dest, encodeBalance(balance))
 	return nil
 }
 
-func invokeTransfer(wc chaincode.WriteContext, input *Input) error {
-	bsrc := decodeBalance(wc.GetState(wc.Sender()))
-	if bsrc < input.Value {
+func invokeTransfer(ctx chaincode.CallContext, input *Input) error {
+	bsctx := decodeBalance(ctx.GetState(ctx.Sender()))
+	if bsctx < input.Value {
 		return errors.New("not enough balance")
 	}
-	bdes := decodeBalance(wc.GetState(input.Dest))
+	bdes := decodeBalance(ctx.GetState(input.Dest))
 
-	bsrc -= input.Value
+	bsctx -= input.Value
 	bdes += input.Value
 
-	wc.SetState(wc.Sender(), encodeBalance(bsrc))
-	wc.SetState(input.Dest, encodeBalance(bdes))
+	ctx.SetState(ctx.Sender(), encodeBalance(bsctx))
+	ctx.SetState(input.Dest, encodeBalance(bdes))
 	return nil
 }
 
-func queryTotal(rc chaincode.ReadContext) ([]byte, error) {
-	b, err := rc.GetState(keyTotal)
+func queryTotal(ctx chaincode.CallContext) ([]byte, error) {
+	b, err := ctx.VerifyState(keyTotal)
 	if err != nil {
 		return nil, err
 	}
 	return json.Marshal(decodeBalance(b))
 }
 
-func queryBalance(rc chaincode.ReadContext, input *Input) ([]byte, error) {
-	b, err := rc.GetState(input.Dest)
+func queryBalance(ctx chaincode.CallContext, input *Input) ([]byte, error) {
+	b, err := ctx.VerifyState(input.Dest)
 	if err != nil {
 		return nil, err
 	}

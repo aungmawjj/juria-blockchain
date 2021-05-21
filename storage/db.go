@@ -11,18 +11,17 @@ import (
 
 // data collection prefixes for different data collections
 const (
-	_                        byte = iota
-	colBlockByHash                // block by hash
-	colBlockHashByHeight          // block hash by height
-	colBlockHeight                // last block height
-	colBlockCommitByHash          // block commit by block hash
-	colTxByHash                   // tx by hash
-	colTxCommitByHash             // tx commit info by tx hash
-	colStateValueByKey            // state value by state key
-	colMerkleIndexByStateKey      // tree leaf index by state key
-	colMerkleTreeHeight           // tree height
-	colMerkleLeafCount            // tree leaf count
-	colMerkleNodeByPosition       // tree node value by position
+	colBlockByHash           byte = iota + 1 // block by hash
+	colBlockHashByHeight                     // block hash by height
+	colBlockHeight                           // last block height
+	colBlockCommitByHash                     // block commit by block hash
+	colTxByHash                              // tx by hash
+	colTxCommitByHash                        // tx commit info by tx hash
+	colStateValueByKey                       // state value by state key
+	colMerkleIndexByStateKey                 // tree leaf index by state key
+	colMerkleTreeHeight                      // tree height
+	colMerkleLeafCount                       // tree leaf count
+	colMerkleNodeByPosition                  // tree node value by position
 )
 
 type setter interface {

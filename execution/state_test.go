@@ -19,11 +19,15 @@ func newMapStateStore() *mapStateStore {
 	}
 }
 
+func (store *mapStateStore) VerifyState(key []byte) ([]byte, error) {
+	return store.stateMap[string(key)], nil
+}
+
 func (store *mapStateStore) GetState(key []byte) []byte {
 	return store.stateMap[string(key)]
 }
 
-func (store *mapStateStore) setState(key, value []byte) {
+func (store *mapStateStore) SetState(key, value []byte) {
 	store.stateMap[string(key)] = value
 }
 
@@ -31,13 +35,13 @@ func TestStateTracker_GetState(t *testing.T) {
 	assert := assert.New(t)
 
 	ms := newMapStateStore()
-	trk := NewStateTracker(ms, nil)
-	ms.setState([]byte{1}, []byte{200})
+	trk := newStateTracker(ms, nil)
+	ms.SetState([]byte{1}, []byte{200})
 
 	assert.Equal([]byte{200}, trk.GetState([]byte{1}))
 	assert.Nil(trk.GetState([]byte{2}))
 
-	trkChild := trk.Spawn(nil)
+	trkChild := trk.spawn(nil)
 	assert.Equal([]byte{200}, trkChild.GetState([]byte{1}), "child get state from root store")
 	assert.Nil(trkChild.GetState([]byte{2}))
 
@@ -50,14 +54,14 @@ func TestStateTracker_SetState(t *testing.T) {
 	assert := assert.New(t)
 
 	ms := newMapStateStore()
-	trk := NewStateTracker(ms, nil)
-	ms.setState([]byte{1}, []byte{200})
+	trk := newStateTracker(ms, nil)
+	ms.SetState([]byte{1}, []byte{200})
 
 	trk.SetState([]byte{1}, []byte{100})
 	trk.SetState([]byte{1}, []byte{50})
 
 	assert.Equal([]byte{50}, trk.GetState([]byte{1}))
-	scList := trk.GetStateChanges()
+	scList := trk.getStateChanges()
 	assert.Equal(1, len(scList))
 	assert.Equal([]byte{1}, scList[0].Key)
 	assert.Equal([]byte{50}, scList[0].Value)
@@ -71,25 +75,26 @@ func TestStateTracker_SetState(t *testing.T) {
 	assert.Equal([]byte{30}, trk.GetState([]byte{3}))
 	assert.Equal([]byte{20}, trk.GetState([]byte{2}))
 
-	scList = trk.GetStateChanges()
+	scList = trk.getStateChanges()
 	assert.Equal(3, len(scList))
+	// scList list must be sorted by key
 	assert.Equal([]byte{1}, scList[0].Key)
-	assert.Equal([]byte{3}, scList[1].Key)
-	assert.Equal([]byte{2}, scList[2].Key)
+	assert.Equal([]byte{2}, scList[1].Key)
+	assert.Equal([]byte{3}, scList[2].Key)
 
 	assert.Equal([]byte{10}, scList[0].Value)
-	assert.Equal([]byte{30}, scList[1].Value)
-	assert.Equal([]byte{20}, scList[2].Value)
+	assert.Equal([]byte{20}, scList[1].Value)
+	assert.Equal([]byte{30}, scList[2].Value)
 }
 
 func TestStateTracker_Merge(t *testing.T) {
 	assert := assert.New(t)
 
 	ms := newMapStateStore()
-	trk := NewStateTracker(ms, nil)
+	trk := newStateTracker(ms, nil)
 
 	trk.SetState([]byte{1}, []byte{200})
-	trkChild := trk.Spawn(nil)
+	trkChild := trk.spawn(nil)
 	trkChild.SetState([]byte{2}, []byte{20})
 	trkChild.SetState([]byte{1}, []byte{10})
 
@@ -98,12 +103,12 @@ func TestStateTracker_Merge(t *testing.T) {
 
 	assert.Equal([]byte{200}, trk.GetState([]byte{1}), "child does not set parent state")
 
-	trk.Merge(trkChild)
+	trk.merge(trkChild)
 
 	assert.Equal([]byte{10}, trk.GetState([]byte{1}))
 	assert.Equal([]byte{20}, trk.GetState([]byte{2}))
 
-	scList := trk.GetStateChanges()
+	scList := trk.getStateChanges()
 	assert.Equal(2, len(scList))
 	assert.Equal([]byte{1}, scList[0].Key, "change order should be in favor of parent tracker")
 	assert.Equal([]byte{2}, scList[1].Key)
@@ -113,10 +118,10 @@ func TestStateTracker_WithPrefix(t *testing.T) {
 	assert := assert.New(t)
 
 	ms := newMapStateStore()
-	trk := NewStateTracker(ms, nil)
+	trk := newStateTracker(ms, nil)
 	trk.SetState([]byte{1, 1}, []byte{50})
 
-	trkChild := trk.Spawn([]byte{1})
+	trkChild := trk.spawn([]byte{1})
 	assert.Equal([]byte{50}, trkChild.GetState([]byte{1}))
 
 	trkChild.SetState([]byte{1}, []byte{10})
@@ -124,12 +129,12 @@ func TestStateTracker_WithPrefix(t *testing.T) {
 	assert.Equal([]byte{10}, trkChild.GetState([]byte{1}))
 	assert.Equal([]byte{20}, trkChild.GetState([]byte{2}))
 
-	scList := trkChild.GetStateChanges()
+	scList := trkChild.getStateChanges()
 	assert.Equal(2, len(scList))
 	assert.Equal([]byte{1, 1}, scList[0].Key)
 	assert.Equal([]byte{1, 2}, scList[1].Key)
 
-	trk.Merge(trkChild)
+	trk.merge(trkChild)
 	assert.Equal([]byte{10}, trk.GetState([]byte{1, 1}))
 	assert.Equal([]byte{20}, trk.GetState([]byte{1, 2}))
 }

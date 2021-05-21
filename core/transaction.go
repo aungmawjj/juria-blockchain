@@ -84,7 +84,11 @@ func (tx *Transaction) SetInput(val []byte) *Transaction {
 }
 
 func (tx *Transaction) SetHash(val []byte) *Transaction {
-	tx.data.Hash = val
+	if len(val) == 0 {
+		tx.data.Hash = tx.Sum()
+	} else {
+		tx.data.Hash = val
+	}
 	return tx
 }
 

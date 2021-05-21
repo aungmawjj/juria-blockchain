@@ -4,13 +4,21 @@
 package chaincode
 
 type MockState struct {
-	StateMap map[string][]byte
+	StateMap    map[string][]byte
+	VerifyError error
 }
 
 func NewMockState() *MockState {
 	return &MockState{
 		StateMap: make(map[string][]byte),
 	}
+}
+
+func (ms *MockState) VerifyState(key []byte) ([]byte, error) {
+	if ms.VerifyError != nil {
+		return nil, ms.VerifyError
+	}
+	return ms.GetState(key), nil
 }
 
 func (ms *MockState) GetState(key []byte) []byte {
@@ -26,7 +34,10 @@ type MockCallContext struct {
 	MockBlockHeight uint64
 	MockBlockHash   []byte
 	MockInput       []byte
+	*MockState
 }
+
+var _ CallContext = (*MockCallContext)(nil)
 
 func (wc *MockCallContext) Sender() []byte {
 	return wc.MockSender
@@ -42,36 +53,4 @@ func (wc *MockCallContext) BlockHeight() uint64 {
 
 func (wc *MockCallContext) Input() []byte {
 	return wc.MockInput
-}
-
-type MockReadContext struct {
-	MockCallContext
-	GetStateError error
-	State         *MockState
-}
-
-var _ ReadContext = (*MockReadContext)(nil)
-
-func (rc *MockReadContext) Input() []byte {
-	return rc.MockInput
-}
-
-func (rc *MockReadContext) GetState(key []byte) ([]byte, error) {
-	if rc.GetStateError != nil {
-		return nil, rc.GetStateError
-	}
-	return rc.State.GetState(key), nil
-}
-
-type MockWriteContext struct {
-	MockCallContext
-	State *MockState
-}
-
-func (wc *MockWriteContext) GetState(key []byte) []byte {
-	return wc.State.GetState(key)
-}
-
-func (wc *MockWriteContext) SetState(key, value []byte) {
-	wc.State.SetState(key, value)
 }

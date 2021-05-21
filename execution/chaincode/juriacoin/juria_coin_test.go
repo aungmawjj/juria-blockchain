@@ -14,12 +14,12 @@ import (
 func TestJuriaCoin_Init(t *testing.T) {
 	assert := assert.New(t)
 	state := chaincode.NewMockState()
-	jrc := new(JuriaCoin)
+	jctx := new(JuriaCoin)
 
-	wc := new(chaincode.MockWriteContext)
-	wc.MockSender = []byte{1, 1, 1}
-	wc.State = state
-	err := jrc.Init(wc)
+	ctx := new(chaincode.MockCallContext)
+	ctx.MockState = state
+	ctx.MockSender = []byte{1, 1, 1}
+	err := jctx.Init(ctx)
 
 	assert.NoError(err)
 
@@ -27,13 +27,11 @@ func TestJuriaCoin_Init(t *testing.T) {
 		Method: "minter",
 	}
 	b, _ := json.Marshal(input)
-	rc := new(chaincode.MockReadContext)
-	rc.MockInput = b
-	rc.State = state
-	minter, err := jrc.Query(rc)
+	ctx.MockInput = b
+	minter, err := jctx.Query(ctx)
 
 	assert.NoError(err)
-	assert.Equal(wc.MockSender, minter, "deployer should be minter")
+	assert.Equal(ctx.MockSender, minter, "deployer should be minter")
 
 	input = &Input{
 		Method: "balance",
@@ -43,35 +41,33 @@ func TestJuriaCoin_Init(t *testing.T) {
 func TestJuriaCoin_SetMinter(t *testing.T) {
 	assert := assert.New(t)
 	state := chaincode.NewMockState()
-	jrc := new(JuriaCoin)
+	jctx := new(JuriaCoin)
 
-	wc := new(chaincode.MockWriteContext)
-	wc.MockSender = []byte{1, 1, 1}
-	wc.State = state
-	jrc.Init(wc)
+	ctx := new(chaincode.MockCallContext)
+	ctx.MockState = state
+	ctx.MockSender = []byte{1, 1, 1}
+	jctx.Init(ctx)
 
 	input := &Input{
 		Method: "setMinter",
 		Dest:   []byte{2, 2, 2},
 	}
 	b, _ := json.Marshal(input)
-	wc.MockSender = []byte{3, 3, 3}
-	wc.MockInput = b
-	err := jrc.Invoke(wc)
+	ctx.MockSender = []byte{3, 3, 3}
+	ctx.MockInput = b
+	err := jctx.Invoke(ctx)
 	assert.Error(err, "sender not minter error")
 
-	wc.MockSender = []byte{1, 1, 1}
-	err = jrc.Invoke(wc)
+	ctx.MockSender = []byte{1, 1, 1}
+	err = jctx.Invoke(ctx)
 
 	assert.NoError(err)
 	input = &Input{
 		Method: "minter",
 	}
 	b, _ = json.Marshal(input)
-	rc := new(chaincode.MockReadContext)
-	rc.State = state
-	rc.MockInput = b
-	minter, err := jrc.Query(rc)
+	ctx.MockInput = b
+	minter, err := jctx.Query(ctx)
 
 	assert.NoError(err)
 	assert.Equal([]byte{2, 2, 2}, minter)
@@ -80,12 +76,12 @@ func TestJuriaCoin_SetMinter(t *testing.T) {
 func TestJuriaCoin_Mint(t *testing.T) {
 	assert := assert.New(t)
 	state := chaincode.NewMockState()
-	jrc := new(JuriaCoin)
+	jctx := new(JuriaCoin)
 
-	wc := new(chaincode.MockWriteContext)
-	wc.MockSender = []byte{1, 1, 1}
-	wc.State = state
-	jrc.Init(wc)
+	ctx := new(chaincode.MockCallContext)
+	ctx.MockState = state
+	ctx.MockSender = []byte{1, 1, 1}
+	jctx.Init(ctx)
 
 	input := &Input{
 		Method: "mint",
@@ -93,13 +89,13 @@ func TestJuriaCoin_Mint(t *testing.T) {
 		Value:  100,
 	}
 	b, _ := json.Marshal(input)
-	wc.MockSender = []byte{3, 3, 3}
-	wc.MockInput = b
-	err := jrc.Invoke(wc)
+	ctx.MockSender = []byte{3, 3, 3}
+	ctx.MockInput = b
+	err := jctx.Invoke(ctx)
 	assert.Error(err, "sender not minter error")
 
-	wc.MockSender = []byte{1, 1, 1}
-	err = jrc.Invoke(wc)
+	ctx.MockSender = []byte{1, 1, 1}
+	err = jctx.Invoke(ctx)
 
 	assert.NoError(err)
 
@@ -107,10 +103,8 @@ func TestJuriaCoin_Mint(t *testing.T) {
 		Method: "total",
 	}
 	b, _ = json.Marshal(input)
-	rc := new(chaincode.MockReadContext)
-	rc.State = state
-	rc.MockInput = b
-	b, err = jrc.Query(rc)
+	ctx.MockInput = b
+	b, err = jctx.Query(ctx)
 
 	assert.NoError(err)
 
@@ -124,8 +118,8 @@ func TestJuriaCoin_Mint(t *testing.T) {
 		Dest:   []byte{2, 2, 2},
 	}
 	b, _ = json.Marshal(input)
-	rc.MockInput = b
-	b, err = jrc.Query(rc)
+	ctx.MockInput = b
+	b, err = jctx.Query(ctx)
 
 	assert.NoError(err)
 
@@ -138,12 +132,12 @@ func TestJuriaCoin_Mint(t *testing.T) {
 func TestJuriaCoin_Transfer(t *testing.T) {
 	assert := assert.New(t)
 	state := chaincode.NewMockState()
-	jrc := new(JuriaCoin)
+	jctx := new(JuriaCoin)
 
-	wc := new(chaincode.MockWriteContext)
-	wc.MockSender = []byte{1, 1, 1}
-	wc.State = state
-	jrc.Init(wc)
+	ctx := new(chaincode.MockCallContext)
+	ctx.MockState = state
+	ctx.MockSender = []byte{1, 1, 1}
+	jctx.Init(ctx)
 
 	input := &Input{
 		Method: "mint",
@@ -151,8 +145,8 @@ func TestJuriaCoin_Transfer(t *testing.T) {
 		Value:  100,
 	}
 	b, _ := json.Marshal(input)
-	wc.MockInput = b
-	jrc.Invoke(wc)
+	ctx.MockInput = b
+	jctx.Invoke(ctx)
 
 	// transfer 222 -> 333, value = 101
 	input = &Input{
@@ -161,26 +155,24 @@ func TestJuriaCoin_Transfer(t *testing.T) {
 		Value:  101,
 	}
 	b, _ = json.Marshal(input)
-	wc.MockSender = []byte{2, 2, 2}
-	wc.MockInput = b
-	err := jrc.Invoke(wc)
+	ctx.MockSender = []byte{2, 2, 2}
+	ctx.MockInput = b
+	err := jctx.Invoke(ctx)
 
 	assert.Error(err, "not enough coin error")
 
 	// transfer 222 -> 333, value = 100
 	input.Value = 100
 	b, _ = json.Marshal(input)
-	wc.MockInput = b
-	err = jrc.Invoke(wc)
+	ctx.MockInput = b
+	err = jctx.Invoke(ctx)
 
 	assert.NoError(err)
 
 	input.Method = "total"
 	b, _ = json.Marshal(input)
-	rc := new(chaincode.MockReadContext)
-	rc.State = state
-	rc.MockInput = b
-	b, _ = jrc.Query(rc)
+	ctx.MockInput = b
+	b, _ = jctx.Query(ctx)
 	var balance int64
 	json.Unmarshal(b, &balance)
 
@@ -189,8 +181,8 @@ func TestJuriaCoin_Transfer(t *testing.T) {
 	input.Method = "balance"
 	input.Dest = []byte{2, 2, 2}
 	b, _ = json.Marshal(input)
-	rc.MockInput = b
-	b, _ = jrc.Query(rc)
+	ctx.MockInput = b
+	b, _ = jctx.Query(ctx)
 	balance = 0
 	json.Unmarshal(b, &balance)
 
@@ -198,8 +190,8 @@ func TestJuriaCoin_Transfer(t *testing.T) {
 
 	input.Dest = []byte{3, 3, 3}
 	b, _ = json.Marshal(input)
-	rc.MockInput = b
-	b, _ = jrc.Query(rc)
+	ctx.MockInput = b
+	b, _ = jctx.Query(ctx)
 	balance = 0
 	json.Unmarshal(b, &balance)
 

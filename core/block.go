@@ -132,7 +132,11 @@ func (blk *Block) SetTransactions(val [][]byte) *Block {
 }
 
 func (blk *Block) SetHash(val []byte) *Block {
-	blk.data.Hash = val
+	if len(val) == 0 {
+		blk.data.Hash = blk.Sum()
+	} else {
+		blk.data.Hash = val
+	}
 	return blk
 }
 

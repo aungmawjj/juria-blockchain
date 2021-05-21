@@ -8,28 +8,18 @@ type CallContext interface {
 	BlockHash() []byte
 	BlockHeight() uint64
 	Input() []byte
-}
 
-type ReadContext interface {
-	CallContext
-
-	// GetState returns state value verified with merkle root
-	GetState(key []byte) ([]byte, error)
-}
-
-type WriteContext interface {
-	CallContext
-
+	VerifyState(key []byte) ([]byte, error)
 	GetState(key []byte) []byte
 	SetState(key, value []byte)
 }
 
-// all chaincodes implements ChainCode interface
-type ChainCode interface {
+// all chaincodes implements Chaincode interface
+type Chaincode interface {
 	// called when chaincode is deployed
-	Init(wc WriteContext) error
+	Init(ctx CallContext) error
 
-	Invoke(wc WriteContext) error
+	Invoke(ctx CallContext) error
 
-	Query(rc ReadContext) ([]byte, error)
+	Query(ctx CallContext) ([]byte, error)
 }
