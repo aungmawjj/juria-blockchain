@@ -125,7 +125,7 @@ func NewTxCommit() *TxCommit {
 func (txc *TxCommit) Hash() []byte        { return txc.data.Hash }
 func (txc *TxCommit) BlockHash() []byte   { return txc.data.BlockHash }
 func (txc *TxCommit) BlockHeight() uint64 { return txc.data.BlockHeight }
-func (txc *TxCommit) Elapsed() int64      { return txc.data.Elapsed }
+func (txc *TxCommit) Elapsed() float64    { return txc.data.Elapsed }
 func (txc *TxCommit) Error() string       { return txc.data.Error }
 
 func (txc *TxCommit) SetHash(val []byte) *TxCommit {
@@ -143,7 +143,7 @@ func (txc *TxCommit) SetBlockHeight(val uint64) *TxCommit {
 	return txc
 }
 
-func (txc *TxCommit) SetElapsed(val int64) *TxCommit {
+func (txc *TxCommit) SetElapsed(val float64) *TxCommit {
 	txc.data.Elapsed = val
 	return txc
 }

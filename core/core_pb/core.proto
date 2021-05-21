@@ -22,9 +22,13 @@ message Block {
 
 message BlockCommit {
 	bytes hash = 1;
-	repeated StateChange stateChanges = 2;
-	bytes leafCount = 3;
-	bytes merkleRoot = 4;
+	double elapsedExec = 2;
+	double elapsedMerkle = 3;
+	double elapsedWrite = 4;
+	repeated bytes oldBlockTxs = 5;
+	repeated StateChange stateChanges = 6;
+	bytes leafCount = 7;
+	bytes merkleRoot = 8;
 }
 
 message Signature {
@@ -56,7 +60,7 @@ message TxCommit {
 	bytes blockHash = 2;
 	uint64 blockHeight = 3;
 	string error = 4;
-	int64 elapsed = 5;
+	double elapsed = 5;
 }
 
 message TxList {

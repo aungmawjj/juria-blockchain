@@ -189,6 +189,21 @@ func (bcm *BlockCommit) SetMerkleRoot(val []byte) *BlockCommit {
 	return bcm
 }
 
+func (bcm *BlockCommit) SetElapsedExec(val float64) *BlockCommit {
+	bcm.data.ElapsedExec = val
+	return bcm
+}
+
+func (bcm *BlockCommit) SetElapsedMerkle(val float64) *BlockCommit {
+	bcm.data.ElapsedMerkle = val
+	return bcm
+}
+
+func (bcm *BlockCommit) SetElapsedWrite(val float64) *BlockCommit {
+	bcm.data.ElapsedWrite = val
+	return bcm
+}
+
 func (bcm *BlockCommit) SetStateChanges(val []*StateChange) *BlockCommit {
 	scpb := make([]*core_pb.StateChange, len(val))
 	for i, sc := range val {
@@ -198,9 +213,12 @@ func (bcm *BlockCommit) SetStateChanges(val []*StateChange) *BlockCommit {
 	return bcm
 }
 
-func (bcm *BlockCommit) Hash() []byte       { return bcm.data.Hash }
-func (bcm *BlockCommit) LeafCount() []byte  { return bcm.data.LeafCount }
-func (bcm *BlockCommit) MerkleRoot() []byte { return bcm.data.MerkleRoot }
+func (bcm *BlockCommit) Hash() []byte           { return bcm.data.Hash }
+func (bcm *BlockCommit) LeafCount() []byte      { return bcm.data.LeafCount }
+func (bcm *BlockCommit) MerkleRoot() []byte     { return bcm.data.MerkleRoot }
+func (bcm *BlockCommit) ElapsedExec() float64   { return bcm.data.ElapsedExec }
+func (bcm *BlockCommit) ElapsedMerkle() float64 { return bcm.data.ElapsedMerkle }
+func (bcm *BlockCommit) ElapsedWrite() float64  { return bcm.data.ElapsedWrite }
 
 func (bcm *BlockCommit) StateChanges() []*StateChange {
 	scList := make([]*StateChange, len(bcm.data.StateChanges))

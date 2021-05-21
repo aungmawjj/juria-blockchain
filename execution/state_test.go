@@ -63,8 +63,8 @@ func TestStateTracker_SetState(t *testing.T) {
 	assert.Equal([]byte{50}, trk.GetState([]byte{1}))
 	scList := trk.getStateChanges()
 	assert.Equal(1, len(scList))
-	assert.Equal([]byte{1}, scList[0].Key)
-	assert.Equal([]byte{50}, scList[0].Value)
+	assert.Equal([]byte{1}, scList[0].Key())
+	assert.Equal([]byte{50}, scList[0].Value())
 
 	trk.SetState([]byte{3}, []byte{30})
 	trk.SetState([]byte{2}, []byte{60})
@@ -78,13 +78,13 @@ func TestStateTracker_SetState(t *testing.T) {
 	scList = trk.getStateChanges()
 	assert.Equal(3, len(scList))
 	// scList list must be sorted by key
-	assert.Equal([]byte{1}, scList[0].Key)
-	assert.Equal([]byte{2}, scList[1].Key)
-	assert.Equal([]byte{3}, scList[2].Key)
+	assert.Equal([]byte{1}, scList[0].Key())
+	assert.Equal([]byte{2}, scList[1].Key())
+	assert.Equal([]byte{3}, scList[2].Key())
 
-	assert.Equal([]byte{10}, scList[0].Value)
-	assert.Equal([]byte{20}, scList[1].Value)
-	assert.Equal([]byte{30}, scList[2].Value)
+	assert.Equal([]byte{10}, scList[0].Value())
+	assert.Equal([]byte{20}, scList[1].Value())
+	assert.Equal([]byte{30}, scList[2].Value())
 }
 
 func TestStateTracker_Merge(t *testing.T) {
@@ -110,8 +110,8 @@ func TestStateTracker_Merge(t *testing.T) {
 
 	scList := trk.getStateChanges()
 	assert.Equal(2, len(scList))
-	assert.Equal([]byte{1}, scList[0].Key, "change order should be in favor of parent tracker")
-	assert.Equal([]byte{2}, scList[1].Key)
+	assert.Equal([]byte{1}, scList[0].Key(), "change order should be in favor of parent tracker")
+	assert.Equal([]byte{2}, scList[1].Key())
 }
 
 func TestStateTracker_WithPrefix(t *testing.T) {
@@ -131,8 +131,8 @@ func TestStateTracker_WithPrefix(t *testing.T) {
 
 	scList := trkChild.getStateChanges()
 	assert.Equal(2, len(scList))
-	assert.Equal([]byte{1, 1}, scList[0].Key)
-	assert.Equal([]byte{1, 2}, scList[1].Key)
+	assert.Equal([]byte{1, 1}, scList[0].Key())
+	assert.Equal([]byte{1, 2}, scList[1].Key())
 
 	trk.merge(trkChild)
 	assert.Equal([]byte{10}, trk.GetState([]byte{1, 1}))

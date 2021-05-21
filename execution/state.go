@@ -7,6 +7,8 @@ import (
 	"bytes"
 	"sort"
 	"sync"
+
+	"github.com/aungmawjj/juria-blockchain/core"
 )
 
 type StateRO interface {
@@ -17,11 +19,6 @@ type StateRO interface {
 type State interface {
 	StateRO
 	SetState(key, value []byte)
-}
-
-type StateChange struct {
-	Key   []byte
-	Value []byte
 }
 
 // stateTracker tracks state changes in key order
@@ -82,7 +79,7 @@ func (trk *stateTracker) merge(trk1 *stateTracker) {
 	}
 }
 
-func (trk *stateTracker) getStateChanges() []*StateChange {
+func (trk *stateTracker) getStateChanges() []*core.StateChange {
 	trk.mtx.RLock()
 	defer trk.mtx.RUnlock()
 
@@ -92,10 +89,10 @@ func (trk *stateTracker) getStateChanges() []*StateChange {
 	}
 	// scList is sorted by keys to keep it consistant across different nodes
 	sort.Strings(keys)
-	scList := make([]*StateChange, len(keys))
+	scList := make([]*core.StateChange, len(keys))
 	for i, key := range keys {
 		value := trk.changes[key]
-		scList[i] = &StateChange{[]byte(key), value}
+		scList[i] = core.NewStateChange().SetKey([]byte(key)).SetValue(value)
 	}
 	return scList
 }

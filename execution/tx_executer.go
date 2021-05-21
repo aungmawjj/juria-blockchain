@@ -39,7 +39,7 @@ func (txe *txExecutor) execute() *core.TxCommit {
 	if err != nil {
 		txc.SetError(err.Error())
 	}
-	txc.SetElapsed(int64(time.Since(start).Milliseconds()))
+	txc.SetElapsed(time.Since(start).Seconds())
 	return txc
 }
 

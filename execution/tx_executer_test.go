@@ -24,10 +24,7 @@ func TestTxExecuter(t *testing.T) {
 		},
 	}
 	b, _ := json.Marshal(depInput)
-	txDep := core.NewTransaction().
-		SetCodeAddr(nil).
-		SetInput(b).
-		Sign(priv)
+	txDep := core.NewTransaction().SetInput(b).Sign(priv)
 
 	blk := core.NewBlock().SetHeight(10).Sign(priv)
 
@@ -48,6 +45,8 @@ func TestTxExecuter(t *testing.T) {
 	txc = texe.execute()
 
 	assert.Equal("", txc.Error())
+	assert.Equal(blk.Hash(), txc.BlockHash())
+	assert.Equal(blk.Height(), txc.BlockHeight())
 
 	// codeinfo must be saved by key (transaction hash)
 	cinfo, err := reg.getCodeInfo(txDep.Hash(), trk.spawn(codeRegistryAddr))
@@ -77,10 +76,7 @@ func TestTxExecuter(t *testing.T) {
 	ccInput.Value = 100
 	b, _ = json.Marshal(ccInput)
 
-	txInvoke := core.NewTransaction().
-		SetCodeAddr(txDep.Hash()).
-		SetInput(b).
-		Sign(priv)
+	txInvoke := core.NewTransaction().SetCodeAddr(txDep.Hash()).SetInput(b).Sign(priv)
 
 	texe.tx = txInvoke
 	txc = texe.execute()

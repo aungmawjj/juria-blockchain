@@ -100,5 +100,9 @@ func (reg *codeRegistry) setCodeInfo(codeAddr []byte, codeInfo *CodeInfo, state 
 func (reg *codeRegistry) getCodeInfo(codeAddr []byte, state StateRO) (*CodeInfo, error) {
 	b := state.GetState(codeAddr)
 	info := new(CodeInfo)
-	return info, json.Unmarshal(b, info)
+	err := json.Unmarshal(b, info)
+	if err != nil {
+		return nil, err
+	}
+	return info, nil
 }
