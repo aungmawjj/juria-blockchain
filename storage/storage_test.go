@@ -33,8 +33,8 @@ func TestStorage_Commit(t *testing.T) {
 	assert := assert.New(t)
 
 	strg := newTestStorage()
-	b0 := core.NewBlock().SetHeight(0)
-	b0.SetHash(b0.Sum())
+	priv := core.GenerateKey(nil)
+	b0 := core.NewBlock().SetHeight(0).Sign(priv)
 	data := &CommitData{
 		Block: b0,
 		StateChanges: []*core.StateChange{
@@ -81,13 +81,11 @@ func TestStorage_Commit(t *testing.T) {
 	b1 := core.NewBlock().
 		SetHeight(1).
 		SetParentHash(b0.Hash()).
-		SetMerkleRoot(strg.GetMerkleRoot())
-	b1.SetHash(b1.Sum())
+		SetMerkleRoot(strg.GetMerkleRoot()).
+		Sign(priv)
 
-	tx1 := core.NewTransaction().SetNonce(1)
-	tx1.SetHash(tx1.Sum())
-	tx2 := core.NewTransaction().SetNonce(2)
-	tx2.SetHash(tx2.Sum())
+	tx1 := core.NewTransaction().SetNonce(1).Sign(priv)
+	tx2 := core.NewTransaction().SetNonce(2).Sign(priv)
 
 	txc1 := core.NewTxCommit().SetHash(tx1.Hash())
 	txc2 := core.NewTxCommit().SetHash(tx2.Hash())

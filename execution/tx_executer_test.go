@@ -29,9 +29,7 @@ func TestTxExecuter(t *testing.T) {
 		SetInput(b).
 		Sign(priv)
 
-	blk := core.NewBlock().
-		SetHeight(10).
-		SetHash(nil)
+	blk := core.NewBlock().SetHeight(10).Sign(priv)
 
 	trk := newStateTracker(newMapStateStore(), nil)
 	reg := newCodeRegistry()

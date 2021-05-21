@@ -15,17 +15,14 @@ func TestChainStore(t *testing.T) {
 	db := createOnMemoryDB()
 	cs := &chainStore{&badgerGetter{db}}
 
-	blk := core.NewBlock().
-		SetHeight(10)
-	blk.SetHash(blk.Sum())
+	priv := core.GenerateKey(nil)
+	blk := core.NewBlock().SetHeight(10).Sign(priv)
 
 	bcm := core.NewBlockCommit().
 		SetHash(blk.Hash()).
 		SetMerkleRoot([]byte{1})
 
-	tx := core.NewTransaction().
-		SetNonce(1)
-	tx.SetHash(tx.Sum())
+	tx := core.NewTransaction().SetNonce(1).Sign(priv)
 
 	txc := core.NewTxCommit().
 		SetHash(tx.Hash()).

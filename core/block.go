@@ -131,15 +131,6 @@ func (blk *Block) SetTransactions(val [][]byte) *Block {
 	return blk
 }
 
-func (blk *Block) SetHash(val []byte) *Block {
-	if len(val) == 0 {
-		blk.data.Hash = blk.Sum()
-	} else {
-		blk.data.Hash = val
-	}
-	return blk
-}
-
 func (blk *Block) Sign(priv *PrivateKey) *Block {
 	blk.proposer = priv.PublicKey()
 	blk.data.Proposer = priv.PublicKey().key
