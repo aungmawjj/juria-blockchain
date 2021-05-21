@@ -148,4 +148,19 @@ func TestStorage_Commit(t *testing.T) {
 	assert.Equal(bcm.MerkleRoot(), strg.GetMerkleRoot())
 
 	assert.Equal([]byte{30}, strg.GetState([]byte{5}))
+	value, err := strg.VerifyState([]byte{5})
+	assert.NoError(err)
+	assert.Equal([]byte{30}, value)
+
+	value, err = strg.VerifyState([]byte{10})
+	assert.Error(err)
+	assert.Nil(value)
+
+	// tampering state value
+	updFn := strg.stateStore.setState([]byte{5}, []byte{100})
+	updateBadgerDB(strg.db, []updateFunc{updFn})
+
+	value, err = strg.VerifyState([]byte{5})
+	assert.Error(err)
+	assert.Nil(value)
 }

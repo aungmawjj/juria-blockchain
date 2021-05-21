@@ -4,6 +4,8 @@
 package storage
 
 import (
+	"errors"
+	"math/big"
 	"time"
 
 	"github.com/aungmawjj/juria-blockchain/core"
@@ -76,6 +78,22 @@ func (strg *Storage) GetTxCommit(hash []byte) (*core.TxCommit, error) {
 
 func (strg *Storage) GetState(key []byte) []byte {
 	return strg.stateStore.getState(key)
+}
+
+func (strg *Storage) VerifyState(key []byte) ([]byte, error) {
+	value := strg.stateStore.getState(key)
+	merkleIdx, err := strg.stateStore.getMerkleIndex(key)
+	if err != nil {
+		return nil, errors.New("state not found: " + err.Error())
+	}
+	node := &merkle.Node{
+		Data:     strg.stateStore.sumStateValue(value),
+		Position: merkle.NewPosition(0, big.NewInt(0).SetBytes(merkleIdx)),
+	}
+	if !strg.merkleTree.Verify([]*merkle.Node{node}) {
+		return nil, errors.New("merkle verification failed")
+	}
+	return value, nil
 }
 
 func (strg *Storage) GetMerkleRoot() []byte {
