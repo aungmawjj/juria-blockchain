@@ -11,7 +11,5 @@ import (
 
 func TestInit(t *testing.T) {
 	assert := assert.New(t)
-	assert.Panics(func() { Instance() }, "should panic")
-	Set(New())
-	assert.NotNil(Instance(), "instance should not be nil")
+	assert.NotNil(New())
 }

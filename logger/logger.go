@@ -5,7 +5,6 @@ package logger
 
 import (
 	"log"
-	"sync"
 
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
@@ -39,9 +38,9 @@ type Config struct {
 	Level zapcore.Level
 }
 
-// New create production logger
+// New create development logger
 func New() Logger {
-	return NewWithConfig(Config{false, 0})
+	return NewWithConfig(Config{Debug: true})
 }
 
 // NewWithConfig creates a new logger with config
@@ -65,31 +64,3 @@ func NewWithConfig(cfg Config) Logger {
 func NewNop() Logger {
 	return &zapLogger{zap.NewNop().Sugar()}
 }
-
-var myLogger Logger
-var mtx sync.RWMutex
-
-// Set sets a global logger
-func Set(logger Logger) {
-	mtx.Lock()
-	defer mtx.Unlock()
-
-	myLogger = logger
-}
-
-// Instance returns global Logger
-func Instance() Logger {
-	mtx.RLock()
-	defer mtx.RUnlock()
-
-	if myLogger == nil {
-		panic("logger isn't initialized")
-	}
-	return myLogger
-}
-
-func Debug(msg string, keyValues ...interface{}) { Instance().Debug(msg, keyValues) }
-func Info(msg string, keyValues ...interface{})  { Instance().Info(msg, keyValues) }
-func Warn(msg string, keyValues ...interface{})  { Instance().Warn(msg, keyValues) }
-func Error(msg string, keyValues ...interface{}) { Instance().Error(msg, keyValues) }
-func Panic(msg string, keyValues ...interface{}) { Instance().Panic(msg, keyValues) }
