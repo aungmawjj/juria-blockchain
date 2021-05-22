@@ -191,10 +191,9 @@ func (pool *TxPool) getTxsToExecute(hashes [][]byte) ([]*core.Transaction, [][]b
 			executedTxs = append(executedTxs, hash)
 		} else {
 			tx := pool.store.getTx(hash)
-			if tx == nil { // after sync or syncVerify tx should be in store or storage
-				panic("tx not found to execute")
+			if tx != nil {
+				txs = append(txs, tx)
 			}
-			txs = append(txs, tx)
 		}
 	}
 	pool.store.setTxsPending(hashes)

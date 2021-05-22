@@ -250,11 +250,6 @@ func TestTxPool_GetTxsToExecute(t *testing.T) {
 	storage.On("HasTx", tx3.Hash()).Return(false)
 
 	pool.SubmitTx(tx1)
-
-	assert.Panics(func() {
-		pool.GetTxsToExecute([][]byte{tx1.Hash(), tx2.Hash(), tx3.Hash()})
-	}, "tx3 not found")
-
 	pool.SubmitTx(tx3)
 	txs, old := pool.GetTxsToExecute([][]byte{tx1.Hash(), tx2.Hash(), tx3.Hash()})
 
