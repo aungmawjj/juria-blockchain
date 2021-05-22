@@ -6,6 +6,7 @@ package execution
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/aungmawjj/juria-blockchain/core"
@@ -58,7 +59,12 @@ func (txe *txExecutor) executeWithTimeout() error {
 	}
 }
 
-func (txe *txExecutor) executeChaincode() error {
+func (txe *txExecutor) executeChaincode() (err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			err = fmt.Errorf("%+v", r)
+		}
+	}()
 	if len(txe.tx.CodeAddr()) == 0 {
 		return txe.executeDeployment()
 	}
