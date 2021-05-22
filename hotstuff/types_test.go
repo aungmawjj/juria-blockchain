@@ -70,7 +70,7 @@ func (m *MockVote) Block() Block {
 	return castBlock(args.Get(0))
 }
 
-func (m *MockVote) Validator() string {
+func (m *MockVote) Voter() string {
 	args := m.Called()
 	return args.String(0)
 }
@@ -91,10 +91,10 @@ func newMockQC(blk Block) *MockQC {
 	return qc
 }
 
-func newMockVote(blk Block, validator string) *MockVote {
+func newMockVote(blk Block, voter string) *MockVote {
 	vote := new(MockVote)
 	vote.On("Block").Return(blk)
-	vote.On("Validator").Return(validator)
+	vote.On("Voter").Return(voter)
 	return vote
 }
 

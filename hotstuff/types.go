@@ -62,7 +62,7 @@ type QC interface {
 // Vote type
 type Vote interface {
 	Block() Block
-	Validator() string
+	Voter() string
 }
 
 // Driver godoc

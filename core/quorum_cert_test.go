@@ -29,21 +29,21 @@ func TestQuorumCert(t *testing.T) {
 	blockHash := []byte{1}
 	votes := make([]*Vote, len(privKeys))
 	for i, priv := range privKeys {
-		votes[i] = &Vote{&core_pb.Vote{
+		votes[i] = NewVote().setData(&core_pb.Vote{
 			BlockHash: blockHash,
 			Signature: priv.Sign(blockHash).data,
-		}}
+		})
 	}
 
-	nilSigVote := &Vote{&core_pb.Vote{
+	nilSigVote := NewVote().setData(&core_pb.Vote{
 		BlockHash: blockHash,
 		Signature: nil,
-	}}
+	})
 
-	invalidSigVote := &Vote{&core_pb.Vote{
+	invalidSigVote := NewVote().setData(&core_pb.Vote{
 		BlockHash: blockHash,
 		Signature: privKeys[0].Sign(blockHash).data,
-	}}
+	})
 
 	qc := NewQuorumCert().Build([]*Vote{votes[2], votes[1], votes[0]})
 	qcValid, err := qc.Marshal()

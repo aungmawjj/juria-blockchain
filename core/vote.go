@@ -17,7 +17,8 @@ var (
 
 // Vote type
 type Vote struct {
-	data *core_pb.Vote
+	data  *core_pb.Vote
+	voter *PublicKey
 }
 
 func NewVote() *Vote {
@@ -44,8 +45,17 @@ func (vote *Vote) Validate(vs ValidatorStore) error {
 	return nil
 }
 
-// BlockHash of vote
+func (vote *Vote) setData(data *core_pb.Vote) *Vote {
+	vote.data = data
+	sig, err := newSignature(vote.data.Signature)
+	if err == nil {
+		vote.voter = sig.pubKey
+	}
+	return vote
+}
+
 func (vote *Vote) BlockHash() []byte { return vote.data.BlockHash }
+func (vote *Vote) Voter() *PublicKey { return vote.voter }
 
 // Marshal encodes vote as bytes
 func (vote *Vote) Marshal() ([]byte, error) {
@@ -58,6 +68,6 @@ func (vote *Vote) Unmarshal(b []byte) error {
 	if err := proto.Unmarshal(b, data); err != nil {
 		return err
 	}
-	vote.data = data
+	vote.setData(data)
 	return nil
 }
