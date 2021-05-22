@@ -79,7 +79,7 @@ func TestMsgService_BroadcastProposal(t *testing.T) {
 
 	assert.EqualValues(MsgTypeProposal, raws[0][0])
 
-	assert.Equal(2, recvCount)
+	assert.Equal(3, recvCount)
 	if assert.NotNil(recvBlk) {
 		assert.Equal(blk.Height(), recvBlk.Height())
 	}

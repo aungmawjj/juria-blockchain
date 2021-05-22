@@ -78,11 +78,11 @@ func (blk *Block) Validate(vs ValidatorStore) error {
 }
 
 // Vote creates a vote for block
-func (blk *Block) Vote(priv *PrivateKey) *Vote {
+func (blk *Block) Vote(signer Signer) *Vote {
 	return &Vote{
 		data: &core_pb.Vote{
 			BlockHash: blk.data.Hash,
-			Signature: priv.Sign(blk.data.Hash).data,
+			Signature: signer.Sign(blk.data.Hash).data,
 		},
 	}
 }
@@ -131,11 +131,11 @@ func (blk *Block) SetTransactions(val [][]byte) *Block {
 	return blk
 }
 
-func (blk *Block) Sign(priv *PrivateKey) *Block {
-	blk.proposer = priv.PublicKey()
-	blk.data.Proposer = priv.PublicKey().key
+func (blk *Block) Sign(signer Signer) *Block {
+	blk.proposer = signer.PublicKey()
+	blk.data.Proposer = signer.PublicKey().key
 	blk.data.Hash = blk.Sum()
-	blk.data.Signature = priv.Sign(blk.data.Hash).data.Value
+	blk.data.Signature = signer.Sign(blk.data.Hash).data.Value
 	return blk
 }
 

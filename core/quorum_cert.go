@@ -40,7 +40,7 @@ func (qc *QuorumCert) Validate(vs ValidatorStore) error {
 	if err != nil {
 		return err
 	}
-	if len(sigs) < MajorityCount(vs.ValidatorCount()) {
+	if len(sigs) < vs.MajorityCount() {
 		return ErrNotEnoughSig
 	}
 	if sigs.hasDuplicate() {

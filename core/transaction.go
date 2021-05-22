@@ -83,11 +83,11 @@ func (tx *Transaction) SetInput(val []byte) *Transaction {
 	return tx
 }
 
-func (tx *Transaction) Sign(priv *PrivateKey) *Transaction {
-	tx.sender = priv.PublicKey()
-	tx.data.Sender = priv.PublicKey().key
+func (tx *Transaction) Sign(signer Signer) *Transaction {
+	tx.sender = signer.PublicKey()
+	tx.data.Sender = signer.PublicKey().key
 	tx.data.Hash = tx.Sum()
-	tx.data.Signature = priv.Sign(tx.data.Hash).data.Value
+	tx.data.Signature = signer.Sign(tx.data.Hash).data.Value
 	return tx
 }
 

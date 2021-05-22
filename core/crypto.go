@@ -17,6 +17,11 @@ var (
 	ErrInvalidKeySize = errors.New("invalid key size")
 )
 
+type Signer interface {
+	Sign(msg []byte) *Signature
+	PublicKey() *PublicKey
+}
+
 // PublicKey type
 type PublicKey struct {
 	key    ed25519.PublicKey
@@ -53,6 +58,8 @@ type PrivateKey struct {
 	key    ed25519.PrivateKey
 	pubKey *PublicKey
 }
+
+var _ Signer = (*PrivateKey)(nil)
 
 // NewPrivateKey creates PrivateKey from bytes
 func NewPrivateKey(b []byte) (*PrivateKey, error) {

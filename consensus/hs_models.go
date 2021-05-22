@@ -10,30 +10,26 @@ import (
 	"github.com/aungmawjj/juria-blockchain/hotstuff"
 )
 
-type blockStore interface {
-	getBlock(hash []byte) *core.Block
-}
-
 type hsVote struct {
-	vote       *core.Vote
-	blockStore blockStore
+	vote  *core.Vote
+	store *blockStore
 }
 
 var _ hotstuff.Vote = (*hsVote)(nil)
 
-func newHsVote(vote *core.Vote, blockLoader blockStore) hotstuff.Vote {
+func newHsVote(vote *core.Vote, store *blockStore) hotstuff.Vote {
 	return &hsVote{
-		vote:       vote,
-		blockStore: blockLoader,
+		vote:  vote,
+		store: store,
 	}
 }
 
 func (v *hsVote) Block() hotstuff.Block {
-	blk := v.blockStore.getBlock(v.vote.BlockHash())
+	blk := v.store.getBlock(v.vote.BlockHash())
 	if blk == nil {
 		return nil
 	}
-	return newHsBlock(blk, v.blockStore)
+	return newHsBlock(blk, v.store)
 }
 
 func (v *hsVote) Voter() string {
@@ -45,36 +41,36 @@ func (v *hsVote) Voter() string {
 }
 
 type hsQC struct {
-	qc         *core.QuorumCert
-	blockStore blockStore
+	qc    *core.QuorumCert
+	store *blockStore
 }
 
-func newHsQC(qc *core.QuorumCert, blockLoader blockStore) hotstuff.QC {
+func newHsQC(qc *core.QuorumCert, store *blockStore) hotstuff.QC {
 	return &hsQC{
-		qc:         qc,
-		blockStore: blockLoader,
+		qc:    qc,
+		store: store,
 	}
 }
 
 func (q *hsQC) Block() hotstuff.Block {
-	blk := q.blockStore.getBlock(q.qc.BlockHash())
+	blk := q.store.getBlock(q.qc.BlockHash())
 	if blk == nil {
 		return nil
 	}
-	return newHsBlock(blk, q.blockStore)
+	return newHsBlock(blk, q.store)
 }
 
 type hsBlock struct {
-	block      *core.Block
-	blockStore blockStore
+	block *core.Block
+	store *blockStore
 }
 
 var _ hotstuff.Block = (*hsBlock)(nil)
 
-func newHsBlock(block *core.Block, blockLoader blockStore) hotstuff.Block {
+func newHsBlock(block *core.Block, store *blockStore) hotstuff.Block {
 	return &hsBlock{
-		block:      block,
-		blockStore: blockLoader,
+		block: block,
+		store: store,
 	}
 }
 
@@ -91,11 +87,11 @@ func (b *hsBlock) Height() uint64 {
 }
 
 func (b *hsBlock) Parent() hotstuff.Block {
-	blk := b.blockStore.getBlock(b.block.ParentHash())
+	blk := b.store.getBlock(b.block.ParentHash())
 	if blk == nil {
 		return nil
 	}
-	return newHsBlock(blk, b.blockStore)
+	return newHsBlock(blk, b.store)
 }
 
 func (b *hsBlock) Equal(hsb hotstuff.Block) bool {
@@ -107,5 +103,5 @@ func (b *hsBlock) Equal(hsb hotstuff.Block) bool {
 }
 
 func (b *hsBlock) Justify() hotstuff.QC {
-	return newHsQC(b.block.QuorumCert(), b.blockStore)
+	return newHsQC(b.block.QuorumCert(), b.store)
 }

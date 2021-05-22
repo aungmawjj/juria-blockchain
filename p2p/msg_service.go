@@ -71,6 +71,7 @@ func (svc *MsgService) SubscribeTxList(buffer int) *emitter.Subscription {
 }
 
 func (svc *MsgService) BroadcastProposal(blk *core.Block) error {
+	svc.proposalEmitter.Emit(blk) // send proposal to self
 	data, err := blk.Marshal()
 	if err != nil {
 		return err

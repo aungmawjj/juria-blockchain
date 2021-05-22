@@ -41,10 +41,11 @@ func TestBlock(t *testing.T) {
 	assertt.Equal([]byte{1}, blk.MerkleRoot())
 	assertt.Equal([][]byte{{1}}, blk.Transactions())
 
-	rs := new(MockValidatorStore)
-	rs.On("ValidatorCount").Return(1)
-	rs.On("IsValidator", privKey.PublicKey()).Return(true)
-	rs.On("IsValidator", mock.Anything).Return(false)
+	vs := new(MockValidatorStore)
+	vs.On("ValidatorCount").Return(1)
+	vs.On("MajorityCount").Return(1)
+	vs.On("IsValidator", privKey.PublicKey()).Return(true)
+	vs.On("IsValidator", mock.Anything).Return(false)
 
 	bOk, err := blk.Marshal()
 	assertt.NoError(err)
@@ -83,7 +84,7 @@ func TestBlock(t *testing.T) {
 			err := blk.Unmarshal(tt.b)
 			assert.NoError(err)
 
-			err = blk.Validate(rs)
+			err = blk.Validate(vs)
 
 			if tt.wantErr {
 				assert.Error(err)
@@ -104,10 +105,10 @@ func TestBlock_Vote(t *testing.T) {
 	vote := blk.Vote(privKey)
 	assert.Equal(blk.Hash(), vote.BlockHash())
 
-	rs := new(MockValidatorStore)
-	rs.On("IsValidator", privKey.PublicKey()).Return(true)
+	vs := new(MockValidatorStore)
+	vs.On("IsValidator", privKey.PublicKey()).Return(true)
 
-	err := vote.Validate(rs)
+	err := vote.Validate(vs)
 	assert.NoError(err)
-	rs.AssertExpectations(t)
+	vs.AssertExpectations(t)
 }
