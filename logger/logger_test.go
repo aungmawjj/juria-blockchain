@@ -11,5 +11,8 @@ import (
 
 func TestInit(t *testing.T) {
 	assert := assert.New(t)
-	assert.NotNil(New())
+
+	assert.NotPanics(func() {
+		Info("hello", "key", "value", "key1", 1)
+	})
 }

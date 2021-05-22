@@ -26,11 +26,11 @@ type zapLogger struct {
 // make sure to implement Logger interface
 var _ Logger = (*zapLogger)(nil)
 
-func (zl *zapLogger) Debug(msg string, keyValues ...interface{}) { zl.logger.Debugw(msg, keyValues) }
-func (zl *zapLogger) Info(msg string, keyValues ...interface{})  { zl.logger.Infow(msg, keyValues) }
-func (zl *zapLogger) Warn(msg string, keyValues ...interface{})  { zl.logger.Warnw(msg, keyValues) }
-func (zl *zapLogger) Error(msg string, keyValues ...interface{}) { zl.logger.Errorw(msg, keyValues) }
-func (zl *zapLogger) Panic(msg string, keyValues ...interface{}) { zl.logger.Panicw(msg, keyValues) }
+func (zl *zapLogger) Debug(msg string, keyValues ...interface{}) { zl.logger.Debugw(msg, keyValues...) }
+func (zl *zapLogger) Info(msg string, keyValues ...interface{})  { zl.logger.Infow(msg, keyValues...) }
+func (zl *zapLogger) Warn(msg string, keyValues ...interface{})  { zl.logger.Warnw(msg, keyValues...) }
+func (zl *zapLogger) Error(msg string, keyValues ...interface{}) { zl.logger.Errorw(msg, keyValues...) }
+func (zl *zapLogger) Panic(msg string, keyValues ...interface{}) { zl.logger.Panicw(msg, keyValues...) }
 
 // Config for Logger
 type Config struct {
@@ -40,7 +40,9 @@ type Config struct {
 
 // New create development logger
 func New() Logger {
-	return NewWithConfig(Config{Debug: true})
+	return NewWithConfig(Config{
+		Debug: true,
+	})
 }
 
 // NewWithConfig creates a new logger with config
@@ -63,4 +65,21 @@ func NewWithConfig(cfg Config) Logger {
 // NewNop creates no-op logger
 func NewNop() Logger {
 	return &zapLogger{zap.NewNop().Sugar()}
+}
+
+var myLogger Logger
+
+// Set sets a global logger
+func Set(logger Logger) {
+	myLogger = logger
+}
+
+func Debug(msg string, keyValues ...interface{}) { myLogger.Debug(msg, keyValues...) }
+func Info(msg string, keyValues ...interface{})  { myLogger.Info(msg, keyValues...) }
+func Warn(msg string, keyValues ...interface{})  { myLogger.Warn(msg, keyValues...) }
+func Error(msg string, keyValues ...interface{}) { myLogger.Error(msg, keyValues...) }
+func Panic(msg string, keyValues ...interface{}) { myLogger.Panic(msg, keyValues...) }
+
+func init() {
+	Set(NewNop())
 }
