@@ -29,7 +29,7 @@ type Storage struct {
 	merkleTree  *merkle.Tree
 }
 
-func NewStorage(db *badger.DB, treeOpts merkle.TreeOptions) *Storage {
+func New(db *badger.DB, treeOpts merkle.TreeOptions) *Storage {
 	strg := new(Storage)
 	strg.db = db
 	getter := &badgerGetter{db}
@@ -107,10 +107,7 @@ func (strg *Storage) GetMerkleRoot() []byte {
 func (strg *Storage) commit(data *CommitData) error {
 	start := time.Now()
 	strg.computeMerkleUpdate(data)
-	data.BlockCommit.
-		SetLeafCount(data.merkleUpdate.LeafCount.Bytes()).
-		SetMerkleRoot(data.merkleUpdate.Root.Data).
-		SetElapsedMerkle(time.Since(start).Seconds())
+	data.BlockCommit.SetElapsedMerkle(time.Since(start).Seconds())
 
 	return strg.storeCommitData(data)
 }
@@ -129,12 +126,19 @@ func (strg *Storage) storeCommitData(data *CommitData) error {
 }
 
 func (strg *Storage) computeMerkleUpdate(data *CommitData) {
+	if len(data.BlockCommit.StateChanges()) == 0 {
+		return
+	}
 	strg.stateStore.loadPrevValues(data.BlockCommit.StateChanges())
 	strg.stateStore.loadPrevTreeIndexes(data.BlockCommit.StateChanges())
 	prevLeafCount := strg.merkleStore.getLeafCount()
 	leafCount := strg.stateStore.setNewTreeIndexes(data.BlockCommit.StateChanges(), prevLeafCount)
 	nodes := strg.stateStore.computeUpdatedTreeNodes(data.BlockCommit.StateChanges())
 	data.merkleUpdate = strg.merkleTree.Update(nodes, leafCount)
+
+	data.BlockCommit.
+		SetLeafCount(data.merkleUpdate.LeafCount.Bytes()).
+		SetMerkleRoot(data.merkleUpdate.Root.Data)
 }
 
 func (strg *Storage) storeChainData(data *CommitData) error {
@@ -152,6 +156,9 @@ func (strg *Storage) storeBlockCommit(data *CommitData) error {
 
 // commit state values and merkle tree in one transaction
 func (strg *Storage) commitStateMerkleTree(data *CommitData) error {
+	if len(data.BlockCommit.StateChanges()) == 0 {
+		return nil
+	}
 	updFns := strg.stateStore.commitStateChanges(data.BlockCommit.StateChanges())
 	updFns = append(updFns, strg.merkleStore.commitUpdate(data.merkleUpdate)...)
 	return updateBadgerDB(strg.db, updFns)

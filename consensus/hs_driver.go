@@ -4,67 +4,42 @@
 package consensus
 
 import (
-	"context"
 	"time"
 
 	"github.com/aungmawjj/juria-blockchain/core"
 	"github.com/aungmawjj/juria-blockchain/hotstuff"
+	"github.com/aungmawjj/juria-blockchain/logger"
+	"github.com/aungmawjj/juria-blockchain/storage"
 )
 
 type hsDriver struct {
-	txPool   TxPool
-	storage  Storage
-	msgSvc   MsgService
-	hotstuff *hotstuff.Hotstuff
-	vstore   core.ValidatorStore
-	signer   core.Signer
-	store    *blockStore
+	resources *Resources
+	state     *state
+	hotstuff  *hotstuff.Hotstuff
 
-	maxTxCount int
-	txWaitTime time.Duration
+	blockTxLimit int
+	txWaitTime   time.Duration
 }
 
 var _ hotstuff.Driver = (*hsDriver)(nil)
 
-func (hsd *hsDriver) CreateLeaf(
-	ctx context.Context, parent hotstuff.Block, qc hotstuff.QC, height uint64,
-) hotstuff.Block {
+func (hsd *hsDriver) MajorityCount() int {
+	return hsd.resources.VldStore.MajorityCount()
+}
 
+func (hsd *hsDriver) CreateLeaf(parent hotstuff.Block, qc hotstuff.QC, height uint64) hotstuff.Block {
 	blk := core.NewBlock().
-		SetParentHash(parent.(*hsBlock).block.ParentHash()).
+		SetParentHash(parent.(*hsBlock).block.Hash()).
 		SetQuorumCert(qc.(*hsQC).qc).
-		SetHeight(height)
-
-	return hsd.buildBlockWithTxs(ctx, blk)
-}
-
-func (hsd *hsDriver) buildBlockWithTxs(ctx context.Context, blk *core.Block) hotstuff.Block {
-	timer := time.NewTimer(hsd.txWaitTime)
-	for {
-		select {
-		case <-ctx.Done(): // canceled
-			return nil
-
-		case <-time.After(time.Millisecond):
-			if txs := hsd.txPool.PopTxsFromQueue(hsd.maxTxCount); txs != nil {
-				blk.SetTransactions(txs)
-				hsd.sealAndStoreBlock(blk)
-				return newHsBlock(blk, hsd.store)
-			}
-
-		case <-timer.C: // create empty block
-			hsd.sealAndStoreBlock(blk)
-			return newHsBlock(blk, hsd.store)
-		}
-	}
-}
-
-func (hsd *hsDriver) sealAndStoreBlock(blk *core.Block) {
-	blk.SetExecHeight(hsd.hotstuff.GetBExec().Height()).
-		SetMerkleRoot(hsd.storage.GetMerkleRoot()).
+		SetHeight(height).
+		SetTransactions(hsd.resources.TxPool.PopTxsFromQueue(hsd.blockTxLimit)).
+		SetExecHeight(hsd.hotstuff.GetBExec().Height()).
+		SetMerkleRoot(hsd.resources.Storage.GetMerkleRoot()).
 		SetTimestamp(time.Now().UnixNano()).
-		Sign(hsd.signer)
-	hsd.store.setBlock(blk)
+		Sign(hsd.resources.Signer)
+
+	hsd.state.setBlock(blk)
+	return newHsBlock(blk, hsd.state)
 }
 
 func (hsd *hsDriver) CreateQC(hsVotes []hotstuff.Vote) hotstuff.QC {
@@ -73,28 +48,63 @@ func (hsd *hsDriver) CreateQC(hsVotes []hotstuff.Vote) hotstuff.QC {
 		votes[i] = hsv.(*hsVote).vote
 	}
 	qc := core.NewQuorumCert().Build(votes)
-	return newHsQC(qc, hsd.store)
+	return newHsQC(qc, hsd.state)
 }
 
 func (hsd *hsDriver) BroadcastProposal(hsBlk hotstuff.Block) {
 	blk := hsBlk.(*hsBlock).block
-	hsd.msgSvc.BroadcastProposal(blk)
+	hsd.resources.MsgSvc.BroadcastProposal(blk)
 }
 
 func (hsd *hsDriver) VoteBlock(hsBlk hotstuff.Block) {
 	blk := hsBlk.(*hsBlock).block
-	vote := blk.Vote(hsd.signer)
-	if hsd.signer.PublicKey().Equal(blk.Proposer()) {
-		hsd.hotstuff.OnReceiveVote(newHsVote(vote, hsd.store))
-	} else {
-		hsd.msgSvc.SendVote(blk.Proposer(), vote)
+	vote := blk.Vote(hsd.resources.Signer)
+	hsd.delayVoteWhenNoTxs()
+	hsd.resources.MsgSvc.SendVote(blk.Proposer(), vote)
+	hsd.resources.TxPool.SetTxsPending(blk.Transactions())
+	logger.Debug("voted block", "height", hsBlk.Height(), "leader", hsd.state.getLeaderIndex())
+}
+
+func (hsd *hsDriver) delayVoteWhenNoTxs() {
+	timer := time.NewTimer(hsd.txWaitTime)
+	for hsd.resources.TxPool.GetStatus().Total == 0 {
+		select {
+		case <-timer.C:
+			return
+		case <-time.After(time.Millisecond):
+		}
 	}
 }
 
-func (hsd *hsDriver) Execute(hsBlk hotstuff.Block) {
-
+func (hsd *hsDriver) Commit(hsBlk hotstuff.Block) {
+	start := time.Now()
+	bexe := hsBlk.(*hsBlock).block
+	txs, old := hsd.resources.TxPool.GetTxsToExecute(bexe.Transactions())
+	bcm, txcs := hsd.resources.Execution.Execute(bexe, txs)
+	bcm.SetOldBlockTxs(old)
+	data := &storage.CommitData{
+		Block:        bexe,
+		Transactions: txs,
+		BlockCommit:  bcm,
+		TxCommits:    txcs,
+	}
+	err := hsd.resources.Storage.Commit(data)
+	if err != nil {
+		logger.Fatal("commit storage error", "error", err)
+	}
+	hsd.cleanStateOnCommited(bexe)
+	logger.Debug("commited bock", "height", bexe.Height(), "elapsed", time.Since(start))
 }
 
-func (hsd *hsDriver) MajorityCount() int {
-	return hsd.vstore.MajorityCount()
+func (hsd *hsDriver) cleanStateOnCommited(bexe *core.Block) {
+	// lowest block in state should be bexe
+	hsd.state.deleteBlock(bexe.ParentHash())
+	hsd.resources.TxPool.RemoveTxs(bexe.Transactions())
+
+	folks := hsd.state.getOlderBlocks(bexe)
+	for _, blk := range folks {
+		// put transactions from folked block back to queue
+		hsd.resources.TxPool.PutTxsToQueue(blk.Transactions())
+		hsd.state.deleteBlock(blk.Hash())
+	}
 }

@@ -9,10 +9,28 @@ import (
 	"github.com/aungmawjj/juria-blockchain/core"
 )
 
+type Config struct {
+	TxExecTimeout time.Duration
+}
+
 type Execution struct {
+	state  StateRO
+	config Config
+
 	codeRegistry *codeRegistry
-	state        StateRO
-	txTimeout    time.Duration
+}
+
+func New(state StateRO, config Config) *Execution {
+	if config.TxExecTimeout == 0 {
+		config.TxExecTimeout = 10 * time.Second
+	}
+	exec := &Execution{
+		state:  state,
+		config: config,
+	}
+	exec.codeRegistry = newCodeRegistry()
+	exec.codeRegistry.registerDriver(DriverTypeNative, newNativeCodeDriver())
+	return exec
 }
 
 func (exec *Execution) Execute(
@@ -21,7 +39,7 @@ func (exec *Execution) Execute(
 	bexe := &blkExecutor{
 		codeRegistry: exec.codeRegistry,
 		state:        exec.state,
-		txTimeout:    exec.txTimeout,
+		txTimeout:    exec.config.TxExecTimeout,
 		blk:          blk,
 		txs:          txs,
 	}

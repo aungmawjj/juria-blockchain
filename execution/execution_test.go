@@ -23,7 +23,9 @@ func TestExecution(t *testing.T) {
 	execution := &Execution{
 		state:        state,
 		codeRegistry: reg,
-		txTimeout:    1 * time.Second,
+		config: Config{
+			TxExecTimeout: 1 * time.Second,
+		},
 	}
 
 	priv := core.GenerateKey(nil)

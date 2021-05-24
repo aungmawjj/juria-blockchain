@@ -6,26 +6,33 @@
 package hotstuff
 
 import (
-	"context"
 	"fmt"
 )
 
 // Hotstuff consensus engine
 type Hotstuff struct {
-	state
 	driver Driver
+	*state
+}
+
+func New(driver Driver, b0 Block, q0 QC) *Hotstuff {
+	return &Hotstuff{
+		driver: driver,
+		state:  newState(b0, q0),
+	}
 }
 
 // OnPropose is called to propose a new block
-func (hs *Hotstuff) OnPropose(ctx context.Context) {
+func (hs *Hotstuff) OnPropose() Block {
 	bLeaf := hs.GetBLeaf()
-	bNew := hs.driver.CreateLeaf(ctx, bLeaf, hs.GetQCHigh(), bLeaf.Height()+1)
+	bNew := hs.driver.CreateLeaf(bLeaf, hs.GetQCHigh(), bLeaf.Height()+1)
 	if bNew == nil {
-		return
+		return nil
 	}
 	hs.setBLeaf(bNew)
 	hs.startProposal(bNew)
 	hs.driver.BroadcastProposal(bNew)
+	return bNew
 }
 
 // OnReceiveVote is called when received a vote
@@ -45,17 +52,17 @@ func (hs *Hotstuff) OnReceiveVote(v Vote) {
 func (hs *Hotstuff) OnReceiveProposal(bNew Block) {
 	if hs.CanVote(bNew) {
 		hs.driver.VoteBlock(bNew)
-		hs.setVHeight(bNew.Height())
+		hs.setBVote(bNew)
 	}
 	hs.Update(bNew)
 }
 
 // CanVote returns true if the hotstuff instance can vote the given block
 func (hs *Hotstuff) CanVote(bNew Block) bool {
-	if bNew.Height() <= hs.GetVHeight() {
-		return false
+	if CmpBlockHeight(bNew, hs.GetBVote()) == 1 {
+		return hs.CheckSafetyRule(bNew) || hs.CheckLivenessRule(bNew)
 	}
-	return hs.CheckSafetyRule(bNew) || hs.CheckLivenessRule(bNew)
+	return false
 }
 
 // CheckSafetyRule returns true if the given block extends from b_Lock
@@ -93,7 +100,7 @@ func (hs *Hotstuff) onCommit(b Block) {
 	if CmpBlockHeight(b, hs.GetBExec()) == 1 {
 		// commit parent blocks recurrsively
 		hs.onCommit(b.Parent())
-		hs.driver.Execute(b)
+		hs.driver.Commit(b)
 
 	} else if !hs.GetBExec().Equal(b) {
 		panic(fmt.Sprintf("hotstuff safety breached!!!\n%+v\n%+v\n", b, hs.GetBExec()))
@@ -105,5 +112,6 @@ func (hs *Hotstuff) UpdateQCHigh(qc QC) {
 	if CmpBlockHeight(qc.Block(), hs.GetQCHigh().Block()) == 1 {
 		hs.setQCHigh(qc)
 		hs.setBLeaf(qc.Block())
+		hs.qcHighEmitter.Emit(qc)
 	}
 }

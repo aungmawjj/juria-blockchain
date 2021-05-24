@@ -17,6 +17,7 @@ type Logger interface {
 	Warn(msg string, keyValues ...interface{})
 	Error(msg string, keyValues ...interface{})
 	Panic(msg string, keyValues ...interface{})
+	Fatal(msg string, keyValues ...interface{})
 }
 
 type zapLogger struct {
@@ -31,6 +32,7 @@ func (zl *zapLogger) Info(msg string, keyValues ...interface{})  { zl.logger.Inf
 func (zl *zapLogger) Warn(msg string, keyValues ...interface{})  { zl.logger.Warnw(msg, keyValues...) }
 func (zl *zapLogger) Error(msg string, keyValues ...interface{}) { zl.logger.Errorw(msg, keyValues...) }
 func (zl *zapLogger) Panic(msg string, keyValues ...interface{}) { zl.logger.Panicw(msg, keyValues...) }
+func (zl *zapLogger) Fatal(msg string, keyValues ...interface{}) { zl.logger.Fatalw(msg, keyValues...) }
 
 // Config for Logger
 type Config struct {
@@ -38,7 +40,7 @@ type Config struct {
 	Level zapcore.Level
 }
 
-// New create development logger
+// New create production logger
 func New() Logger {
 	return NewWithConfig(Config{
 		Debug: true,
@@ -79,6 +81,7 @@ func Info(msg string, keyValues ...interface{})  { myLogger.Info(msg, keyValues.
 func Warn(msg string, keyValues ...interface{})  { myLogger.Warn(msg, keyValues...) }
 func Error(msg string, keyValues ...interface{}) { myLogger.Error(msg, keyValues...) }
 func Panic(msg string, keyValues ...interface{}) { myLogger.Panic(msg, keyValues...) }
+func Fatal(msg string, keyValues ...interface{}) { myLogger.Fatal(msg, keyValues...) }
 
 func init() {
 	Set(NewNop())

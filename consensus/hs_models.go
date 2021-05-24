@@ -10,14 +10,18 @@ import (
 	"github.com/aungmawjj/juria-blockchain/hotstuff"
 )
 
+type blockStore interface {
+	getBlock(hash []byte) *core.Block
+}
+
 type hsVote struct {
 	vote  *core.Vote
-	store *blockStore
+	store blockStore
 }
 
 var _ hotstuff.Vote = (*hsVote)(nil)
 
-func newHsVote(vote *core.Vote, store *blockStore) hotstuff.Vote {
+func newHsVote(vote *core.Vote, store blockStore) hotstuff.Vote {
 	return &hsVote{
 		vote:  vote,
 		store: store,
@@ -42,10 +46,10 @@ func (v *hsVote) Voter() string {
 
 type hsQC struct {
 	qc    *core.QuorumCert
-	store *blockStore
+	store blockStore
 }
 
-func newHsQC(qc *core.QuorumCert, store *blockStore) hotstuff.QC {
+func newHsQC(qc *core.QuorumCert, store blockStore) hotstuff.QC {
 	return &hsQC{
 		qc:    qc,
 		store: store,
@@ -62,24 +66,16 @@ func (q *hsQC) Block() hotstuff.Block {
 
 type hsBlock struct {
 	block *core.Block
-	store *blockStore
+	store blockStore
 }
 
 var _ hotstuff.Block = (*hsBlock)(nil)
 
-func newHsBlock(block *core.Block, store *blockStore) hotstuff.Block {
+func newHsBlock(block *core.Block, store blockStore) hotstuff.Block {
 	return &hsBlock{
 		block: block,
 		store: store,
 	}
-}
-
-func (b *hsBlock) Proposer() string {
-	p := b.block.Proposer()
-	if p == nil {
-		return ""
-	}
-	return p.String()
 }
 
 func (b *hsBlock) Height() uint64 {

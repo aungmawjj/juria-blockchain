@@ -7,36 +7,47 @@ import (
 	"fmt"
 	"sync"
 	"sync/atomic"
+
+	"github.com/aungmawjj/juria-blockchain/emitter"
 )
 
 type state struct {
-	vHeight atomic.Value
-	bLock   atomic.Value
-	bExec   atomic.Value
-	qcHigh  atomic.Value
-	bLeaf   atomic.Value
+	bVote  atomic.Value
+	bLock  atomic.Value
+	bExec  atomic.Value
+	qcHigh atomic.Value
+	bLeaf  atomic.Value
 
 	proposal Block
 	votes    map[string]Vote
 	pMtx     sync.RWMutex
+
+	qcHighEmitter *emitter.Emitter
 }
 
-func (s *state) init(b0 Block, q0 QC) {
-	s.setVHeight(b0.Height())
+func newState(b0 Block, q0 QC) *state {
+	s := new(state)
+	s.qcHighEmitter = emitter.New()
+	s.setBVote(b0)
 	s.setBLock(b0)
 	s.setBExec(b0)
 	s.setBLeaf(b0)
 	s.setQCHigh(q0)
+	return s
 }
 
-func (s *state) setVHeight(height uint64) { s.vHeight.Store(height) }
-func (s *state) setBLock(b Block)         { s.bLock.Store(b) }
-func (s *state) setBExec(b Block)         { s.bExec.Store(b) }
-func (s *state) setBLeaf(bNew Block)      { s.bLeaf.Store(bNew) }
-func (s *state) setQCHigh(qcHigh QC)      { s.qcHigh.Store(qcHigh) }
+func (s *state) setBVote(b Block)    { s.bVote.Store(b) }
+func (s *state) setBLock(b Block)    { s.bLock.Store(b) }
+func (s *state) setBExec(b Block)    { s.bExec.Store(b) }
+func (s *state) setBLeaf(bNew Block) { s.bLeaf.Store(bNew) }
+func (s *state) setQCHigh(qcHigh QC) { s.qcHigh.Store(qcHigh) }
 
-func (s *state) GetVHeight() uint64 {
-	return s.vHeight.Load().(uint64)
+func (s *state) SubscribeNewQCHigh() *emitter.Subscription {
+	return s.qcHighEmitter.Subscribe(10)
+}
+
+func (s *state) GetBVote() Block {
+	return s.bVote.Load().(Block)
 }
 
 func (s *state) GetBLock() Block {

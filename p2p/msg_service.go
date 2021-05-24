@@ -47,6 +47,9 @@ func NewMsgService(host *Host) *MsgService {
 	svc := new(MsgService)
 	svc.host = host
 	svc.host.SetPeerAddedHandler(svc.onAddedPeer)
+	for _, peer := range svc.host.PeerStore().List() {
+		svc.host.onAddedPeer(peer)
+	}
 
 	svc.reqHandlers = make(map[p2p_pb.Request_Type]ReqHandler)
 	svc.setEmitters()
@@ -71,7 +74,6 @@ func (svc *MsgService) SubscribeTxList(buffer int) *emitter.Subscription {
 }
 
 func (svc *MsgService) BroadcastProposal(blk *core.Block) error {
-	svc.proposalEmitter.Emit(blk) // send proposal to self
 	data, err := blk.Marshal()
 	if err != nil {
 		return err
@@ -95,6 +97,14 @@ func (svc *MsgService) SendNewView(pubKey *core.PublicKey, qc *core.QuorumCert) 
 	return svc.sendData(pubKey, MsgTypeNewView, data)
 }
 
+func (svc *MsgService) BroadcastNewView(qc *core.QuorumCert) error {
+	data, err := qc.Marshal()
+	if err != nil {
+		return err
+	}
+	return svc.broadcastData(MsgTypeNewView, data)
+}
+
 func (svc *MsgService) BroadcastTxList(txList *core.TxList) error {
 	data, err := txList.Marshal()
 	if err != nil {
@@ -112,9 +122,9 @@ func (svc *MsgService) RequestBlock(pubKey *core.PublicKey, hash []byte) (*core.
 	return blk, blk.Unmarshal(respData)
 }
 
-func (svc *MsgService) RequestTxList(pubKey *core.PublicKey, hashList [][]byte) (*core.TxList, error) {
+func (svc *MsgService) RequestTxList(pubKey *core.PublicKey, hashes [][]byte) (*core.TxList, error) {
 	hl := new(p2p_pb.HashList)
-	hl.List = hashList
+	hl.List = hashes
 	reqData, _ := proto.Marshal(hl)
 	respData, err := svc.requestData(pubKey, p2p_pb.Request_TxList, reqData)
 	if err != nil {

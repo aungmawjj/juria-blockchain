@@ -4,7 +4,6 @@
 package hotstuff
 
 import (
-	"context"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -62,7 +61,7 @@ func TestHotstuff_UpdateQCHigh(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			hs := new(Hotstuff)
-			hs.state.init(tt.fields.bLeaf, tt.fields.qcHigh)
+			hs.state = newState(tt.fields.bLeaf, tt.fields.qcHigh)
 
 			hs.UpdateQCHigh(tt.args.qc)
 
@@ -78,16 +77,14 @@ func TestHotstuff_SuccessfulPropose(t *testing.T) {
 	b0 := newMockBlock(10, nil, q0)
 
 	driver := new(MockDriver)
-	hs := new(Hotstuff)
-	hs.driver = driver
-	hs.state.init(b0, q0)
+	hs := New(driver, b0, q0)
 
 	b1 := newMockBlock(11, b0, q0)
 
-	driver.On("CreateLeaf", mock.Anything, b0, q0, b0.Height()+1).Once().Return(b1)
+	driver.On("CreateLeaf", b0, q0, b0.Height()+1).Once().Return(b1)
 	driver.On("BroadcastProposal", b1).Once()
 
-	hs.OnPropose(context.Background())
+	hs.OnPropose()
 
 	driver.AssertExpectations(t)
 
@@ -108,13 +105,11 @@ func TestHotstuff_FailedPropose(t *testing.T) {
 	b0 := newMockBlock(10, nil, q0)
 
 	driver := new(MockDriver)
-	hs := new(Hotstuff)
-	hs.driver = driver
-	hs.state.init(b0, q0)
+	hs := New(driver, b0, q0)
 
-	driver.On("CreateLeaf", mock.Anything, b0, q0, b0.Height()+1).Once().Return(nil)
+	driver.On("CreateLeaf", b0, q0, b0.Height()+1).Once().Return(nil)
 
-	hs.OnPropose(context.Background())
+	hs.OnPropose()
 
 	driver.AssertExpectations(t)
 	driver.AssertNotCalled(t, "BroadcastProposal")
@@ -133,12 +128,11 @@ func TestHotstuff_OnReceiveVote(t *testing.T) {
 	assert := assert.New(t)
 
 	driver := new(MockDriver)
-	hs := new(Hotstuff)
-	hs.driver = driver
-	hs.state.init(b0, q0)
-	driver.On("CreateLeaf", mock.Anything, b0, q0, b0.Height()+1).Once().Return(b1)
+	hs := New(driver, b0, q0)
+
+	driver.On("CreateLeaf", b0, q0, b0.Height()+1).Once().Return(b1)
 	driver.On("BroadcastProposal", b1).Once()
-	hs.OnPropose(context.Background())
+	hs.OnPropose()
 	driver.On("MajorityCount").Return(2)
 
 	v1 := newMockVote(b1, "r1")
@@ -190,23 +184,24 @@ func TestHotstuff_CanVote(t *testing.T) {
 	_ = bf4
 
 	tests := []struct {
-		name    string
-		vHeight uint64
-		bLock   Block
-		bNew    Block
-		want    bool
+		name  string
+		bVote Block
+		bLock Block
+		bNew  Block
+		want  bool
 	}{
-		{"proposal 1", 10, b0, b1, true},
-		{"proposal 2", 11, b0, b2, true},
-		{"proposal 3", 12, b0, b3, true},
-		{"proposal 4", 13, b1, b4, true},
-		{"proposal not higher", 13, b1, b3, false},
-		{"trigger liveness rule", 13, b1, bf4, true},
+		{"proposal 1", b0, b0, b1, true},
+		{"proposal 2", b1, b0, b2, true},
+		{"proposal 3", b2, b0, b3, true},
+		{"proposal 4", b3, b1, b4, true},
+		{"proposal not higher", b3, b1, b3, false},
+		{"trigger liveness rule", b3, b1, bf4, true},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			hs := new(Hotstuff)
-			hs.setVHeight(tt.vHeight)
+			hs.state = new(state)
+			hs.setBVote(tt.bVote)
 			hs.setBLock(tt.bLock)
 
 			assert.Equal(t, tt.want, hs.CanVote(tt.bNew))
@@ -250,17 +245,17 @@ func TestHotstuff_Update(t *testing.T) {
 	_ = bb6
 
 	hs0 := new(Hotstuff)
-	hs0.state.init(b0, q0)
+	hs0.state = newState(b0, q0)
 
 	hs1 := new(Hotstuff)
-	hs1.state.init(b0, q1)
+	hs1.state = newState(b0, q1)
 
 	hs2 := new(Hotstuff)
-	hs2.state.init(b0, q2)
+	hs2.state = newState(b0, q2)
 	hs2.setBLock(b1)
 
 	hs3 := new(Hotstuff)
-	hs3.state.init(b2, q2)
+	hs3.state = newState(b2, q2)
 
 	tests := []struct {
 		name      string
@@ -285,7 +280,7 @@ func TestHotstuff_Update(t *testing.T) {
 			driver := new(MockDriver)
 			tt.hs.driver = driver
 			if tt.execCount > 0 {
-				driver.On("Execute", mock.Anything).Times(tt.execCount)
+				driver.On("Commit", mock.Anything).Times(tt.execCount)
 			}
 			tt.hs.Update(tt.bNew)
 

@@ -13,7 +13,7 @@ import (
 )
 
 func newTestStorage() *Storage {
-	return NewStorage(createOnMemoryDB(), merkle.TreeOptions{
+	return New(createOnMemoryDB(), merkle.TreeOptions{
 		BranchFactor: 8,
 		HashFunc:     hashFunc,
 	})

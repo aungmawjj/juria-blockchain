@@ -3,15 +3,60 @@
 
 package core
 
-import "math"
+import (
+	"math"
+)
 
 // ValidatorStore godoc
 type ValidatorStore interface {
 	ValidatorCount() int
 	MajorityCount() int
 	IsValidator(pubKey *PublicKey) bool
-	GetValidator(idx int) []byte
+	GetValidator(idx int) *PublicKey
 	GetValidatorIndex(pubKey *PublicKey) (int, bool)
+}
+
+type simpleValidatorStore struct {
+	validators []*PublicKey
+	vMap       map[string]int
+}
+
+var _ ValidatorStore = (*simpleValidatorStore)(nil)
+
+func NewValidatorStore(validators []*PublicKey) ValidatorStore {
+	store := &simpleValidatorStore{
+		validators: validators,
+	}
+	store.vMap = make(map[string]int, len(store.validators))
+	for i, v := range store.validators {
+		store.vMap[v.String()] = i
+	}
+	return store
+}
+
+func (store *simpleValidatorStore) ValidatorCount() int {
+	return len(store.validators)
+}
+
+func (store *simpleValidatorStore) MajorityCount() int {
+	return majorityCount(len(store.validators))
+}
+
+func (store *simpleValidatorStore) IsValidator(pubKey *PublicKey) bool {
+	_, ok := store.vMap[pubKey.String()]
+	return ok
+}
+
+func (store *simpleValidatorStore) GetValidator(idx int) *PublicKey {
+	if idx >= len(store.validators) || idx < 0 {
+		return nil
+	}
+	return store.validators[idx]
+}
+
+func (store *simpleValidatorStore) GetValidatorIndex(pubKey *PublicKey) (int, bool) {
+	idx, ok := store.vMap[pubKey.String()]
+	return idx, ok
 }
 
 // majorityCount returns 2f + 1 members

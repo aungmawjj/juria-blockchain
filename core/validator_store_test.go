@@ -31,13 +31,13 @@ func (m *MockValidatorStore) IsValidator(pubKey *PublicKey) bool {
 	return args.Bool(0)
 }
 
-func (m *MockValidatorStore) GetValidator(idx int) []byte {
+func (m *MockValidatorStore) GetValidator(idx int) *PublicKey {
 	args := m.Called(idx)
 	val := args.Get(0)
-	if r, ok := val.([]byte); ok {
-		return r
+	if val == nil {
+		return nil
 	}
-	return nil
+	return val.(*PublicKey)
 }
 
 func (m *MockValidatorStore) GetValidatorIndex(pubKey *PublicKey) (int, bool) {

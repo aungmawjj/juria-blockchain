@@ -55,8 +55,10 @@ func (blk *Block) Validate(vs ValidatorStore) error {
 	if blk.data == nil {
 		return ErrNilBlock
 	}
-	if err := blk.quorumCert.Validate(vs); err != nil {
-		return err
+	if !blk.IsGenesis() { // skip quorum cert validation for genesis block
+		if err := blk.quorumCert.Validate(vs); err != nil {
+			return err
+		}
 	}
 	if !bytes.Equal(blk.Sum(), blk.Hash()) {
 		return ErrInvalidBlockHash
@@ -79,12 +81,20 @@ func (blk *Block) Validate(vs ValidatorStore) error {
 
 // Vote creates a vote for block
 func (blk *Block) Vote(signer Signer) *Vote {
-	return &Vote{
-		data: &core_pb.Vote{
-			BlockHash: blk.data.Hash,
-			Signature: signer.Sign(blk.data.Hash).data,
+	return NewVote().setData(&core_pb.Vote{
+		BlockHash: blk.data.Hash,
+		Signature: signer.Sign(blk.data.Hash).data,
+	})
+}
+
+func (blk *Block) ProposerVote() *Vote {
+	return NewVote().setData(&core_pb.Vote{
+		BlockHash: blk.data.Hash,
+		Signature: &core_pb.Signature{
+			PubKey: blk.data.Proposer,
+			Value:  blk.data.Signature,
 		},
-	}
+	})
 }
 
 func (blk *Block) setData(data *core_pb.Block) *Block {
@@ -148,6 +158,7 @@ func (blk *Block) ExecHeight() uint64      { return blk.data.ExecHeight }
 func (blk *Block) MerkleRoot() []byte      { return blk.data.MerkleRoot }
 func (blk *Block) Timestamp() int64        { return blk.data.Timestamp }
 func (blk *Block) Transactions() [][]byte  { return blk.data.Transactions }
+func (blk *Block) IsGenesis() bool         { return blk.Height() == 0 }
 
 // Marshal encodes blk as bytes
 func (blk *Block) Marshal() ([]byte, error) {
@@ -161,82 +172,5 @@ func (blk *Block) Unmarshal(b []byte) error {
 		return err
 	}
 	blk.setData(data)
-	return nil
-}
-
-type BlockCommit struct {
-	data *core_pb.BlockCommit
-}
-
-func NewBlockCommit() *BlockCommit {
-	return &BlockCommit{
-		data: new(core_pb.BlockCommit),
-	}
-}
-
-func (bcm *BlockCommit) SetHash(val []byte) *BlockCommit {
-	bcm.data.Hash = val
-	return bcm
-}
-
-func (bcm *BlockCommit) SetLeafCount(val []byte) *BlockCommit {
-	bcm.data.LeafCount = val
-	return bcm
-}
-
-func (bcm *BlockCommit) SetMerkleRoot(val []byte) *BlockCommit {
-	bcm.data.MerkleRoot = val
-	return bcm
-}
-
-func (bcm *BlockCommit) SetElapsedExec(val float64) *BlockCommit {
-	bcm.data.ElapsedExec = val
-	return bcm
-}
-
-func (bcm *BlockCommit) SetElapsedMerkle(val float64) *BlockCommit {
-	bcm.data.ElapsedMerkle = val
-	return bcm
-}
-
-func (bcm *BlockCommit) SetStateChanges(val []*StateChange) *BlockCommit {
-	scpb := make([]*core_pb.StateChange, len(val))
-	for i, sc := range val {
-		scpb[i] = sc.data
-	}
-	bcm.data.StateChanges = scpb
-	return bcm
-}
-
-func (bcm *BlockCommit) Hash() []byte           { return bcm.data.Hash }
-func (bcm *BlockCommit) LeafCount() []byte      { return bcm.data.LeafCount }
-func (bcm *BlockCommit) MerkleRoot() []byte     { return bcm.data.MerkleRoot }
-func (bcm *BlockCommit) ElapsedExec() float64   { return bcm.data.ElapsedExec }
-func (bcm *BlockCommit) ElapsedMerkle() float64 { return bcm.data.ElapsedMerkle }
-
-func (bcm *BlockCommit) StateChanges() []*StateChange {
-	scList := make([]*StateChange, len(bcm.data.StateChanges))
-	for i, scData := range bcm.data.StateChanges {
-		scList[i] = NewStateChange().setData(scData)
-	}
-	return scList
-}
-
-func (bcm *BlockCommit) setData(data *core_pb.BlockCommit) *BlockCommit {
-	bcm.data = data
-	return bcm
-}
-
-func (bcm *BlockCommit) Marshal() ([]byte, error) {
-	return proto.Marshal(bcm.data)
-}
-
-func (bcm *BlockCommit) Unmarshal(b []byte) error {
-	data := new(core_pb.BlockCommit)
-	err := proto.Unmarshal(b, data)
-	if err != nil {
-		return err
-	}
-	bcm.setData(data)
 	return nil
 }

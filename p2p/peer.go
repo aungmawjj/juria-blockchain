@@ -11,6 +11,7 @@ import (
 
 	"github.com/aungmawjj/juria-blockchain/core"
 	"github.com/aungmawjj/juria-blockchain/emitter"
+	"github.com/aungmawjj/juria-blockchain/logger"
 	"github.com/multiformats/go-multiaddr"
 )
 
@@ -71,6 +72,7 @@ func (p *Peer) Disconnect() error {
 	p.statusMtx.Lock()
 	defer p.statusMtx.Unlock()
 
+	logger.Info("peer disconnected", "addr", p.addr)
 	p.status = PeerStatusDisconnected
 	if p.rwc != nil {
 		return p.rwc.Close()
@@ -95,6 +97,7 @@ func (p *Peer) OnConnected(rwc io.ReadWriteCloser) {
 	p.statusMtx.Lock()
 	defer p.statusMtx.Unlock()
 
+	logger.Info("peer connected", "addr", p.addr)
 	p.status = PeerStatusConnected
 	p.rwc = rwc
 	go p.listen()

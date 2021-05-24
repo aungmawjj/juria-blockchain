@@ -47,10 +47,10 @@ func TestVote(t *testing.T) {
 			err := vote.Unmarshal(tt.b)
 			assert.NoError(err)
 
-			rs := new(MockValidatorStore)
-			rs.On("IsValidator", mock.Anything).Return(true)
+			vs := new(MockValidatorStore)
+			vs.On("IsValidator", mock.Anything).Return(true)
 
-			err = vote.Validate(rs)
+			err = vote.Validate(vs)
 
 			if tt.wantErr {
 				assert.Error(err)

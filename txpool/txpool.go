@@ -9,6 +9,7 @@ import (
 
 	"github.com/aungmawjj/juria-blockchain/core"
 	"github.com/aungmawjj/juria-blockchain/emitter"
+	"github.com/aungmawjj/juria-blockchain/logger"
 )
 
 type Status struct {
@@ -39,7 +40,7 @@ type TxPool struct {
 	broadcaster *broadcaster
 }
 
-func NewTxPool(storage Storage, msgSvc MsgService) *TxPool {
+func New(storage Storage, msgSvc MsgService) *TxPool {
 	pool := &TxPool{
 		storage:     storage,
 		msgSvc:      msgSvc,
@@ -94,14 +95,20 @@ func (pool *TxPool) subscribeTxs() {
 	sub := pool.msgSvc.SubscribeTxList(100)
 	for e := range sub.Events() {
 		txList := e.(*core.TxList)
-		pool.addTxList(txList)
+		if err := pool.addTxList(txList); err != nil {
+			logger.Error("add received transactions error", "error", err)
+		}
 	}
 }
 
 func (pool *TxPool) submitTx(tx *core.Transaction) error {
-	if err := pool.addNewTx(tx); err != nil {
+	if err := tx.Validate(); err != nil {
 		return err
 	}
+	if pool.storage.HasTx(tx.Hash()) {
+		return ErrOldTx
+	}
+	pool.store.addNewTx(tx)
 	pool.broadcaster.queue <- tx
 	return nil
 }
@@ -123,19 +130,11 @@ func (pool *TxPool) addTxList(txList *core.TxList) error {
 }
 
 func (pool *TxPool) addNewTx(tx *core.Transaction) error {
-	if err := pool.verifyReceivedTx(tx); err != nil {
-		return err
-	}
-	pool.store.addNewTx(tx)
-	return nil
-}
-
-func (pool *TxPool) verifyReceivedTx(tx *core.Transaction) error {
 	if err := tx.Validate(); err != nil {
 		return err
 	}
-	if pool.storage.HasTx(tx.Hash()) {
-		return ErrOldTx
+	if !pool.storage.HasTx(tx.Hash()) {
+		pool.store.addNewTx(tx)
 	}
 	return nil
 }
@@ -154,8 +153,7 @@ func (pool *TxPool) syncTxs(peer *core.PublicKey, hashes [][]byte) error {
 	if err != nil {
 		return err
 	}
-	pool.addTxList(txList)
-	return nil
+	return pool.addTxList(txList)
 }
 
 func (pool *TxPool) requestTxList(peer *core.PublicKey, hashes [][]byte) (*core.TxList, error) {

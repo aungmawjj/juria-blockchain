@@ -3,15 +3,33 @@
 
 package hotstuff
 
-import "context"
-
 // Block type
 type Block interface {
-	Proposer() string
 	Height() uint64
 	Parent() Block
 	Equal(blk Block) bool
 	Justify() QC
+}
+
+// QC type
+type QC interface {
+	Block() Block
+}
+
+// Vote type
+type Vote interface {
+	Block() Block
+	Voter() string
+}
+
+// Driver godoc
+type Driver interface {
+	MajorityCount() int
+	CreateLeaf(parent Block, qc QC, height uint64) Block
+	CreateQC(votes []Vote) QC
+	BroadcastProposal(blk Block)
+	VoteBlock(blk Block)
+	Commit(blk Block)
 }
 
 // CmpBlockHeight compares two blocks by height
@@ -52,25 +70,4 @@ func IsThreeChain(b, b1, b2 Block) bool {
 		return false
 	}
 	return b1.Equal(b2.Parent()) && b.Equal(b1.Parent())
-}
-
-// QC type
-type QC interface {
-	Block() Block
-}
-
-// Vote type
-type Vote interface {
-	Block() Block
-	Voter() string
-}
-
-// Driver godoc
-type Driver interface {
-	CreateLeaf(ctx context.Context, parent Block, qc QC, height uint64) Block
-	CreateQC(votes []Vote) QC
-	BroadcastProposal(blk Block)
-	VoteBlock(blk Block)
-	Execute(blk Block)
-	MajorityCount() int
 }

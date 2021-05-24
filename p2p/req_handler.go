@@ -12,7 +12,7 @@ type ReqHandler interface {
 }
 
 type TxListReqHandler struct {
-	GetTxList func(sender *core.PublicKey, hashList [][]byte) (*core.TxList, error)
+	GetTxList func(sender *core.PublicKey, hashes [][]byte) (*core.TxList, error)
 }
 
 var _ ReqHandler = (*TxListReqHandler)(nil)

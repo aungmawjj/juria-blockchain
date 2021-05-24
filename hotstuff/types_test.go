@@ -4,7 +4,6 @@
 package hotstuff
 
 import (
-	"context"
 	"testing"
 
 	"github.com/stretchr/testify/mock"
@@ -134,8 +133,13 @@ type MockDriver struct {
 
 var _ Driver = (*MockDriver)(nil)
 
-func (m *MockDriver) CreateLeaf(ctx context.Context, parent Block, qc QC, height uint64) Block {
-	args := m.Called(ctx, parent, qc, height)
+func (m *MockDriver) MajorityCount() int {
+	args := m.Called()
+	return args.Int(0)
+}
+
+func (m *MockDriver) CreateLeaf(parent Block, qc QC, height uint64) Block {
+	args := m.Called(parent, qc, height)
 	return castBlock(args.Get(0))
 }
 
@@ -156,11 +160,6 @@ func (m *MockDriver) SendNewView(qc QC) {
 	m.Called(qc)
 }
 
-func (m *MockDriver) Execute(blk Block) {
+func (m *MockDriver) Commit(blk Block) {
 	m.Called(blk)
-}
-
-func (m *MockDriver) MajorityCount() int {
-	args := m.Called()
-	return args.Int(0)
 }

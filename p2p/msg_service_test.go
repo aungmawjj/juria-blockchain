@@ -79,7 +79,7 @@ func TestMsgService_BroadcastProposal(t *testing.T) {
 
 	assert.EqualValues(MsgTypeProposal, raws[0][0])
 
-	assert.Equal(3, recvCount)
+	assert.Equal(2, recvCount)
 	if assert.NotNil(recvBlk) {
 		assert.Equal(blk.Height(), recvBlk.Height())
 	}
@@ -220,7 +220,7 @@ func TestMsgService_RequestTxList(t *testing.T) {
 	}
 
 	txListReqHandler := &TxListReqHandler{
-		GetTxList: func(sender *core.PublicKey, hashList [][]byte) (*core.TxList, error) {
+		GetTxList: func(sender *core.PublicKey, hashes [][]byte) (*core.TxList, error) {
 			return txs, nil
 		},
 	}

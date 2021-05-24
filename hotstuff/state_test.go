@@ -14,17 +14,15 @@ func Test_state_init(t *testing.T) {
 	b0 := new(MockBlock)
 	q0 := new(MockQC)
 
-	s := &state{}
-
 	b0.On("Height").Return(10)
-	s.init(b0, q0)
+	s := newState(b0, q0)
 
 	assert := assert.New(t)
 	assert.Equal(b0, s.GetBExec())
 	assert.Equal(b0, s.GetBLock())
 	assert.Equal(b0, s.GetBLeaf())
+	assert.Equal(b0, s.GetBVote())
 	assert.Equal(q0, s.GetQCHigh())
-	assert.Equal(b0.Height(), s.GetVHeight())
 }
 
 func Test_state_GetVotes(t *testing.T) {

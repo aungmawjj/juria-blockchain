@@ -24,6 +24,10 @@ const (
 	colMerkleNodeByPosition                  // tree node value by position
 )
 
+func NewDB(path string) (*badger.DB, error) {
+	return badger.Open(badger.DefaultOptions(path))
+}
+
 type setter interface {
 	Set(key, value []byte) error
 }
