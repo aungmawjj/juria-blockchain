@@ -25,6 +25,7 @@ func (vld *validator) start() {
 	go vld.proposalLoop()
 	go vld.voteLoop()
 	go vld.newViewLoop()
+	logger.I().Info("started validator")
 }
 
 func (vld *validator) proposalLoop() {
@@ -33,7 +34,7 @@ func (vld *validator) proposalLoop() {
 
 	for e := range sub.Events() {
 		if err := vld.onReceiveProposal(e.(*core.Block)); err != nil {
-			logger.Error("on received proposal error", "error", err)
+			logger.I().Warnw("on received proposal failed", "error", err)
 		}
 	}
 }
@@ -44,7 +45,7 @@ func (vld *validator) voteLoop() {
 
 	for e := range sub.Events() {
 		if err := vld.onReceiveVote(e.(*core.Vote)); err != nil {
-			logger.Error("on received vote error", "error", err)
+			logger.I().Warnw("received vote failed", "error", err)
 		}
 	}
 }
@@ -55,7 +56,7 @@ func (vld *validator) newViewLoop() {
 
 	for e := range sub.Events() {
 		if err := vld.onReceiveNewView(e.(*core.QuorumCert)); err != nil {
-			logger.Error("on received new view error", "error", err)
+			logger.I().Warnw("received new view failed", "error", err)
 		}
 	}
 }

@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"os"
 	"path"
 
@@ -20,6 +21,7 @@ import (
 	"github.com/aungmawjj/juria-blockchain/storage"
 	"github.com/aungmawjj/juria-blockchain/txpool"
 	"github.com/multiformats/go-multiaddr"
+	"go.uber.org/zap"
 	_ "golang.org/x/crypto/sha3"
 )
 
@@ -56,18 +58,18 @@ func Run(config Config) {
 	node.config = config
 	node.setupLogger()
 	if err := node.readKey(); err != nil {
-		logger.Fatal("read key failed", "error", err)
+		logger.I().Fatalw("read key failed", "error", err)
 	}
 	if err := node.readValidators(); err != nil {
-		logger.Fatal("read validators failed", "error", err)
+		logger.I().Fatalw("read validators failed", "error", err)
 	}
 
 	node.vldStore = core.NewValidatorStore(node.vldKeys)
 	if err := node.setupStorage(); err != nil {
-		logger.Fatal("setup storage failed", "error", err)
+		logger.I().Fatalw("setup storage failed", "error", err)
 	}
 	if err := node.setupHost(); err != nil {
-		logger.Fatal("setup p2p host failed", "error", err)
+		logger.I().Fatalw("setup p2p host failed", "error", err)
 	}
 
 	node.msgSvc = p2p.NewMsgService(node.host)
@@ -84,15 +86,17 @@ func Run(config Config) {
 }
 
 func (node *Node) setupLogger() {
-	var instance logger.Logger
+	var inst *zap.Logger
+	var err error
 	if node.config.Debug {
-		instance = logger.NewWithConfig(logger.Config{
-			Debug: true,
-		})
+		inst, err = zap.NewDevelopment()
 	} else {
-		instance = logger.New()
+		inst, err = zap.NewProduction()
 	}
-	logger.Set(instance)
+	if err != nil {
+		log.Fatalf("can't initialize zap logger: %v", err)
+	}
+	logger.Set(inst.Sugar())
 }
 
 func (node *Node) readKey() error {

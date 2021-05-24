@@ -13,6 +13,6 @@ func TestInit(t *testing.T) {
 	assert := assert.New(t)
 
 	assert.NotPanics(func() {
-		Info("hello", "key", "value", "key1", 1)
+		I().Info("hello", "key", "value", "key1", 1)
 	})
 }

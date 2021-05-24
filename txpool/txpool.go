@@ -96,7 +96,7 @@ func (pool *TxPool) subscribeTxs() {
 	for e := range sub.Events() {
 		txList := e.(*core.TxList)
 		if err := pool.addTxList(txList); err != nil {
-			logger.Error("add received transactions error", "error", err)
+			logger.I().Warnw("add tx list failed", "error", err)
 		}
 	}
 }
@@ -191,6 +191,8 @@ func (pool *TxPool) getTxsToExecute(hashes [][]byte) ([]*core.Transaction, [][]b
 			tx := pool.store.getTx(hash)
 			if tx != nil {
 				txs = append(txs, tx)
+			} else {
+				logger.I().Warnw("missing tx to execute")
 			}
 		}
 	}

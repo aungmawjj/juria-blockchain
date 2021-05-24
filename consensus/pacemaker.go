@@ -22,7 +22,7 @@ type pacemaker struct {
 	viewWidth time.Duration
 
 	// the validators change view if the leader failed to create next qc in this duration
-	qcTimeout time.Duration
+	leaderTimeout time.Duration
 
 	// pendingViewChange is set true after viewChange
 	// reset view timer if pendingViewChange is true on next qc update and set to false
@@ -43,6 +43,7 @@ func (pm *pacemaker) start() {
 	pm.pendingViewChange = false
 	go pm.beatLoop()
 	go pm.viewChangeLoop()
+	logger.I().Info("started pacemaker")
 }
 
 func (pm *pacemaker) stop() {
@@ -85,7 +86,9 @@ func (pm *pacemaker) onBeat() {
 		return
 	}
 	hsBlk := pm.hotstuff.OnPropose()
-	logger.Debug("proposed new block", "height", hsBlk.Height())
+	logger.I().Debugw("proposed block",
+		"height", hsBlk.Height(), "qcRef", hsBlk.Justify().Block().Height(),
+	)
 
 	vote := hsBlk.(*hsBlock).block.ProposerVote()
 	pm.hotstuff.OnReceiveVote(newHsVote(vote, pm.state))
@@ -107,15 +110,16 @@ func (pm *pacemaker) viewChangeLoop() {
 		case <-vtimer.C:
 			pm.changeView()
 
-		case <-time.After(pm.qcTimeout):
-			logger.Warn("qc timeout for leader")
+		case <-time.After(pm.leaderTimeout):
+			logger.I().Warnw("leader timeout", "leader", pm.state.getLeaderIndex())
 			pm.changeView()
 			vtimer.Stop()
 
 		case e := <-subQC.Events():
 			qc := e.(hotstuff.QC)
-			if ok := pm.needViewTimerReset(qc); ok {
+			if ok := pm.needViewTimerResetForNewQC(qc); ok {
 				vtimer.Reset(pm.viewWidth)
+				logger.I().Infow("view timer reset", "leader", pm.state.getLeaderIndex())
 			}
 		}
 	}
@@ -131,12 +135,15 @@ func (pm *pacemaker) changeView() {
 	leader := pm.resources.VldStore.GetValidator(pm.state.getLeaderIndex())
 	pm.resources.MsgSvc.SendNewView(leader, pm.hotstuff.GetQCHigh().(*hsQC).qc)
 
-	logger.Info("view changed", "leader", leaderIdx)
+	logger.I().Infow("view changed", "leader", leaderIdx, "bexec", pm.hotstuff.GetBExec().Height())
 }
 
-func (pm *pacemaker) needViewTimerReset(qc hotstuff.QC) bool {
+func (pm *pacemaker) needViewTimerResetForNewQC(qc hotstuff.QC) bool {
 	proposer := qc.Block().(*hsBlock).block.Proposer()
 	pidx, _ := pm.resources.VldStore.GetValidatorIndex(proposer)
+
+	logger.I().Debugw("updated qc", "proposer", pidx, "qcRef", qc.Block().Height())
+
 	leaderIdx := pm.state.getLeaderIndex()
 	if !pm.pendingViewChange && pidx != leaderIdx {
 		pm.state.setLeaderIndex(pidx)

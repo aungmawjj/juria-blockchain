@@ -16,9 +16,9 @@ type Config struct {
 	BlockTxLimit int
 	TxWaitTime   time.Duration
 
-	BeatDelay time.Duration
-	ViewWidth time.Duration
-	QCTimeout time.Duration
+	BeatDelay     time.Duration
+	ViewWidth     time.Duration
+	LeaderTimeout time.Duration
 }
 
 type Consensus struct {
@@ -49,10 +49,10 @@ func New(resources *Resources, config Config) *Consensus {
 		cons.config.BeatDelay = 2 * time.Second
 	}
 	if cons.config.ViewWidth == 0 {
-		cons.config.ViewWidth = 60 * time.Second
+		cons.config.ViewWidth = 30 * time.Second
 	}
-	if cons.config.QCTimeout == 0 {
-		cons.config.QCTimeout = 5 * time.Second
+	if cons.config.LeaderTimeout == 0 {
+		cons.config.LeaderTimeout = 10 * time.Second
 	}
 
 	cons.start()
@@ -131,8 +131,8 @@ func (cons *Consensus) setupPacemaker() {
 		state:     cons.state,
 		hotstuff:  cons.hotstuff,
 
-		beatDelay: cons.config.BeatDelay,
-		viewWidth: cons.config.ViewWidth,
-		qcTimeout: cons.config.QCTimeout,
+		beatDelay:     cons.config.BeatDelay,
+		viewWidth:     cons.config.ViewWidth,
+		leaderTimeout: cons.config.LeaderTimeout,
 	}
 }

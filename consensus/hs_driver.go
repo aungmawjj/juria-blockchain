@@ -62,7 +62,11 @@ func (hsd *hsDriver) VoteBlock(hsBlk hotstuff.Block) {
 	hsd.delayVoteWhenNoTxs()
 	hsd.resources.MsgSvc.SendVote(blk.Proposer(), vote)
 	hsd.resources.TxPool.SetTxsPending(blk.Transactions())
-	logger.Debug("voted block", "height", hsBlk.Height(), "leader", hsd.state.getLeaderIndex())
+	logger.I().Debugw("voted block",
+		"proposer", hsd.state.getLeaderIndex(),
+		"height", hsBlk.Height(),
+		"qcRef", hsBlk.Justify().Block().Height(),
+	)
 }
 
 func (hsd *hsDriver) delayVoteWhenNoTxs() {
@@ -90,10 +94,10 @@ func (hsd *hsDriver) Commit(hsBlk hotstuff.Block) {
 	}
 	err := hsd.resources.Storage.Commit(data)
 	if err != nil {
-		logger.Fatal("commit storage error", "error", err)
+		logger.I().Fatalw("commit storage error", "error", err)
 	}
 	hsd.cleanStateOnCommited(bexe)
-	logger.Debug("commited bock", "height", bexe.Height(), "elapsed", time.Since(start))
+	logger.I().Debugw("commited bock", "height", bexe.Height(), "elapsed", time.Since(start))
 }
 
 func (hsd *hsDriver) cleanStateOnCommited(bexe *core.Block) {

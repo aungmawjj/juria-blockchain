@@ -49,7 +49,7 @@ func runNodes(juria, rootdir string, count int) {
 			PubKey: keys[i].PublicKey().Bytes(),
 			Addr:   addrs[i].String(),
 		}
-		dirs[i] = path.Join(rootdir, fmt.Sprintf("%02d", i))
+		dirs[i] = path.Join(rootdir, fmt.Sprintf("%0d", i))
 	}
 
 	for i := 0; i < count; i++ {
@@ -67,7 +67,7 @@ func runNodes(juria, rootdir string, count int) {
 	cmds := make([]*exec.Cmd, count)
 	for i := 0; i < count; i++ {
 		logfile, _ := os.Create(path.Join(dirs[i], "log.txt"))
-		cmd := exec.Command(juria, "--debug", "-d", dirs[i], "-p", ports[i])
+		cmd := exec.Command(juria, "-d", dirs[i], "-p", ports[i])
 		fmt.Println(strings.Join(cmd.Args, " "))
 		cmd.Stderr = logfile
 		cmd.Stdout = logfile

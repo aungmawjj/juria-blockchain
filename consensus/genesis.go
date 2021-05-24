@@ -33,7 +33,7 @@ type genesis struct {
 }
 
 func (gns *genesis) run() (*core.Block, *core.QuorumCert) {
-	logger.Info("creating genesis block...")
+	logger.I().Infow("creating genesis block...")
 	gns.done = make(chan struct{})
 	gns.votes = make(map[string]*core.Vote, gns.resources.VldStore.ValidatorCount())
 
@@ -43,6 +43,7 @@ func (gns *genesis) run() (*core.Block, *core.QuorumCert) {
 	gns.propose()
 
 	<-gns.done
+	logger.I().Info("created genesis block and qc")
 	return gns.getB0(), gns.getQ0()
 }
 
@@ -57,7 +58,7 @@ func (gns *genesis) propose() {
 		Sign(gns.resources.Signer)
 
 	gns.setB0(b0)
-	logger.Info("created genesis block, broadcasting...")
+	logger.I().Infow("created genesis block, broadcasting...")
 	go gns.broadcastProposalLoop()
 	gns.onReceiveVote(b0.ProposerVote())
 }
@@ -71,7 +72,7 @@ func (gns *genesis) broadcastProposalLoop() {
 		}
 		if gns.getQ0() == nil {
 			if err := gns.resources.MsgSvc.BroadcastProposal(gns.getB0()); err != nil {
-				logger.Error("broadcast proposal error", "error", err)
+				logger.I().Errorw("broadcast proposal error", "error", err)
 			}
 		}
 		time.Sleep(2 * time.Second)
@@ -103,7 +104,7 @@ func (gns *genesis) proposalLoop() {
 
 		case e := <-sub.Events():
 			if err := gns.onReceiveProposal(e.(*core.Block)); err != nil {
-				logger.Error("on receive proposal", "error", err)
+				logger.I().Errorw("receive proposal failed", "error", err)
 			}
 		}
 	}
@@ -120,7 +121,7 @@ func (gns *genesis) voteLoop() {
 
 		case e := <-sub.Events():
 			if err := gns.onReceiveVote(e.(*core.Vote)); err != nil {
-				logger.Error("on receive vote", "error", err)
+				logger.I().Errorw("receive vote failed", "error", err)
 			}
 		}
 	}
@@ -137,14 +138,13 @@ func (gns *genesis) newViewLoop() {
 
 		case e := <-sub.Events():
 			if err := gns.onReceiveNewView(e.(*core.QuorumCert)); err != nil {
-				logger.Error("on receive new view", "error", err)
+				logger.I().Errorw("receive new view failed", "error", err)
 			}
 		}
 	}
 }
 
 func (gns *genesis) onReceiveProposal(proposal *core.Block) error {
-	logger.Debug("received proposal")
 	if err := proposal.Validate(gns.resources.VldStore); err != nil {
 		return err
 	}
@@ -161,12 +161,11 @@ func (gns *genesis) onReceiveProposal(proposal *core.Block) error {
 		return fmt.Errorf("genesis block with txs")
 	}
 	gns.setB0(proposal)
-	logger.Info("got genesis block, voting...")
+	logger.I().Infow("got genesis block, voting...")
 	return gns.resources.MsgSvc.SendVote(proposal.Proposer(), proposal.Vote(gns.resources.Signer))
 }
 
 func (gns *genesis) onReceiveVote(vote *core.Vote) error {
-	logger.Debug("received vote")
 	if err := vote.Validate(gns.resources.VldStore); err != nil {
 		return err
 	}
@@ -182,7 +181,7 @@ func (gns *genesis) onReceiveVote(vote *core.Vote) error {
 		vlist = append(vlist, vote)
 	}
 	gns.setQ0(core.NewQuorumCert().Build(vlist))
-	logger.Info("created qc, broadcasting...")
+	logger.I().Infow("created qc, broadcasting...")
 	gns.broadcastQC()
 	return nil
 }
@@ -195,14 +194,13 @@ func (gns *genesis) broadcastQC() {
 		default:
 		}
 		if err := gns.resources.MsgSvc.BroadcastNewView(gns.getQ0()); err != nil {
-			logger.Error("broadcast proposal error", "error", err)
+			logger.I().Errorw("broadcast proposal error", "error", err)
 		}
 		time.Sleep(time.Second)
 	}
 }
 
 func (gns *genesis) onReceiveNewView(qc *core.QuorumCert) error {
-	logger.Debug("received qc")
 	gns.mtxNewView.Lock()
 	defer gns.mtxNewView.Unlock()
 
