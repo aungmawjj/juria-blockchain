@@ -27,8 +27,6 @@ type Host struct {
 	peerStore *PeerStore
 	libHost   host.Host
 
-	onAddedPeer func(peer *Peer)
-
 	reconnectInterval time.Duration
 }
 
@@ -66,15 +64,13 @@ func (host *Host) handleStream(s network.Stream) {
 	if err != nil {
 		return
 	}
-	peer, loaded := host.peerStore.LoadOrStore(NewPeer(pubKey, s.Conn().RemoteMultiaddr()))
-	if !loaded && host.onAddedPeer != nil {
-		go host.onAddedPeer(peer)
+	if peer := host.peerStore.Load(pubKey); peer != nil {
+		if err := peer.SetConnecting(); err == nil {
+			peer.OnConnected(s)
+			return
+		}
 	}
-	if err := peer.SetConnecting(); err != nil {
-		s.Close()
-		return
-	}
-	peer.OnConnected(s)
+	s.Close() // cannot find peer in the store (peer not allowed to connect)
 }
 
 func (host *Host) reconnectLoop() {
@@ -87,7 +83,8 @@ func (host *Host) reconnectLoop() {
 }
 
 func (host *Host) connectPeer(peer *Peer) {
-	if err := peer.SetConnecting(); err != nil { // prevent simultaneous connections from both hosts
+	// prevent simultaneous connections from both hosts
+	if err := peer.SetConnecting(); err != nil {
 		return
 	}
 	s, err := host.newStream(peer)
@@ -108,15 +105,8 @@ func (host *Host) newStream(peer *Peer) (network.Stream, error) {
 }
 
 func (host *Host) AddPeer(peer *Peer) {
-	peer, loaded := host.peerStore.LoadOrStore(peer)
-	if !loaded && host.onAddedPeer != nil {
-		go host.onAddedPeer(peer)
-	}
+	peer, _ = host.peerStore.LoadOrStore(peer)
 	go host.connectPeer(peer)
-}
-
-func (host *Host) SetPeerAddedHandler(fn func(peer *Peer)) {
-	host.onAddedPeer = fn
 }
 
 func (host *Host) PeerStore() *PeerStore {

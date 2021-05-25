@@ -44,32 +44,9 @@ func Run(config Config) {
 	node := new(Node)
 	node.config = config
 	node.setupLogger()
-
-	var err error
-	node.privKey, err = readNodeKey(node.config.Datadir)
-	if err != nil {
-		logger.I().Fatalw("read key failed", "error", err)
-	}
-	node.vldKeys, node.vldAddrs, err = readValidators(node.config.Datadir)
-	if err != nil {
-		logger.I().Fatalw("read validators failed", "error", err)
-	}
-
-	node.vldStore = core.NewValidatorStore(node.vldKeys)
-	if err := node.setupStorage(); err != nil {
-		logger.I().Fatalw("setup storage failed", "error", err)
-	}
-	if err := node.setupHost(); err != nil {
-		logger.I().Fatalw("setup p2p host failed", "error", err)
-	}
-	node.msgSvc = p2p.NewMsgService(node.host)
-	node.txpool = txpool.New(node.storage, node.msgSvc)
-	node.execution = execution.New(node.storage, node.config.ExecutionConfig)
-	node.setupConsensus()
-	node.msgSvc.SetReqHandler(&p2p.BlockReqHandler{GetBlock: node.GetBlock})
-	node.msgSvc.SetReqHandler(&p2p.TxListReqHandler{GetTxList: node.GetTxList})
-
-	logger.I().Infow("node setup done", "port", node.config.Port, "pubKey", node.privKey.PublicKey())
+	node.readFiles()
+	node.setupComponents()
+	logger.I().Infow("node setup done, starting consensus...")
 	node.consensus.Start()
 	logger.I().Infow("started consensus", "bexec", node.consensus.GetStatus().BExec)
 	select {}
@@ -87,6 +64,38 @@ func (node *Node) setupLogger() {
 		log.Fatalf("can't initialize zap logger: %v", err)
 	}
 	logger.Set(inst.Sugar())
+}
+
+func (node *Node) readFiles() {
+	var err error
+	node.privKey, err = readNodeKey(node.config.Datadir)
+	if err != nil {
+		logger.I().Fatalw("read key failed", "error", err)
+	}
+	logger.I().Infow("read nodekey", "pubkey", node.privKey.PublicKey())
+
+	node.vldKeys, node.vldAddrs, err = readValidators(node.config.Datadir)
+	if err != nil {
+		logger.I().Fatalw("read validators failed", "error", err)
+	}
+	logger.I().Infow("read validators", "count", len(node.vldKeys))
+}
+
+func (node *Node) setupComponents() {
+	node.vldStore = core.NewValidatorStore(node.vldKeys)
+	if err := node.setupStorage(); err != nil {
+		logger.I().Fatalw("setup storage failed", "error", err)
+	}
+	if err := node.setupHost(); err != nil {
+		logger.I().Fatalw("setup p2p host failed", "error", err)
+	}
+	logger.I().Infow("setup p2p host", "port", node.config.Port)
+	node.msgSvc = p2p.NewMsgService(node.host)
+	node.txpool = txpool.New(node.storage, node.msgSvc)
+	node.execution = execution.New(node.storage, node.config.ExecutionConfig)
+	node.setupConsensus()
+	node.msgSvc.SetReqHandler(&p2p.BlockReqHandler{GetBlock: node.GetBlock})
+	node.msgSvc.SetReqHandler(&p2p.TxListReqHandler{GetTxList: node.GetTxList})
 }
 
 func (node *Node) setupStorage() error {

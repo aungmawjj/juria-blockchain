@@ -46,9 +46,8 @@ type MsgService struct {
 func NewMsgService(host *Host) *MsgService {
 	svc := new(MsgService)
 	svc.host = host
-	svc.host.SetPeerAddedHandler(svc.onAddedPeer)
 	for _, peer := range svc.host.PeerStore().List() {
-		svc.host.onAddedPeer(peer)
+		go svc.listenPeer(peer)
 	}
 
 	svc.reqHandlers = make(map[p2p_pb.Request_Type]ReqHandler)
@@ -158,11 +157,7 @@ func (svc *MsgService) setMsgReceivers() {
 	svc.receivers[MsgTypeRequest] = svc.onReceiveRequest
 }
 
-func (svc *MsgService) onAddedPeer(peer *Peer) {
-	go svc.receivePeerMessages(peer)
-}
-
-func (svc *MsgService) receivePeerMessages(peer *Peer) {
+func (svc *MsgService) listenPeer(peer *Peer) {
 	sub := peer.SubscribeMsg()
 	for e := range sub.Events() {
 		msg := e.([]byte)

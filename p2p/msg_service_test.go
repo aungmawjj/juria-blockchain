@@ -38,15 +38,12 @@ func setupMsgServiceWithLoopBackPeers() (*MsgService, [][]byte, []*Peer) {
 	host := new(Host)
 	host.peerStore = NewPeerStore()
 
-	svc := NewMsgService(host)
-
 	peers[0].OnConnected(newRWCLoopBack())
 	peers[1].OnConnected(newRWCLoopBack())
 	host.peerStore.Store(peers[0])
 	host.peerStore.Store(peers[1])
-	go host.onAddedPeer(peers[0])
-	go host.onAddedPeer(peers[1])
 
+	svc := NewMsgService(host)
 	time.Sleep(time.Millisecond)
 	return svc, raws, peers
 }

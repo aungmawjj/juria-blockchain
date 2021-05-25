@@ -175,6 +175,9 @@ func (gns *genesis) onReceiveVote(vote *core.Vote) error {
 	defer gns.mtxVote.Unlock()
 
 	gns.votes[vote.Voter().String()] = vote
+	// genesis qc will be created with all validator votes,
+	// not majority to simplify synchronization
+	// it also makes sense that the blockchain will be initiated with all validator approval
 	if len(gns.votes) < gns.resources.VldStore.ValidatorCount() {
 		return nil
 	}

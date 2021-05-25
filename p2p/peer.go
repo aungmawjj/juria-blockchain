@@ -26,6 +26,12 @@ const (
 	PeerStatusBlocked
 )
 
+const (
+	// message size limit in bytes (~100 MB)
+	// to avoid out of memory allocation for reading next message
+	MessageSizeLimit uint32 = 100000000
+)
+
 // Peer type
 type Peer struct {
 	pubKey *core.PublicKey
@@ -108,6 +114,7 @@ func (p *Peer) listen() {
 	for {
 		msg, err := p.read()
 		if err != nil {
+			logger.I().Warnw("read message failed", "error", err, "peer", p.pubKey)
 			return
 		}
 		p.emitter.Emit(msg)
@@ -120,6 +127,9 @@ func (p *Peer) read() ([]byte, error) {
 		return nil, err
 	}
 	size := binary.BigEndian.Uint32(b)
+	if size > MessageSizeLimit {
+		return nil, fmt.Errorf("big message size %d", size)
+	}
 	return p.readFixedSize(size)
 }
 

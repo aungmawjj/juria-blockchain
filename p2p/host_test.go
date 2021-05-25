@@ -30,18 +30,10 @@ func TestHost(t *testing.T) {
 		return
 	}
 
-	addedPeerCalls := 0
-	onAddedPeer := func(peer *Peer) {
-		addedPeerCalls++
-	}
-	host1.SetPeerAddedHandler(onAddedPeer)
-	host2.SetPeerAddedHandler(onAddedPeer)
-
 	host1.AddPeer(NewPeer(priv2.PublicKey(), addr2))
+	host2.AddPeer(NewPeer(priv1.PublicKey(), addr2))
 
 	time.Sleep(10 * time.Millisecond)
-
-	assert.Equal(2, addedPeerCalls)
 
 	p1 := host2.PeerStore().Load(priv1.PublicKey())
 	p2 := host1.PeerStore().Load(priv2.PublicKey())

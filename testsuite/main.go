@@ -20,18 +20,18 @@ import (
 
 const (
 	Juria     = "./juria"
-	TestDir   = "test-data"
+	WorkDir   = "workdir"
 	NodeCount = 4
 )
 
 func main() {
-	runNodes(Juria, TestDir, NodeCount)
+	runNodes(Juria, WorkDir, NodeCount)
 }
 
-func runNodes(juria, rootdir string, count int) {
-	err := os.RemoveAll(rootdir)
+func runNodes(juria, workdir string, count int) {
+	err := os.RemoveAll(workdir)
 	check(err)
-	err = os.Mkdir(rootdir, 0755)
+	err = os.Mkdir(workdir, 0755)
 	check(err)
 
 	keys := make([]*core.PrivateKey, count)
@@ -49,7 +49,7 @@ func runNodes(juria, rootdir string, count int) {
 			PubKey: keys[i].PublicKey().Bytes(),
 			Addr:   addrs[i].String(),
 		}
-		dirs[i] = path.Join(rootdir, fmt.Sprintf("%0d", i))
+		dirs[i] = path.Join(workdir, fmt.Sprintf("%0d", i))
 	}
 
 	for i := 0; i < count; i++ {
