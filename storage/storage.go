@@ -4,6 +4,7 @@
 package storage
 
 import (
+	"crypto"
 	"errors"
 	"math/big"
 	"time"
@@ -11,6 +12,7 @@ import (
 	"github.com/aungmawjj/juria-blockchain/core"
 	"github.com/aungmawjj/juria-blockchain/merkle"
 	"github.com/dgraph-io/badger/v3"
+	_ "golang.org/x/crypto/sha3"
 )
 
 type CommitData struct {
@@ -21,6 +23,14 @@ type CommitData struct {
 	merkleUpdate *merkle.UpdateResult
 }
 
+type Config struct {
+	MerkleBranchFactor uint8
+}
+
+var DefaultConfig = Config{
+	MerkleBranchFactor: 8,
+}
+
 type Storage struct {
 	db          *badger.DB
 	chainStore  *chainStore
@@ -29,14 +39,14 @@ type Storage struct {
 	merkleTree  *merkle.Tree
 }
 
-func New(db *badger.DB, treeOpts merkle.TreeOptions) *Storage {
+func New(db *badger.DB, config Config) *Storage {
 	strg := new(Storage)
 	strg.db = db
 	getter := &badgerGetter{db}
 	strg.chainStore = &chainStore{getter}
-	strg.stateStore = &stateStore{getter, treeOpts.HashFunc}
+	strg.stateStore = &stateStore{getter, crypto.SHA3_256}
 	strg.merkleStore = &merkleStore{getter}
-	strg.merkleTree = merkle.NewTree(strg.merkleStore, treeOpts)
+	strg.merkleTree = merkle.NewTree(strg.merkleStore, crypto.SHA3_256, config.MerkleBranchFactor)
 	return strg
 }
 

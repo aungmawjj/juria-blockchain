@@ -18,7 +18,7 @@ type TxPool interface {
 	PutTxsToQueue(hashes [][]byte)
 	SyncTxs(peer *core.PublicKey, hashes [][]byte) error
 	VerifyProposalTxs(hashes [][]byte) error
-	GetStatus() *txpool.Status
+	GetStatus() txpool.Status
 }
 
 type Storage interface {

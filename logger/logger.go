@@ -5,14 +5,7 @@ package logger
 
 import (
 	"go.uber.org/zap"
-	"go.uber.org/zap/zapcore"
 )
-
-// Config for Logger
-type Config struct {
-	Debug bool
-	Level zapcore.Level
-}
 
 var myLogger *zap.SugaredLogger
 

@@ -13,6 +13,10 @@ type Config struct {
 	TxExecTimeout time.Duration
 }
 
+var DefaultConfig = Config{
+	TxExecTimeout: 10 * time.Second,
+}
+
 type Execution struct {
 	state  StateRO
 	config Config
@@ -21,9 +25,6 @@ type Execution struct {
 }
 
 func New(state StateRO, config Config) *Execution {
-	if config.TxExecTimeout == 0 {
-		config.TxExecTimeout = 10 * time.Second
-	}
 	exec := &Execution{
 		state:  state,
 		config: config,

@@ -9,12 +9,6 @@ import (
 	"math/big"
 )
 
-// TreeOptions type
-type TreeOptions struct {
-	BranchFactor uint8
-	HashFunc     crypto.Hash
-}
-
 // Tree implements a merkle tree engine
 type Tree struct {
 	store    Store
@@ -24,15 +18,14 @@ type Tree struct {
 }
 
 // NewTree creates a new Merkle Tree
-func NewTree(store Store, opts TreeOptions) *Tree {
+func NewTree(store Store, h crypto.Hash, bfactor uint8) *Tree {
 	tree := new(Tree)
 	tree.store = store
-	if opts.BranchFactor < 2 {
+	tree.bfactor = bfactor
+	if tree.bfactor < 2 {
 		tree.bfactor = 2
-	} else {
-		tree.bfactor = opts.BranchFactor
 	}
-	tree.hashFunc = opts.HashFunc
+	tree.hashFunc = h
 	tree.calc = NewTreeCalc(tree.bfactor)
 	return tree
 }

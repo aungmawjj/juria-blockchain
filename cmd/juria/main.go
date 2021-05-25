@@ -11,44 +11,77 @@ import (
 )
 
 const (
-	flagDebug   = "debug"
-	flagDataDir = "datadir"
-	flagPort    = "port"
+	FlagDebug   = "debug"
+	FlagDataDir = "datadir"
+	FlagPort    = "port"
+
+	// storage
+	FlagMerkleBranchFactor = "storage-merkleBranchFactor"
+
+	// execution
+	FlagTxExecTimeout = "execution-txExecTimeout"
+
+	// consensus
+	FlagBlockTxLimit  = "consensus-blockTxLimit"
+	FlagTxWaitTime    = "consensus-txWaitTime"
+	FlagBeatDelay     = "consensus-beatDelay"
+	FlagViewWidth     = "consensus-viewWidth"
+	FlagLeaderTimeout = "consensus-leaderTimeout"
 )
+
+var nodeConfig = node.DefaultConfig
 
 var rootCmd = &cobra.Command{
 	Use:   "juria",
 	Short: "Juria blockchain",
 	Run: func(cmd *cobra.Command, args []string) {
-		debug, err := cmd.Flags().GetBool(flagDebug)
-		check(err)
-		datadir, err := cmd.Flags().GetString(flagDataDir)
-		check(err)
-		port, err := cmd.Flags().GetInt(flagPort)
-		check(err)
-
-		node.Run(node.Config{
-			Debug:   debug,
-			Datadir: datadir,
-			Port:    port,
-		})
+		node.Run(nodeConfig)
 	},
 }
 
 func main() {
-	check(rootCmd.Execute())
-}
-
-func init() {
-	rootCmd.PersistentFlags().Bool(flagDebug, false, "debug mode")
-	rootCmd.PersistentFlags().StringP(flagDataDir, "d", "", "blockchain data directory")
-	rootCmd.MarkPersistentFlagRequired(flagDataDir)
-
-	rootCmd.Flags().IntP(flagPort, "p", 9040, "p2p port")
-}
-
-func check(err error) {
+	err := rootCmd.Execute()
 	if err != nil {
 		log.Fatal(err)
 	}
+}
+
+func init() {
+	rootCmd.PersistentFlags().BoolVar(&nodeConfig.Debug,
+		FlagDebug, false, "debug mode")
+
+	rootCmd.PersistentFlags().StringVarP(&nodeConfig.Datadir,
+		FlagDataDir, "d", "", "blockchain data directory")
+	rootCmd.MarkPersistentFlagRequired(FlagDataDir)
+
+	rootCmd.Flags().IntVarP(&nodeConfig.Port,
+		FlagPort, "p", nodeConfig.Port, "p2p port")
+
+	rootCmd.Flags().Uint8Var(&nodeConfig.StorageConfig.MerkleBranchFactor,
+		FlagMerkleBranchFactor, nodeConfig.StorageConfig.MerkleBranchFactor,
+		"merkle tree branching factor")
+
+	rootCmd.Flags().DurationVar(&nodeConfig.ExecutionConfig.TxExecTimeout,
+		FlagTxExecTimeout, nodeConfig.ExecutionConfig.TxExecTimeout,
+		"tx execution timeout")
+
+	rootCmd.Flags().IntVar(&nodeConfig.ConsensusConfig.BlockTxLimit,
+		FlagBlockTxLimit, nodeConfig.ConsensusConfig.BlockTxLimit,
+		"maximum tx count in a block")
+
+	rootCmd.Flags().DurationVar(&nodeConfig.ConsensusConfig.TxWaitTime,
+		FlagTxWaitTime, nodeConfig.ConsensusConfig.TxWaitTime,
+		"block creation delay if no transactions in the pool")
+
+	rootCmd.Flags().DurationVar(&nodeConfig.ConsensusConfig.BeatDelay,
+		FlagBeatDelay, nodeConfig.ConsensusConfig.BeatDelay,
+		"delay to propose next block if leader cannot create qc")
+
+	rootCmd.Flags().DurationVar(&nodeConfig.ConsensusConfig.ViewWidth,
+		FlagViewWidth, nodeConfig.ConsensusConfig.ViewWidth,
+		"view duration for a leader")
+
+	rootCmd.Flags().DurationVar(&nodeConfig.ConsensusConfig.LeaderTimeout,
+		FlagLeaderTimeout, nodeConfig.ConsensusConfig.LeaderTimeout,
+		"if leader cannot create next qc in this duration, change view")
 }

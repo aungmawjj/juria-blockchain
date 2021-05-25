@@ -8,7 +8,6 @@ import (
 	"encoding/binary"
 	"fmt"
 	"sync"
-	"sync/atomic"
 	"time"
 
 	"github.com/aungmawjj/juria-blockchain/core"
@@ -28,8 +27,11 @@ type genesis struct {
 	mtxVote    sync.Mutex
 	mtxNewView sync.Mutex
 
-	b0 atomic.Value
-	q0 atomic.Value
+	b0 *core.Block
+	q0 *core.QuorumCert
+
+	mtxB0 sync.RWMutex
+	mtxQ0 sync.RWMutex
 }
 
 func (gns *genesis) run() (*core.Block, *core.QuorumCert) {
@@ -229,21 +231,26 @@ func (gns *genesis) onReceiveNewView(qc *core.QuorumCert) error {
 	return nil
 }
 
-func (gns *genesis) setB0(val *core.Block)      { gns.b0.Store(val) }
-func (gns *genesis) setQ0(val *core.QuorumCert) { gns.q0.Store(val) }
+func (gns *genesis) setB0(val *core.Block) {
+	gns.mtxB0.Lock()
+	defer gns.mtxB0.Unlock()
+	gns.b0 = val
+}
+
+func (gns *genesis) setQ0(val *core.QuorumCert) {
+	gns.mtxQ0.Lock()
+	defer gns.mtxQ0.Unlock()
+	gns.q0 = val
+}
 
 func (gns *genesis) getB0() *core.Block {
-	b0 := gns.b0.Load()
-	if b0 == nil {
-		return nil
-	}
-	return b0.(*core.Block)
+	gns.mtxB0.RLock()
+	defer gns.mtxB0.RUnlock()
+	return gns.b0
 }
 
 func (gns *genesis) getQ0() *core.QuorumCert {
-	q0 := gns.q0.Load()
-	if q0 == nil {
-		return nil
-	}
-	return q0.(*core.QuorumCert)
+	gns.mtxQ0.RLock()
+	defer gns.mtxQ0.RUnlock()
+	return gns.q0
 }

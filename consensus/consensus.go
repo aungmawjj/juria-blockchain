@@ -4,29 +4,15 @@
 package consensus
 
 import (
-	"time"
-
 	"github.com/aungmawjj/juria-blockchain/core"
 	"github.com/aungmawjj/juria-blockchain/hotstuff"
 )
-
-type Config struct {
-	ChainID int64
-
-	BlockTxLimit int
-	TxWaitTime   time.Duration
-
-	BeatDelay     time.Duration
-	ViewWidth     time.Duration
-	LeaderTimeout time.Duration
-}
 
 type Consensus struct {
 	resources *Resources
 
 	config Config
 
-	lastBlk   *core.Block
 	state     *state
 	hsDriver  *hsDriver
 	hotstuff  *hotstuff.Hotstuff
@@ -39,32 +25,23 @@ func New(resources *Resources, config Config) *Consensus {
 		resources: resources,
 		config:    config,
 	}
-	if cons.config.BlockTxLimit == 0 {
-		cons.config.BlockTxLimit = 200
-	}
-	if cons.config.TxWaitTime == 0 {
-		cons.config.TxWaitTime = 1 * time.Second
-	}
-	if cons.config.BeatDelay == 0 {
-		cons.config.BeatDelay = 2 * time.Second
-	}
-	if cons.config.ViewWidth == 0 {
-		cons.config.ViewWidth = 30 * time.Second
-	}
-	if cons.config.LeaderTimeout == 0 {
-		cons.config.LeaderTimeout = 10 * time.Second
-	}
-
-	cons.start()
 	return cons
+}
+
+func (cons *Consensus) Start() {
+	cons.start()
+}
+
+func (cons *Consensus) Stop() {
+	cons.stop()
+}
+
+func (cons *Consensus) GetStatus() Status {
+	return cons.getStatus()
 }
 
 func (cons *Consensus) GetBlock(hash []byte) *core.Block {
 	return cons.state.getBlock(hash)
-}
-
-func (cons *Consensus) StopPacemaker() {
-	cons.pacemaker.stop()
 }
 
 func (cons *Consensus) start() {
@@ -72,11 +49,10 @@ func (cons *Consensus) start() {
 	if err != nil {
 		lastBlk = cons.makeGenesisBlock()
 	}
-	cons.lastBlk = lastBlk
 
-	cons.setupState()
+	cons.setupState(lastBlk)
 	cons.setupHsDriver()
-	cons.setupHotstuff()
+	cons.setupHotstuff(lastBlk)
 	cons.setupValidator()
 	cons.setupPacemaker()
 
@@ -84,9 +60,17 @@ func (cons *Consensus) start() {
 	cons.pacemaker.start()
 }
 
-func (cons *Consensus) setupState() {
+func (cons *Consensus) stop() {
+	if cons.pacemaker == nil {
+		return
+	}
+	cons.pacemaker.stop()
+	cons.validator.stop()
+}
+
+func (cons *Consensus) setupState(lastBlk *core.Block) {
 	cons.state = newState(cons.resources)
-	cons.state.setBlock(cons.lastBlk)
+	cons.state.setBlock(lastBlk)
 }
 
 func (cons *Consensus) makeGenesisBlock() *core.Block {
@@ -101,18 +85,16 @@ func (cons *Consensus) makeGenesisBlock() *core.Block {
 func (cons *Consensus) setupHsDriver() {
 	cons.hsDriver = &hsDriver{
 		resources: cons.resources,
+		config:    cons.config,
 		state:     cons.state,
-
-		txWaitTime:   cons.config.TxWaitTime,
-		blockTxLimit: cons.config.BlockTxLimit,
 	}
 }
 
-func (cons *Consensus) setupHotstuff() {
+func (cons *Consensus) setupHotstuff(lastBlk *core.Block) {
 	cons.hotstuff = hotstuff.New(
 		cons.hsDriver,
-		newHsBlock(cons.lastBlk, cons.state),
-		newHsQC(cons.lastBlk.QuorumCert(), cons.state),
+		newHsBlock(lastBlk, cons.state),
+		newHsQC(lastBlk.QuorumCert(), cons.state),
 	)
 	cons.hsDriver.hotstuff = cons.hotstuff
 }
@@ -128,11 +110,29 @@ func (cons *Consensus) setupValidator() {
 func (cons *Consensus) setupPacemaker() {
 	cons.pacemaker = &pacemaker{
 		resources: cons.resources,
+		config:    cons.config,
 		state:     cons.state,
 		hotstuff:  cons.hotstuff,
-
-		beatDelay:     cons.config.BeatDelay,
-		viewWidth:     cons.config.ViewWidth,
-		leaderTimeout: cons.config.LeaderTimeout,
 	}
+}
+
+func (cons *Consensus) getStatus() (status Status) {
+	if cons.pacemaker == nil {
+		return status
+	}
+	status.Started = true
+	status.BlockPoolSize = cons.state.getBlockPoolSize()
+	status.LeaderIndex = cons.state.getLeaderIndex()
+	status.ViewStart = cons.pacemaker.getViewStart()
+	status.PendingViewChange = cons.pacemaker.getPendingViewChange()
+
+	status.BVote = cons.hotstuff.GetBVote().Height()
+	status.BLeaf = cons.hotstuff.GetBLeaf().Height()
+	status.BLock = cons.hotstuff.GetBLock().Height()
+	status.BExec = cons.hotstuff.GetBExec().Height()
+	qcHighRef := cons.hotstuff.GetQCHigh().Block()
+	if qcHighRef != nil {
+		status.QCHigh = qcHighRef.Height()
+	}
+	return status
 }

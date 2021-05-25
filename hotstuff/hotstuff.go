@@ -115,3 +115,23 @@ func (hs *Hotstuff) UpdateQCHigh(qc QC) {
 		hs.qcHighEmitter.Emit(qc)
 	}
 }
+
+// GetJustifyBlocks returns justify referenced blocks
+func GetJustifyBlocks(bNew Block) (b, b1, b2 Block) {
+	if b2 = bNew.Justify().Block(); b2 == nil {
+		return b, b1, b2
+	}
+	if b1 = b2.Justify().Block(); b1 == nil {
+		return b, b1, b2
+	}
+	b = b1.Justify().Block()
+	return b, b1, b2
+}
+
+// IsThreeChain checks whether the blocks satisfy three chain rule
+func IsThreeChain(b, b1, b2 Block) bool {
+	if b == nil || b1 == nil || b2 == nil {
+		return false
+	}
+	return b1.Equal(b2.Parent()) && b.Equal(b1.Parent())
+}

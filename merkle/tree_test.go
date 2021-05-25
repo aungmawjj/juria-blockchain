@@ -13,16 +13,16 @@ import (
 
 func TestNewTree(t *testing.T) {
 	tests := []struct {
-		name string
-		opts TreeOptions
-		want uint8
+		name    string
+		bfactor uint8
+		want    uint8
 	}{
-		{"branch factor < 2", TreeOptions{1, crypto.SHA1}, 2},
-		{"branch factor >= 2", TreeOptions{4, crypto.SHA1}, 4},
+		{"branch factor < 2", 1, 2},
+		{"branch factor >= 2", 4, 4},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			tree := NewTree(nil, tt.opts)
+			tree := NewTree(nil, crypto.SHA1, tt.bfactor)
 			assert.Equal(t, tt.want, tree.bfactor)
 		})
 	}
@@ -30,13 +30,9 @@ func TestNewTree(t *testing.T) {
 
 func TestTree_Root(t *testing.T) {
 	store := NewMapStore()
-	tree := NewTree(store, TreeOptions{
-		BranchFactor: 2,
-		HashFunc:     crypto.SHA1,
-	})
+	tree := NewTree(store, crypto.SHA1, 2)
 
 	assert := assert.New(t)
-
 	assert.Nil(tree.Root())
 
 	upd := &UpdateResult{
@@ -62,10 +58,7 @@ func TestTree_Update(t *testing.T) {
 	assert := assert.New(t)
 
 	store := NewMapStore()
-	tree := NewTree(store, TreeOptions{
-		BranchFactor: 3,
-		HashFunc:     crypto.SHA1,
-	})
+	tree := NewTree(store, crypto.SHA1, 3)
 
 	leaves := make([]*Node, 7)
 	for i := range leaves {
@@ -135,10 +128,7 @@ func TestTree_Update(t *testing.T) {
 
 func TestTree_Verify(t *testing.T) {
 	store := NewMapStore()
-	tree := NewTree(store, TreeOptions{
-		BranchFactor: 3,
-		HashFunc:     crypto.SHA1,
-	})
+	tree := NewTree(store, crypto.SHA1, 3)
 
 	leaves := make([]*Node, 7)
 	for i := range leaves {

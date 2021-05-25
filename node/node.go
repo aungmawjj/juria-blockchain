@@ -4,46 +4,22 @@
 package node
 
 import (
-	"crypto"
-	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"log"
-	"os"
 	"path"
 
 	"github.com/aungmawjj/juria-blockchain/consensus"
 	"github.com/aungmawjj/juria-blockchain/core"
 	"github.com/aungmawjj/juria-blockchain/execution"
 	"github.com/aungmawjj/juria-blockchain/logger"
-	"github.com/aungmawjj/juria-blockchain/merkle"
 	"github.com/aungmawjj/juria-blockchain/p2p"
 	"github.com/aungmawjj/juria-blockchain/storage"
 	"github.com/aungmawjj/juria-blockchain/txpool"
 	"github.com/multiformats/go-multiaddr"
 	"go.uber.org/zap"
-	_ "golang.org/x/crypto/sha3"
 )
 
-type Validator struct {
-	PubKey []byte
-	Addr   string
-}
-
-type Config struct {
-	Debug   bool
-	Datadir string
-	Port    int
-}
-
-type Node struct {
-	config Config
-
-	privKey *core.PrivateKey
-
-	vldKeys  []*core.PublicKey
-	vldAddrs []multiaddr.Multiaddr
-
+type components struct {
 	vldStore  core.ValidatorStore
 	storage   *storage.Storage
 	host      *p2p.Host
@@ -53,14 +29,28 @@ type Node struct {
 	consensus *consensus.Consensus
 }
 
+type Node struct {
+	config Config
+
+	privKey  *core.PrivateKey
+	vldKeys  []*core.PublicKey
+	vldAddrs []multiaddr.Multiaddr
+
+	components
+}
+
 func Run(config Config) {
 	node := new(Node)
 	node.config = config
 	node.setupLogger()
-	if err := node.readKey(); err != nil {
+
+	var err error
+	node.privKey, err = readNodeKey(node.config.Datadir)
+	if err != nil {
 		logger.I().Fatalw("read key failed", "error", err)
 	}
-	if err := node.readValidators(); err != nil {
+	node.vldKeys, node.vldAddrs, err = readValidators(node.config.Datadir)
+	if err != nil {
 		logger.I().Fatalw("read validators failed", "error", err)
 	}
 
@@ -71,17 +61,15 @@ func Run(config Config) {
 	if err := node.setupHost(); err != nil {
 		logger.I().Fatalw("setup p2p host failed", "error", err)
 	}
-
 	node.msgSvc = p2p.NewMsgService(node.host)
 	node.txpool = txpool.New(node.storage, node.msgSvc)
-	node.execution = execution.New(node.storage, execution.Config{})
+	node.execution = execution.New(node.storage, node.config.ExecutionConfig)
 	node.setupConsensus()
-	node.msgSvc.SetReqHandler(&p2p.BlockReqHandler{
-		GetBlock: node.GetBlock,
-	})
-	node.msgSvc.SetReqHandler(&p2p.TxListReqHandler{
-		GetTxList: node.GetTxList,
-	})
+	node.msgSvc.SetReqHandler(&p2p.BlockReqHandler{GetBlock: node.GetBlock})
+	node.msgSvc.SetReqHandler(&p2p.TxListReqHandler{GetTxList: node.GetTxList})
+
+	logger.I().Infow("node setup done, starting consensus...")
+	node.consensus.Start()
 	select {}
 }
 
@@ -99,52 +87,12 @@ func (node *Node) setupLogger() {
 	logger.Set(inst.Sugar())
 }
 
-func (node *Node) readKey() error {
-	b, err := ioutil.ReadFile(path.Join(node.config.Datadir, "nodekey"))
-	if err != nil {
-		return fmt.Errorf("cannot read nodekey %w", err)
-	}
-	node.privKey, err = core.NewPrivateKey(b)
-	return err
-}
-
-func (node *Node) readValidators() error {
-	f, err := os.Open(path.Join(node.config.Datadir, "validators.json"))
-	if err != nil {
-		return fmt.Errorf("cannot read validators %w", err)
-	}
-	defer f.Close()
-
-	var vlds []Validator
-	if err := json.NewDecoder(f).Decode(&vlds); err != nil {
-		return fmt.Errorf("cannot parse validators json %w", err)
-	}
-
-	node.vldKeys = make([]*core.PublicKey, len(vlds))
-	node.vldAddrs = make([]multiaddr.Multiaddr, len(vlds))
-
-	for i, vld := range vlds {
-		node.vldKeys[i], err = core.NewPublicKey(vld.PubKey)
-		if err != nil {
-			return fmt.Errorf("invalid public key %w", err)
-		}
-		node.vldAddrs[i], err = multiaddr.NewMultiaddr(vld.Addr)
-		if err != nil {
-			return fmt.Errorf("invalid multiaddr %w", err)
-		}
-	}
-	return nil
-}
-
 func (node *Node) setupStorage() error {
 	db, err := storage.NewDB(path.Join(node.config.Datadir, "db"))
 	if err != nil {
 		return fmt.Errorf("cannot create db %w", err)
 	}
-	node.storage = storage.New(db, merkle.TreeOptions{
-		HashFunc:     crypto.SHA3_256,
-		BranchFactor: 4,
-	})
+	node.storage = storage.New(db, node.config.StorageConfig)
 	return nil
 }
 
@@ -171,7 +119,7 @@ func (node *Node) setupConsensus() {
 		MsgSvc:    node.msgSvc,
 		TxPool:    node.txpool,
 		Execution: node.execution,
-	}, consensus.Config{})
+	}, node.config.ConsensusConfig)
 
 }
 

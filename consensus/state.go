@@ -14,7 +14,7 @@ import (
 type state struct {
 	resources *Resources
 
-	blocks    map[string]*core.Block
+	blockpool map[string]*core.Block
 	mtxBlocks sync.RWMutex
 
 	mtxUpdate sync.Mutex
@@ -25,26 +25,32 @@ type state struct {
 func newState(resources *Resources) *state {
 	return &state{
 		resources: resources,
-		blocks:    make(map[string]*core.Block),
+		blockpool: make(map[string]*core.Block),
 	}
+}
+
+func (state *state) getBlockPoolSize() int {
+	state.mtxBlocks.RLock()
+	defer state.mtxBlocks.RUnlock()
+	return len(state.blockpool)
 }
 
 func (state *state) setBlock(blk *core.Block) {
 	state.mtxBlocks.Lock()
 	defer state.mtxBlocks.Unlock()
-	state.blocks[string(blk.Hash())] = blk
+	state.blockpool[string(blk.Hash())] = blk
 }
 
 func (state *state) getBlock(hash []byte) *core.Block {
 	state.mtxBlocks.RLock()
 	defer state.mtxBlocks.RUnlock()
-	return state.blocks[string(hash)]
+	return state.blockpool[string(hash)]
 }
 
 func (state *state) deleteBlock(hash []byte) {
 	state.mtxBlocks.Lock()
 	defer state.mtxBlocks.Unlock()
-	delete(state.blocks, string(hash))
+	delete(state.blockpool, string(hash))
 }
 
 func (state *state) getOlderBlocks(blk *core.Block) []*core.Block {
@@ -52,7 +58,7 @@ func (state *state) getOlderBlocks(blk *core.Block) []*core.Block {
 	defer state.mtxBlocks.RUnlock()
 
 	ret := make([]*core.Block, 0)
-	for _, b := range state.blocks {
+	for _, b := range state.blockpool {
 		if b.Height() < blk.Height() {
 			ret = append(ret, b)
 		}

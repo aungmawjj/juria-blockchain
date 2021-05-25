@@ -87,7 +87,7 @@ func (pool *TxPool) GetTx(hash []byte) *core.Transaction {
 	return pool.store.getTx(hash)
 }
 
-func (pool *TxPool) GetStatus() *Status {
+func (pool *TxPool) GetStatus() Status {
 	return pool.store.getStatus()
 }
 

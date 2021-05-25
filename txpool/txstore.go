@@ -169,13 +169,12 @@ func (store *txStore) getTx(hash []byte) *core.Transaction {
 	return item.tx
 }
 
-func (store *txStore) getStatus() *Status {
+func (store *txStore) getStatus() (status Status) {
 	store.mtx.RLock()
 	defer store.mtx.RUnlock()
 
-	ret := new(Status)
-	ret.Total = len(store.txItems)
-	ret.Queue = store.txq.Len()
-	ret.Pending = ret.Total - ret.Queue
-	return ret
+	status.Total = len(store.txItems)
+	status.Queue = store.txq.Len()
+	status.Pending = status.Total - status.Queue
+	return status
 }

@@ -57,6 +57,9 @@ func newHsQC(qc *core.QuorumCert, store blockStore) hotstuff.QC {
 }
 
 func (q *hsQC) Block() hotstuff.Block {
+	if q.qc == nil {
+		return nil
+	}
 	blk := q.store.getBlock(q.qc.BlockHash())
 	if blk == nil {
 		return nil

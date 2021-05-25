@@ -8,15 +8,11 @@ import (
 	"testing"
 
 	"github.com/aungmawjj/juria-blockchain/core"
-	"github.com/aungmawjj/juria-blockchain/merkle"
 	"github.com/stretchr/testify/assert"
 )
 
 func newTestStorage() *Storage {
-	return New(createOnMemoryDB(), merkle.TreeOptions{
-		BranchFactor: 8,
-		HashFunc:     hashFunc,
-	})
+	return New(createOnMemoryDB(), Config{MerkleBranchFactor: 8})
 }
 
 func TestStorage_StateZero(t *testing.T) {

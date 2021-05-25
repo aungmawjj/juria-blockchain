@@ -4,6 +4,7 @@
 package consensus
 
 import (
+	"sync"
 	"time"
 
 	"github.com/aungmawjj/juria-blockchain/hotstuff"
@@ -12,35 +13,29 @@ import (
 
 type pacemaker struct {
 	resources *Resources
-	state     *state
-	hotstuff  *hotstuff.Hotstuff
+	config    Config
 
-	// leader wait for this duration after proposal to get a qc
-	// leader will propose next block when a new qc is created or after beat delay
-	beatDelay time.Duration
+	state    *state
+	hotstuff *hotstuff.Hotstuff
 
-	viewWidth time.Duration
+	// start timestamp in second of current view
+	viewStart int64
+	mtxVS     sync.RWMutex
 
-	// the validators change view if the leader failed to create next qc in this duration
-	leaderTimeout time.Duration
-
-	// pendingViewChange is set true after viewChange
-	// reset view timer if pendingViewChange is true on next qc update and set to false
+	// true when view changed before the next leader is approved
 	pendingViewChange bool
-	stopCh            chan struct{}
+	mtxPVC            sync.RWMutex
+
+	stopCh chan struct{}
 }
 
 func (pm *pacemaker) start() {
 	if pm.stopCh != nil {
-		select {
-		case <-pm.stopCh: // confirm stopping
-			break
-		default: // pm not stopping, cannot start
-			return
-		}
+		return
 	}
 	pm.stopCh = make(chan struct{})
-	pm.pendingViewChange = false
+	pm.setViewStart()
+	pm.setPendingViewChange(false)
 	go pm.beatLoop()
 	go pm.viewChangeLoop()
 	logger.I().Info("started pacemaker")
@@ -56,6 +51,7 @@ func (pm *pacemaker) stop() {
 	default:
 	}
 	close(pm.stopCh)
+	pm.stopCh = nil
 }
 
 func (pm *pacemaker) beatLoop() {
@@ -64,10 +60,14 @@ func (pm *pacemaker) beatLoop() {
 
 	for {
 		pm.onBeat()
+		d := pm.config.BeatDelay
+		if pm.resources.TxPool.GetStatus().Total == 0 {
+			d += pm.config.TxWaitTime
+		}
 		select {
 		case <-pm.stopCh:
 			return
-		case <-time.After(pm.beatDelay):
+		case <-time.After(d):
 		case <-subQC.Events():
 		}
 	}
@@ -99,7 +99,7 @@ func (pm *pacemaker) viewChangeLoop() {
 	subQC := pm.hotstuff.SubscribeNewQCHigh()
 	defer subQC.Unsubscribe()
 
-	vtimer := time.NewTimer(pm.viewWidth)
+	vtimer := time.NewTimer(pm.config.ViewWidth)
 
 	for {
 		select {
@@ -110,7 +110,7 @@ func (pm *pacemaker) viewChangeLoop() {
 		case <-vtimer.C:
 			pm.changeView()
 
-		case <-time.After(pm.leaderTimeout):
+		case <-time.After(pm.config.LeaderTimeout):
 			logger.I().Warnw("leader timeout", "leader", pm.state.getLeaderIndex())
 			pm.changeView()
 			vtimer.Stop()
@@ -118,7 +118,8 @@ func (pm *pacemaker) viewChangeLoop() {
 		case e := <-subQC.Events():
 			qc := e.(hotstuff.QC)
 			if ok := pm.needViewTimerResetForNewQC(qc); ok {
-				vtimer.Reset(pm.viewWidth)
+				vtimer.Reset(pm.config.ViewWidth)
+				pm.setViewStart()
 				logger.I().Infow("view timer reset", "leader", pm.state.getLeaderIndex())
 			}
 		}
@@ -131,10 +132,10 @@ func (pm *pacemaker) changeView() {
 		leaderIdx = 0
 	}
 	pm.state.setLeaderIndex(leaderIdx)
-	pm.pendingViewChange = true
+	pm.setPendingViewChange(true)
+	pm.setViewStart()
 	leader := pm.resources.VldStore.GetValidator(pm.state.getLeaderIndex())
 	pm.resources.MsgSvc.SendNewView(leader, pm.hotstuff.GetQCHigh().(*hsQC).qc)
-
 	logger.I().Infow("view changed", "leader", leaderIdx, "bexec", pm.hotstuff.GetBExec().Height())
 }
 
@@ -145,13 +146,38 @@ func (pm *pacemaker) needViewTimerResetForNewQC(qc hotstuff.QC) bool {
 	logger.I().Debugw("updated qc", "proposer", pidx, "qcRef", qc.Block().Height())
 
 	leaderIdx := pm.state.getLeaderIndex()
-	if !pm.pendingViewChange && pidx != leaderIdx {
+	pending := pm.getPendingViewChange()
+	if !pending && pidx != leaderIdx {
 		pm.state.setLeaderIndex(pidx)
 		return true
 	}
-	if pm.pendingViewChange && pidx == leaderIdx {
-		pm.pendingViewChange = false
+	if pending && pidx == leaderIdx {
+		pm.setPendingViewChange(false)
 		return true
 	}
 	return false
+}
+
+func (pm *pacemaker) setViewStart() {
+	pm.mtxVS.Lock()
+	defer pm.mtxVS.Unlock()
+	pm.viewStart = time.Now().Unix()
+}
+
+func (pm *pacemaker) getViewStart() int64 {
+	pm.mtxVS.RLock()
+	defer pm.mtxVS.RUnlock()
+	return pm.viewStart
+}
+
+func (pm *pacemaker) setPendingViewChange(val bool) {
+	pm.mtxPVC.Lock()
+	defer pm.mtxPVC.Unlock()
+	pm.pendingViewChange = val
+}
+
+func (pm *pacemaker) getPendingViewChange() bool {
+	pm.mtxPVC.RLock()
+	defer pm.mtxPVC.RUnlock()
+	return pm.pendingViewChange
 }

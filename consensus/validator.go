@@ -19,22 +19,47 @@ type validator struct {
 	hotstuff  *hotstuff.Hotstuff
 
 	mtxProposal sync.Mutex
+
+	stopCh chan struct{}
 }
 
 func (vld *validator) start() {
+	if vld.stopCh != nil {
+		return
+	}
+	vld.stopCh = make(chan struct{})
 	go vld.proposalLoop()
 	go vld.voteLoop()
 	go vld.newViewLoop()
 	logger.I().Info("started validator")
 }
 
+func (vld *validator) stop() {
+	if vld.stopCh == nil {
+		return // not started yet
+	}
+	select {
+	case <-vld.stopCh: // already stopped
+		return
+	default:
+	}
+	close(vld.stopCh)
+	vld.stopCh = nil
+}
+
 func (vld *validator) proposalLoop() {
 	sub := vld.resources.MsgSvc.SubscribeProposal(100)
 	defer sub.Unsubscribe()
 
-	for e := range sub.Events() {
-		if err := vld.onReceiveProposal(e.(*core.Block)); err != nil {
-			logger.I().Warnw("on received proposal failed", "error", err)
+	for {
+		select {
+		case <-vld.stopCh:
+			return
+
+		case e := <-sub.Events():
+			if err := vld.onReceiveProposal(e.(*core.Block)); err != nil {
+				logger.I().Warnw("on received proposal failed", "error", err)
+			}
 		}
 	}
 }
@@ -43,9 +68,15 @@ func (vld *validator) voteLoop() {
 	sub := vld.resources.MsgSvc.SubscribeVote(1000)
 	defer sub.Unsubscribe()
 
-	for e := range sub.Events() {
-		if err := vld.onReceiveVote(e.(*core.Vote)); err != nil {
-			logger.I().Warnw("received vote failed", "error", err)
+	for {
+		select {
+		case <-vld.stopCh:
+			return
+
+		case e := <-sub.Events():
+			if err := vld.onReceiveVote(e.(*core.Vote)); err != nil {
+				logger.I().Warnw("received vote failed", "error", err)
+			}
 		}
 	}
 }
@@ -54,9 +85,15 @@ func (vld *validator) newViewLoop() {
 	sub := vld.resources.MsgSvc.SubscribeNewView(100)
 	defer sub.Unsubscribe()
 
-	for e := range sub.Events() {
-		if err := vld.onReceiveNewView(e.(*core.QuorumCert)); err != nil {
-			logger.I().Warnw("received new view failed", "error", err)
+	for {
+		select {
+		case <-vld.stopCh:
+			return
+
+		case e := <-sub.Events():
+			if err := vld.onReceiveNewView(e.(*core.QuorumCert)); err != nil {
+				logger.I().Warnw("received new view failed", "error", err)
+			}
 		}
 	}
 }
@@ -65,6 +102,11 @@ func (vld *validator) onReceiveProposal(proposal *core.Block) error {
 	vld.mtxProposal.Lock()
 	defer vld.mtxProposal.Unlock()
 
+	select {
+	case <-vld.stopCh:
+		return nil
+	default:
+	}
 	if err := proposal.Validate(vld.resources.VldStore); err != nil {
 		return err
 	}
