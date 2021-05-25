@@ -6,6 +6,7 @@ package node
 import (
 	"fmt"
 	"log"
+	"net"
 	"path"
 
 	"github.com/aungmawjj/juria-blockchain/consensus"
@@ -68,8 +69,9 @@ func Run(config Config) {
 	node.msgSvc.SetReqHandler(&p2p.BlockReqHandler{GetBlock: node.GetBlock})
 	node.msgSvc.SetReqHandler(&p2p.TxListReqHandler{GetTxList: node.GetTxList})
 
-	logger.I().Infow("node setup done, starting consensus...")
+	logger.I().Infow("node setup done", "port", node.config.Port, "pubKey", node.privKey.PublicKey())
 	node.consensus.Start()
+	logger.I().Infow("started consensus", "bexec", node.consensus.GetStatus().BExec)
 	select {}
 }
 
@@ -97,6 +99,11 @@ func (node *Node) setupStorage() error {
 }
 
 func (node *Node) setupHost() error {
+	ln, err := net.Listen("tcp4", fmt.Sprintf(":%d", node.config.Port))
+	if err != nil {
+		return fmt.Errorf("cannot listen on %d, %w", node.config.Port, err)
+	}
+	ln.Close()
 	addr, _ := multiaddr.NewMultiaddr(fmt.Sprintf("/ip4/0.0.0.0/tcp/%d", node.config.Port))
 	host, err := p2p.NewHost(node.privKey, addr)
 	if err != nil {

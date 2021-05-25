@@ -19,7 +19,7 @@ import (
 )
 
 const (
-	Juria     = "../cmd/juria/juria"
+	Juria     = "./juria"
 	TestDir   = "test-data"
 	NodeCount = 4
 )

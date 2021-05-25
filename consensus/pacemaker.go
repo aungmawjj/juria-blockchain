@@ -86,13 +86,19 @@ func (pm *pacemaker) onBeat() {
 		return
 	}
 	hsBlk := pm.hotstuff.OnPropose()
-	logger.I().Debugw("proposed block",
-		"height", hsBlk.Height(), "qcRef", hsBlk.Justify().Block().Height(),
-	)
-
+	pm.logProposal(hsBlk)
 	vote := hsBlk.(*hsBlock).block.ProposerVote()
 	pm.hotstuff.OnReceiveVote(newHsVote(vote, pm.state))
 	pm.hotstuff.Update(hsBlk)
+}
+
+func (pm *pacemaker) logProposal(blk hotstuff.Block) {
+	qcRef := blk.Justify().Block()
+	qcRefHeight := uint64(0)
+	if qcRef != nil {
+		qcRefHeight = qcRef.Height()
+	}
+	logger.I().Debugw("proposed block", "height", blk.Height(), "qcRef", qcRefHeight)
 }
 
 func (pm *pacemaker) viewChangeLoop() {
