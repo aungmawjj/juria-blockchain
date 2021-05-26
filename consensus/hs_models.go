@@ -104,3 +104,11 @@ func (b *hsBlock) Equal(hsb hotstuff.Block) bool {
 func (b *hsBlock) Justify() hotstuff.QC {
 	return newHsQC(b.block.QuorumCert(), b.store)
 }
+
+func qcRefHeight(qc hotstuff.QC) (height uint64) {
+	ref := qc.Block()
+	if ref != nil {
+		height = ref.Height()
+	}
+	return height
+}

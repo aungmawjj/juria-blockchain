@@ -16,8 +16,7 @@ type hsDriver struct {
 	resources *Resources
 	config    Config
 
-	state    *state
-	hotstuff *hotstuff.Hotstuff
+	state *state
 }
 
 var _ hotstuff.Driver = (*hsDriver)(nil)
@@ -32,7 +31,7 @@ func (hsd *hsDriver) CreateLeaf(parent hotstuff.Block, qc hotstuff.QC, height ui
 		SetQuorumCert(qc.(*hsQC).qc).
 		SetHeight(height).
 		SetTransactions(hsd.resources.TxPool.PopTxsFromQueue(hsd.config.BlockTxLimit)).
-		SetExecHeight(hsd.hotstuff.GetBExec().Height()).
+		SetExecHeight(hsd.resources.Storage.GetBlockHeight()).
 		SetMerkleRoot(hsd.resources.Storage.GetMerkleRoot()).
 		SetTimestamp(time.Now().UnixNano()).
 		Sign(hsd.resources.Signer)
@@ -64,12 +63,13 @@ func (hsd *hsDriver) VoteBlock(hsBlk hotstuff.Block) {
 	logger.I().Debugw("voted block",
 		"proposer", hsd.state.getLeaderIndex(),
 		"height", hsBlk.Height(),
-		"qcRef", hsBlk.Justify().Block().Height(),
+		"qcRef", qcRefHeight(hsBlk.Justify()),
 	)
 }
 
 func (hsd *hsDriver) delayVoteWhenNoTxs() {
 	timer := time.NewTimer(hsd.config.TxWaitTime)
+	defer timer.Stop()
 	for hsd.resources.TxPool.GetStatus().Total == 0 {
 		select {
 		case <-timer.C:

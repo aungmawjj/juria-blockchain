@@ -26,6 +26,7 @@ type Storage interface {
 	Commit(data *storage.CommitData) error
 	GetBlock(hash []byte) (*core.Block, error)
 	GetLastBlock() (*core.Block, error)
+	GetBlockHeight() uint64
 }
 
 type MsgService interface {

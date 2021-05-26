@@ -96,7 +96,6 @@ func (cons *Consensus) setupHotstuff(lastBlk *core.Block) {
 		newHsBlock(lastBlk, cons.state),
 		newHsQC(lastBlk.QuorumCert(), cons.state),
 	)
-	cons.hsDriver.hotstuff = cons.hotstuff
 }
 
 func (cons *Consensus) setupValidator() {
