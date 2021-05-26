@@ -12,6 +12,7 @@ import (
 	"os/signal"
 	"path"
 	"strings"
+	"time"
 
 	"github.com/aungmawjj/juria-blockchain/core"
 	"github.com/aungmawjj/juria-blockchain/node"
@@ -67,6 +68,9 @@ func runNodes(juria, workdir string, count int) {
 	cmds := make([]*exec.Cmd, count)
 	for i := 0; i < count; i++ {
 		logfile, _ := os.Create(path.Join(dirs[i], "log.txt"))
+		if i == 3 {
+			time.Sleep(5 * time.Second)
+		}
 		cmd := exec.Command(juria, "-d", dirs[i], "-p", ports[i], "--debug")
 		fmt.Println(strings.Join(cmd.Args, " "))
 		cmd.Stderr = logfile

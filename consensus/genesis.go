@@ -13,6 +13,7 @@ import (
 
 	"github.com/aungmawjj/juria-blockchain/core"
 	"github.com/aungmawjj/juria-blockchain/logger"
+	"github.com/aungmawjj/juria-blockchain/storage"
 	"golang.org/x/crypto/sha3"
 )
 
@@ -45,15 +46,29 @@ func (gns *genesis) run() (*core.Block, *core.QuorumCert) {
 	gns.propose()
 
 	<-gns.done
-	logger.I().Info("created genesis block and qc")
+	logger.I().Info("got genesis block and qc")
+	gns.commit()
 	return gns.getB0(), gns.getQ0()
+}
+
+func (gns *genesis) commit() {
+	data := &storage.CommitData{
+		Block: gns.getB0(),
+		QC:    gns.getQ0(),
+	}
+	data.BlockCommit = core.NewBlockCommit().SetHash(data.Block.Hash())
+	err := gns.resources.Storage.Commit(data)
+	if err != nil {
+		logger.I().Fatalf("commit storage error: %+v", err)
+	}
+	logger.I().Debugw("commited genesis bock")
 }
 
 func (gns *genesis) propose() {
 	if !gns.isLeader(gns.resources.Signer.PublicKey()) {
 		return
 	}
-	gns.votes = make(map[string]*core.Vote, gns.resources.VldStore.ValidatorCount())
+	gns.votes = make(map[string]*core.Vote, gns.resources.VldStore.MajorityCount())
 	b0 := gns.createGenesisBlock()
 	gns.setB0(b0)
 	logger.I().Infow("created genesis block, broadcasting...")
@@ -154,7 +169,8 @@ func (gns *genesis) onReceiveProposal(proposal *core.Block) error {
 		return err
 	}
 	if !proposal.IsGenesis() {
-		return fmt.Errorf("not genesis block")
+		logger.I().Info("left behind, fetching genesis block...")
+		return gns.fetchGenesisBlockAndQC(proposal.Proposer())
 	}
 	if !bytes.Equal(hashChainID(gns.chainID), proposal.ParentHash()) {
 		return fmt.Errorf("different chain id genesis")
@@ -168,6 +184,38 @@ func (gns *genesis) onReceiveProposal(proposal *core.Block) error {
 	gns.setB0(proposal)
 	logger.I().Infow("got genesis block, voting...")
 	return gns.resources.MsgSvc.SendVote(proposal.Proposer(), proposal.Vote(gns.resources.Signer))
+}
+
+func (gns *genesis) fetchGenesisBlockAndQC(peer *core.PublicKey) error {
+	b0, err := gns.requestBlockByHeight(peer, 0)
+	if err != nil {
+		return err
+	}
+	if !b0.IsGenesis() {
+		return fmt.Errorf("not genesis block")
+	}
+	b1, err := gns.requestBlockByHeight(peer, 1)
+	if err != nil {
+		return err
+	}
+	if !bytes.Equal(b0.Hash(), b1.QuorumCert().BlockHash()) {
+		return fmt.Errorf("b1 qc ref is not b0")
+	}
+	gns.setB0(b0)
+	gns.setQ0(b1.QuorumCert())
+	close(gns.done)
+	return nil
+}
+
+func (gns *genesis) requestBlockByHeight(peer *core.PublicKey, height uint64) (*core.Block, error) {
+	blk, err := gns.resources.MsgSvc.RequestBlockByHeight(peer, height)
+	if err != nil {
+		return nil, fmt.Errorf("cannot get block by height %d, %w", height, err)
+	}
+	if err := blk.Validate(gns.resources.VldStore); err != nil {
+		return nil, fmt.Errorf("validate block %d error %w", height, err)
+	}
+	return blk, nil
 }
 
 func (gns *genesis) onReceiveVote(vote *core.Vote) error {
@@ -186,10 +234,7 @@ func (gns *genesis) acceptVote(vote *core.Vote) {
 	defer gns.mtxVote.Unlock()
 
 	gns.votes[vote.Voter().String()] = vote
-	// genesis qc will be created with all validator votes,
-	// instead of majority, to simplify synchronization
-	// it also makes sense that the blockchain will be initiated with all validator approval
-	if len(gns.votes) < gns.resources.VldStore.ValidatorCount() {
+	if len(gns.votes) < gns.resources.VldStore.MajorityCount() {
 		return
 	}
 	vlist := make([]*core.Vote, 0, len(gns.votes))
@@ -240,7 +285,6 @@ func (gns *genesis) acceptQC(qc *core.QuorumCert) {
 	default:
 	}
 	b0 := gns.getB0()
-	b0.SetQuorumCert(qc)
 	gns.setQ0(qc)
 	if !gns.isLeader(gns.resources.Signer.PublicKey()) {
 		gns.resources.MsgSvc.SendNewView(b0.Proposer(), qc)

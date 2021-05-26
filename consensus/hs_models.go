@@ -102,6 +102,9 @@ func (b *hsBlock) Equal(hsb hotstuff.Block) bool {
 }
 
 func (b *hsBlock) Justify() hotstuff.QC {
+	if b.block.IsGenesis() { // genesis block doesn't have qc
+		return newHsQC(nil, b.store)
+	}
 	return newHsQC(b.block.QuorumCert(), b.store)
 }
 

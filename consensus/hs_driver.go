@@ -80,8 +80,8 @@ func (hsd *hsDriver) delayVoteWhenNoTxs() {
 }
 
 func (hsd *hsDriver) Commit(hsBlk hotstuff.Block) {
-	start := time.Now()
 	bexe := hsBlk.(*hsBlock).block
+	start := time.Now()
 	txs, old := hsd.resources.TxPool.GetTxsToExecute(bexe.Transactions())
 	bcm, txcs := hsd.resources.Execution.Execute(bexe, txs)
 	bcm.SetOldBlockTxs(old)

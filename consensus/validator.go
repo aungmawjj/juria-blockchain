@@ -130,6 +130,9 @@ func (vld *validator) syncMissingCommitedBlocks(proposal *core.Block) error {
 	commitHeight := vld.resources.Storage.GetBlockHeight()
 	// seems like I left behind. Lets check with qcRef to confirm
 	// only qc is trusted and proposal is not
+	if proposal.IsGenesis() {
+		return fmt.Errorf("genesis block proposal")
+	}
 	qcRef := vld.state.getBlockOnLocalNode(proposal.QuorumCert().BlockHash())
 	if qcRef == nil {
 		var err error
