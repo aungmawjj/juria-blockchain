@@ -4,6 +4,8 @@
 package p2p
 
 import (
+	"bytes"
+	"encoding/binary"
 	"errors"
 	"fmt"
 	"sync/atomic"
@@ -114,6 +116,19 @@ func (svc *MsgService) BroadcastTxList(txList *core.TxList) error {
 
 func (svc *MsgService) RequestBlock(pubKey *core.PublicKey, hash []byte) (*core.Block, error) {
 	respData, err := svc.requestData(pubKey, p2p_pb.Request_Block, hash)
+	if err != nil {
+		return nil, err
+	}
+	blk := core.NewBlock()
+	return blk, blk.Unmarshal(respData)
+}
+
+func (svc *MsgService) RequestBlockByHeight(
+	pubKey *core.PublicKey, height uint64,
+) (*core.Block, error) {
+	buf := bytes.NewBuffer(nil)
+	binary.Write(buf, binary.BigEndian, height)
+	respData, err := svc.requestData(pubKey, p2p_pb.Request_BlockByHeight, buf.Bytes())
 	if err != nil {
 		return nil, err
 	}

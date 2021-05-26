@@ -1,6 +1,8 @@
 package p2p
 
 import (
+	"encoding/binary"
+
 	"github.com/aungmawjj/juria-blockchain/core"
 	"github.com/aungmawjj/juria-blockchain/p2p/p2p_pb"
 	"google.golang.org/protobuf/proto"
@@ -12,7 +14,7 @@ type ReqHandler interface {
 }
 
 type TxListReqHandler struct {
-	GetTxList func(sender *core.PublicKey, hashes [][]byte) (*core.TxList, error)
+	GetTxList func(hashes [][]byte) (*core.TxList, error)
 }
 
 var _ ReqHandler = (*TxListReqHandler)(nil)
@@ -26,7 +28,7 @@ func (hdlr *TxListReqHandler) HandleReq(sender *core.PublicKey, data []byte) ([]
 	if err := proto.Unmarshal(data, req); err != nil {
 		return nil, err
 	}
-	txList, err := hdlr.GetTxList(sender, req.List)
+	txList, err := hdlr.GetTxList(req.List)
 	if err != nil {
 		return nil, err
 	}
@@ -34,7 +36,7 @@ func (hdlr *TxListReqHandler) HandleReq(sender *core.PublicKey, data []byte) ([]
 }
 
 type BlockReqHandler struct {
-	GetBlock func(sender *core.PublicKey, hash []byte) (*core.Block, error)
+	GetBlock func(hash []byte) (*core.Block, error)
 }
 
 var _ ReqHandler = (*BlockReqHandler)(nil)
@@ -44,7 +46,26 @@ func (hdlr *BlockReqHandler) Type() p2p_pb.Request_Type {
 }
 
 func (hdlr *BlockReqHandler) HandleReq(sender *core.PublicKey, data []byte) ([]byte, error) {
-	block, err := hdlr.GetBlock(sender, data)
+	block, err := hdlr.GetBlock(data)
+	if err != nil {
+		return nil, err
+	}
+	return block.Marshal()
+}
+
+type BlockByHeightReqHandler struct {
+	GetBlockByHeight func(height uint64) (*core.Block, error)
+}
+
+var _ ReqHandler = (*BlockByHeightReqHandler)(nil)
+
+func (hdlr *BlockByHeightReqHandler) Type() p2p_pb.Request_Type {
+	return p2p_pb.Request_BlockByHeight
+}
+
+func (hdlr *BlockByHeightReqHandler) HandleReq(sender *core.PublicKey, data []byte) ([]byte, error) {
+	height := binary.BigEndian.Uint64(data)
+	block, err := hdlr.GetBlockByHeight(height)
 	if err != nil {
 		return nil, err
 	}

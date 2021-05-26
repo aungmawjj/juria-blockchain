@@ -116,6 +116,11 @@ func (m *MockMsgService) RequestBlock(pubKey *core.PublicKey, hash []byte) (*cor
 	return castBlock(args.Get(0)), args.Error(1)
 }
 
+func (m *MockMsgService) RequestBlockByHeight(pubKey *core.PublicKey, height uint64) (*core.Block, error) {
+	args := m.Called(pubKey, height)
+	return castBlock(args.Get(0)), args.Error(1)
+}
+
 func (m *MockMsgService) SendNewView(pubKey *core.PublicKey, qc *core.QuorumCert) error {
 	args := m.Called(pubKey, qc)
 	return args.Error(0)

@@ -96,8 +96,15 @@ func (node *Node) setupComponents() {
 	node.txpool = txpool.New(node.storage, node.msgSvc)
 	node.execution = execution.New(node.storage, node.config.ExecutionConfig)
 	node.setupConsensus()
-	node.msgSvc.SetReqHandler(&p2p.BlockReqHandler{GetBlock: node.GetBlock})
-	node.msgSvc.SetReqHandler(&p2p.TxListReqHandler{GetTxList: node.GetTxList})
+	node.msgSvc.SetReqHandler(&p2p.BlockReqHandler{
+		GetBlock: node.GetBlock,
+	})
+	node.msgSvc.SetReqHandler(&p2p.BlockByHeightReqHandler{
+		GetBlockByHeight: node.storage.GetBlockByHeight,
+	})
+	node.msgSvc.SetReqHandler(&p2p.TxListReqHandler{
+		GetTxList: node.GetTxList,
+	})
 }
 
 func (node *Node) setupStorage() error {
@@ -141,14 +148,14 @@ func (node *Node) setupConsensus() {
 
 }
 
-func (node *Node) GetBlock(sender *core.PublicKey, hash []byte) (*core.Block, error) {
+func (node *Node) GetBlock(hash []byte) (*core.Block, error) {
 	if blk := node.consensus.GetBlock(hash); blk != nil {
 		return blk, nil
 	}
 	return node.storage.GetBlock(hash)
 }
 
-func (node *Node) GetTxList(sender *core.PublicKey, hashes [][]byte) (*core.TxList, error) {
+func (node *Node) GetTxList(hashes [][]byte) (*core.TxList, error) {
 	ret := make(core.TxList, len(hashes))
 	for i, hash := range hashes {
 		tx := node.txpool.GetTx(hash)

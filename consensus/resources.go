@@ -35,6 +35,7 @@ type MsgService interface {
 	BroadcastNewView(qc *core.QuorumCert) error
 	SendVote(pubKey *core.PublicKey, vote *core.Vote) error
 	RequestBlock(pubKey *core.PublicKey, hash []byte) (*core.Block, error)
+	RequestBlockByHeight(pubKey *core.PublicKey, height uint64) (*core.Block, error)
 	SendNewView(pubKey *core.PublicKey, qc *core.QuorumCert) error
 
 	SubscribeProposal(buffer int) *emitter.Subscription

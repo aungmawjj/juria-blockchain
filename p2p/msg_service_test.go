@@ -189,7 +189,7 @@ func TestMsgService_RequestBlock(t *testing.T) {
 	blk := core.NewBlock().SetHeight(10).Sign(core.GenerateKey(nil))
 
 	blkReqHandler := &BlockReqHandler{
-		GetBlock: func(sender *core.PublicKey, hash []byte) (*core.Block, error) {
+		GetBlock: func(hash []byte) (*core.Block, error) {
 			if bytes.Equal(blk.Hash(), hash) {
 				return blk, nil
 			}
@@ -217,7 +217,7 @@ func TestMsgService_RequestTxList(t *testing.T) {
 	}
 
 	txListReqHandler := &TxListReqHandler{
-		GetTxList: func(sender *core.PublicKey, hashes [][]byte) (*core.TxList, error) {
+		GetTxList: func(hashes [][]byte) (*core.TxList, error) {
 			return txs, nil
 		},
 	}
