@@ -17,6 +17,7 @@ import (
 
 type CommitData struct {
 	Block        *core.Block
+	QC           *core.QuorumCert // QC for commited block
 	Transactions []*core.Transaction
 	BlockCommit  *core.BlockCommit
 	TxCommits    []*core.TxCommit
@@ -60,6 +61,10 @@ func (strg *Storage) GetBlock(hash []byte) (*core.Block, error) {
 
 func (strg *Storage) GetLastBlock() (*core.Block, error) {
 	return strg.chainStore.getLastBlock()
+}
+
+func (strg *Storage) GetLastQC() (*core.QuorumCert, error) {
+	return strg.chainStore.getLastQC()
 }
 
 func (strg *Storage) GetBlockHeight() uint64 {
@@ -155,6 +160,7 @@ func (strg *Storage) computeMerkleUpdate(data *CommitData) {
 func (strg *Storage) storeChainData(data *CommitData) error {
 	updFns := make([]updateFunc, 0)
 	updFns = append(updFns, strg.chainStore.setBlock(data.Block)...)
+	updFns = append(updFns, strg.chainStore.setLastQC(data.QC))
 	updFns = append(updFns, strg.chainStore.setTxs(data.Transactions)...)
 	updFns = append(updFns, strg.chainStore.setTxCommits(data.TxCommits)...)
 	return updateBadgerDB(strg.db, updFns)

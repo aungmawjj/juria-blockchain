@@ -6,6 +6,7 @@ package consensus
 import (
 	"github.com/aungmawjj/juria-blockchain/core"
 	"github.com/aungmawjj/juria-blockchain/hotstuff"
+	"github.com/aungmawjj/juria-blockchain/logger"
 )
 
 type Consensus struct {
@@ -45,14 +46,10 @@ func (cons *Consensus) GetBlock(hash []byte) *core.Block {
 }
 
 func (cons *Consensus) start() {
-	lastBlk, err := cons.resources.Storage.GetLastBlock()
-	if err != nil {
-		lastBlk = cons.makeGenesisBlock()
-	}
-
-	cons.setupState(lastBlk)
+	b0, q0 := cons.getInitialBlockAndQC()
+	cons.setupState(b0)
 	cons.setupHsDriver()
-	cons.setupHotstuff(lastBlk)
+	cons.setupHotstuff(b0, q0)
 	cons.setupValidator()
 	cons.setupPacemaker()
 
@@ -68,18 +65,27 @@ func (cons *Consensus) stop() {
 	cons.validator.stop()
 }
 
-func (cons *Consensus) setupState(lastBlk *core.Block) {
+func (cons *Consensus) setupState(b0 *core.Block) {
 	cons.state = newState(cons.resources)
-	cons.state.setBlock(lastBlk)
+	cons.state.setBlock(b0)
+	cons.state.setLeaderIndex(cons.resources.VldStore.GetValidatorIndex(b0.Proposer()))
 }
 
-func (cons *Consensus) makeGenesisBlock() *core.Block {
+func (cons *Consensus) getInitialBlockAndQC() (*core.Block, *core.QuorumCert) {
+	b0, err := cons.resources.Storage.GetLastBlock()
+	if err == nil {
+		q0, err := cons.resources.Storage.GetLastQC()
+		if err != nil {
+			logger.I().Fatalf("cannot get last qc %d", b0.Height())
+		}
+		return b0, q0
+	}
+	// chain not started, create genesis block
 	genesis := &genesis{
 		resources: cons.resources,
 		chainID:   cons.config.ChainID,
 	}
-	b0, q0 := genesis.run()
-	return b0.SetQuorumCert(q0)
+	return genesis.run()
 }
 
 func (cons *Consensus) setupHsDriver() {
@@ -90,11 +96,11 @@ func (cons *Consensus) setupHsDriver() {
 	}
 }
 
-func (cons *Consensus) setupHotstuff(lastBlk *core.Block) {
+func (cons *Consensus) setupHotstuff(b0 *core.Block, q0 *core.QuorumCert) {
 	cons.hotstuff = hotstuff.New(
 		cons.hsDriver,
-		newHsBlock(lastBlk, cons.state),
-		newHsQC(lastBlk.QuorumCert(), cons.state),
+		newHsBlock(b0, cons.state),
+		newHsQC(q0, cons.state),
 	)
 }
 
@@ -121,6 +127,7 @@ func (cons *Consensus) getStatus() (status Status) {
 	}
 	status.Started = true
 	status.BlockPoolSize = cons.state.getBlockPoolSize()
+	status.QCPoolSize = cons.state.getQCPoolSize()
 	status.LeaderIndex = cons.state.getLeaderIndex()
 	status.ViewStart = cons.pacemaker.getViewStart()
 	status.PendingViewChange = cons.pacemaker.getPendingViewChange()
@@ -129,9 +136,6 @@ func (cons *Consensus) getStatus() (status Status) {
 	status.BLeaf = cons.hotstuff.GetBLeaf().Height()
 	status.BLock = cons.hotstuff.GetBLock().Height()
 	status.BExec = cons.hotstuff.GetBExec().Height()
-	qcHighRef := cons.hotstuff.GetQCHigh().Block()
-	if qcHighRef != nil {
-		status.QCHigh = qcHighRef.Height()
-	}
+	status.QCHigh = qcRefHeight(cons.hotstuff.GetQCHigh())
 	return status
 }

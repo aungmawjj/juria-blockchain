@@ -40,9 +40,9 @@ func (m *MockValidatorStore) GetValidator(idx int) *PublicKey {
 	return val.(*PublicKey)
 }
 
-func (m *MockValidatorStore) GetValidatorIndex(pubKey *PublicKey) (int, bool) {
+func (m *MockValidatorStore) GetValidatorIndex(pubKey *PublicKey) int {
 	args := m.Called(pubKey)
-	return args.Int(0), args.Bool(1)
+	return args.Int(0)
 }
 
 func TestMajorityCount(t *testing.T) {

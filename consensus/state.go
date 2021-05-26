@@ -13,8 +13,11 @@ import (
 type state struct {
 	resources *Resources
 
-	blockpool map[string]*core.Block
+	blocks    map[string]*core.Block
 	mtxBlocks sync.RWMutex
+
+	qcs    map[string]*core.QuorumCert // qc by block hash
+	mtxQCs sync.RWMutex
 
 	mtxUpdate sync.Mutex
 
@@ -24,32 +27,57 @@ type state struct {
 func newState(resources *Resources) *state {
 	return &state{
 		resources: resources,
-		blockpool: make(map[string]*core.Block),
+		blocks:    make(map[string]*core.Block),
+		qcs:       make(map[string]*core.QuorumCert),
 	}
 }
 
 func (state *state) getBlockPoolSize() int {
 	state.mtxBlocks.RLock()
 	defer state.mtxBlocks.RUnlock()
-	return len(state.blockpool)
+	return len(state.blocks)
 }
 
 func (state *state) setBlock(blk *core.Block) {
 	state.mtxBlocks.Lock()
 	defer state.mtxBlocks.Unlock()
-	state.blockpool[string(blk.Hash())] = blk
+	state.blocks[string(blk.Hash())] = blk
 }
 
 func (state *state) getBlock(hash []byte) *core.Block {
 	state.mtxBlocks.RLock()
 	defer state.mtxBlocks.RUnlock()
-	return state.blockpool[string(hash)]
+	return state.blocks[string(hash)]
 }
 
 func (state *state) deleteBlock(hash []byte) {
 	state.mtxBlocks.Lock()
 	defer state.mtxBlocks.Unlock()
-	delete(state.blockpool, string(hash))
+	delete(state.blocks, string(hash))
+}
+
+func (state *state) getQCPoolSize() int {
+	state.mtxQCs.RLock()
+	defer state.mtxQCs.RUnlock()
+	return len(state.qcs)
+}
+
+func (state *state) setQC(qc *core.QuorumCert) {
+	state.mtxQCs.Lock()
+	defer state.mtxQCs.Unlock()
+	state.qcs[string(qc.BlockHash())] = qc
+}
+
+func (state *state) getQC(blkHash []byte) *core.QuorumCert {
+	state.mtxQCs.RLock()
+	defer state.mtxQCs.RUnlock()
+	return state.qcs[string(blkHash)]
+}
+
+func (state *state) deleteQC(blkHash []byte) {
+	state.mtxQCs.Lock()
+	defer state.mtxQCs.Unlock()
+	delete(state.qcs, string(blkHash))
 }
 
 func (state *state) getOlderBlocks(blk *core.Block) []*core.Block {
@@ -57,7 +85,7 @@ func (state *state) getOlderBlocks(blk *core.Block) []*core.Block {
 	defer state.mtxBlocks.RUnlock()
 
 	ret := make([]*core.Block, 0)
-	for _, b := range state.blockpool {
+	for _, b := range state.blocks {
 		if b.Height() < blk.Height() {
 			ret = append(ret, b)
 		}
@@ -78,11 +106,10 @@ func (state *state) isThisNodeLeader() bool {
 }
 
 func (state *state) isLeader(pubKey *core.PublicKey) bool {
-	vIdx, ok := state.resources.VldStore.GetValidatorIndex(pubKey)
-	if !ok {
+	if !state.resources.VldStore.IsValidator(pubKey) {
 		return false
 	}
-	return state.getLeaderIndex() == vIdx
+	return state.getLeaderIndex() == state.resources.VldStore.GetValidatorIndex(pubKey)
 }
 
 func (state *state) setLeaderIndex(idx int) {

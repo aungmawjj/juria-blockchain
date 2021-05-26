@@ -26,6 +26,7 @@ type Storage interface {
 	Commit(data *storage.CommitData) error
 	GetBlock(hash []byte) (*core.Block, error)
 	GetLastBlock() (*core.Block, error)
+	GetLastQC() (*core.QuorumCert, error)
 	GetBlockHeight() uint64
 }
 

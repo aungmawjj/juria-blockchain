@@ -86,11 +86,10 @@ func (gns *genesis) broadcastProposalLoop() {
 }
 
 func (gns *genesis) isLeader(pubKey *core.PublicKey) bool {
-	pidx, ok := gns.resources.VldStore.GetValidatorIndex(pubKey)
-	if !ok {
+	if !gns.resources.VldStore.IsValidator(pubKey) {
 		return false
 	}
-	return pidx == 0
+	return gns.resources.VldStore.GetValidatorIndex(pubKey) == 0
 }
 
 func hashChainID(chainID int64) []byte {

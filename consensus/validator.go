@@ -105,7 +105,7 @@ func (vld *validator) onReceiveProposal(blk *core.Block) error {
 	if err := blk.Validate(vld.resources.VldStore); err != nil {
 		return err
 	}
-	pidx, _ := vld.resources.VldStore.GetValidatorIndex(blk.Proposer())
+	pidx := vld.resources.VldStore.GetValidatorIndex(blk.Proposer())
 	logger.I().Debugw("received proposal", "proposer", pidx, "height", blk.Height())
 	if err := vld.confirmSyncWithParent(blk.Proposer(), blk); err != nil {
 		return err
@@ -176,7 +176,7 @@ func (vld *validator) updateHotstuff(blk *core.Block, voting bool) error {
 
 func (vld *validator) canVoteProposal(proposal *core.Block) error {
 	if !vld.state.isLeader(proposal.Proposer()) {
-		pidx, _ := vld.resources.VldStore.GetValidatorIndex(proposal.Proposer())
+		pidx := vld.resources.VldStore.GetValidatorIndex(proposal.Proposer())
 		return fmt.Errorf("proposer %d is not leader", pidx)
 	}
 	bh := vld.resources.Storage.GetBlockHeight()

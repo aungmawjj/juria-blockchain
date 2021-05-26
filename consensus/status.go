@@ -7,6 +7,7 @@ type Status struct {
 	Started bool
 
 	BlockPoolSize int
+	QCPoolSize    int
 	LeaderIndex   int
 
 	// start timestamp of current view

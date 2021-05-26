@@ -13,7 +13,7 @@ type ValidatorStore interface {
 	MajorityCount() int
 	IsValidator(pubKey *PublicKey) bool
 	GetValidator(idx int) *PublicKey
-	GetValidatorIndex(pubKey *PublicKey) (int, bool)
+	GetValidatorIndex(pubKey *PublicKey) int
 }
 
 type simpleValidatorStore struct {
@@ -54,9 +54,8 @@ func (store *simpleValidatorStore) GetValidator(idx int) *PublicKey {
 	return store.validators[idx]
 }
 
-func (store *simpleValidatorStore) GetValidatorIndex(pubKey *PublicKey) (int, bool) {
-	idx, ok := store.vMap[pubKey.String()]
-	return idx, ok
+func (store *simpleValidatorStore) GetValidatorIndex(pubKey *PublicKey) int {
+	return store.vMap[pubKey.String()]
 }
 
 // majorityCount returns 2f + 1 members

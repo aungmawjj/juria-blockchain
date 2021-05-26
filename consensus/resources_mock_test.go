@@ -80,6 +80,11 @@ func (m *MockStorage) GetLastBlock() (*core.Block, error) {
 	return castBlock(args.Get(0)), args.Error(1)
 }
 
+func (m *MockStorage) GetLastQC() (*core.QuorumCert, error) {
+	args := m.Called()
+	return castQC(args.Get(0)), args.Error(1)
+}
+
 func (m *MockStorage) GetBlockHeight() uint64 {
 	args := m.Called()
 	return uint64(args.Int(0))
@@ -163,6 +168,13 @@ func castBlock(val interface{}) *core.Block {
 		return nil
 	}
 	return val.(*core.Block)
+}
+
+func castQC(val interface{}) *core.QuorumCert {
+	if val == nil {
+		return nil
+	}
+	return val.(*core.QuorumCert)
 }
 
 func castTransactions(val interface{}) []*core.Transaction {

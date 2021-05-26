@@ -51,6 +51,15 @@ func (cs *chainStore) getBlock(hash []byte) (*core.Block, error) {
 	return blk, blk.Unmarshal(b)
 }
 
+func (cs *chainStore) getLastQC() (*core.QuorumCert, error) {
+	b, err := cs.getter.Get([]byte{colLastQC})
+	if err != nil {
+		return nil, err
+	}
+	qc := core.NewQuorumCert()
+	return qc, qc.Unmarshal(b)
+}
+
 func (cs *chainStore) getBlockCommit(hash []byte) (*core.BlockCommit, error) {
 	b, err := cs.getter.Get(concatBytes([]byte{colBlockCommitByHash}, hash))
 	if err != nil {
@@ -95,15 +104,26 @@ func (cs *chainStore) setBlock(blk *core.Block) []updateFunc {
 	return ret
 }
 
+func (cs *chainStore) setLastQC(qc *core.QuorumCert) updateFunc {
+	return func(setter setter) error {
+		if qc == nil { // some blocks may not have qc (hotstuff nature)
+			return nil
+		}
+		val, err := qc.Marshal()
+		if err != nil {
+			return err
+		}
+		return setter.Set([]byte{colLastQC}, val)
+	}
+}
+
 func (cs *chainStore) setBlockByHash(blk *core.Block) updateFunc {
 	return func(setter setter) error {
 		val, err := blk.Marshal()
 		if err != nil {
 			return err
 		}
-		return setter.Set(
-			concatBytes([]byte{colBlockByHash}, blk.Hash()), val,
-		)
+		return setter.Set(concatBytes([]byte{colBlockByHash}, blk.Hash()), val)
 	}
 }
 

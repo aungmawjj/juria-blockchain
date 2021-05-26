@@ -21,6 +21,8 @@ type Config struct {
 	ViewWidth time.Duration
 
 	// if leader cannot create next qc in this duration, change view
+	// minDur (minimum duration) should be (3 * (TxWaitTime + BeatDelay))
+	// in case of view change, the next leader might not get qc for minDur
 	LeaderTimeout time.Duration
 }
 

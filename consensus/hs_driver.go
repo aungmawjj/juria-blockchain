@@ -87,6 +87,7 @@ func (hsd *hsDriver) Commit(hsBlk hotstuff.Block) {
 	bcm.SetOldBlockTxs(old)
 	data := &storage.CommitData{
 		Block:        bexe,
+		QC:           hsd.state.getQC(bexe.Hash()),
 		Transactions: txs,
 		BlockCommit:  bcm,
 		TxCommits:    txcs,
@@ -104,10 +105,14 @@ func (hsd *hsDriver) cleanStateOnCommited(bexe *core.Block) {
 	hsd.state.deleteBlock(bexe.ParentHash())
 	hsd.resources.TxPool.RemoveTxs(bexe.Transactions())
 
+	// qc for bexe is no longer needed here after commited to storage
+	hsd.state.deleteQC(bexe.Hash())
+
 	folks := hsd.state.getOlderBlocks(bexe)
 	for _, blk := range folks {
 		// put transactions from folked block back to queue
 		hsd.resources.TxPool.PutTxsToQueue(blk.Transactions())
 		hsd.state.deleteBlock(blk.Hash())
+		hsd.state.deleteQC(blk.Hash())
 	}
 }

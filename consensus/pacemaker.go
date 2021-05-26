@@ -148,20 +148,15 @@ func (pm *pacemaker) changeView() {
 }
 
 func (pm *pacemaker) onNewQCHigh(qc hotstuff.QC) {
-	pidx := pm.getProposerIndexForQC(qc)
+	pm.state.setQC(qc.(*hsQC).qc)
+	pidx := pm.resources.VldStore.GetValidatorIndex(qc.Block().(*hsBlock).block.Proposer())
 	logger.I().Debugw("updated qc", "proposer", pidx, "qc", qcRefHeight(qc))
-	if pidx == pm.state.getLeaderIndex() {
+	if pidx == pm.state.getLeaderIndex() { // can also be from previous leader
 		pm.leaderTimer.Reset(pm.config.LeaderTimeout)
 	}
 	if pm.isFirstQCForCurrentView(pidx) {
 		pm.approveViewLeader(pidx)
 	}
-}
-
-func (pm *pacemaker) getProposerIndexForQC(qc hotstuff.QC) int {
-	proposer := qc.Block().(*hsBlock).block.Proposer()
-	pidx, _ := pm.resources.VldStore.GetValidatorIndex(proposer)
-	return pidx
 }
 
 func (pm *pacemaker) isFirstQCForCurrentView(proposer int) bool {
