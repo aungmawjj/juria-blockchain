@@ -6,6 +6,7 @@ package consensus
 import (
 	"bytes"
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"sync"
 	"time"
@@ -37,7 +38,6 @@ type genesis struct {
 func (gns *genesis) run() (*core.Block, *core.QuorumCert) {
 	logger.I().Infow("creating genesis block...")
 	gns.done = make(chan struct{})
-	gns.votes = make(map[string]*core.Vote, gns.resources.VldStore.ValidatorCount())
 
 	go gns.proposalLoop()
 	go gns.voteLoop()
@@ -53,16 +53,20 @@ func (gns *genesis) propose() {
 	if !gns.isLeader(gns.resources.Signer.PublicKey()) {
 		return
 	}
-	b0 := core.NewBlock().
-		SetHeight(0).
-		SetParentHash(hashChainID(gns.chainID)).
-		SetTimestamp(time.Now().UnixNano()).
-		Sign(gns.resources.Signer)
-
+	gns.votes = make(map[string]*core.Vote, gns.resources.VldStore.ValidatorCount())
+	b0 := gns.createGenesisBlock()
 	gns.setB0(b0)
 	logger.I().Infow("created genesis block, broadcasting...")
 	go gns.broadcastProposalLoop()
 	gns.onReceiveVote(b0.ProposerVote())
+}
+
+func (gns *genesis) createGenesisBlock() *core.Block {
+	return core.NewBlock().
+		SetHeight(0).
+		SetParentHash(hashChainID(gns.chainID)).
+		SetTimestamp(time.Now().UnixNano()).
+		Sign(gns.resources.Signer)
 }
 
 func (gns *genesis) broadcastProposalLoop() {
@@ -168,18 +172,26 @@ func (gns *genesis) onReceiveProposal(proposal *core.Block) error {
 }
 
 func (gns *genesis) onReceiveVote(vote *core.Vote) error {
+	if gns.votes == nil {
+		return errors.New("not accepting votes")
+	}
 	if err := vote.Validate(gns.resources.VldStore); err != nil {
 		return err
 	}
+	gns.acceptVote(vote)
+	return nil
+}
+
+func (gns *genesis) acceptVote(vote *core.Vote) {
 	gns.mtxVote.Lock()
 	defer gns.mtxVote.Unlock()
 
 	gns.votes[vote.Voter().String()] = vote
 	// genesis qc will be created with all validator votes,
-	// not majority to simplify synchronization
+	// instead of majority, to simplify synchronization
 	// it also makes sense that the blockchain will be initiated with all validator approval
 	if len(gns.votes) < gns.resources.VldStore.ValidatorCount() {
-		return nil
+		return
 	}
 	vlist := make([]*core.Vote, 0, len(gns.votes))
 	for _, vote := range gns.votes {
@@ -188,7 +200,6 @@ func (gns *genesis) onReceiveVote(vote *core.Vote) error {
 	gns.setQ0(core.NewQuorumCert().Build(vlist))
 	logger.I().Infow("created qc, broadcasting...")
 	gns.broadcastQC()
-	return nil
 }
 
 func (gns *genesis) broadcastQC() {
@@ -206,15 +217,6 @@ func (gns *genesis) broadcastQC() {
 }
 
 func (gns *genesis) onReceiveNewView(qc *core.QuorumCert) error {
-	gns.mtxNewView.Lock()
-	defer gns.mtxNewView.Unlock()
-
-	select {
-	case <-gns.done:
-		return nil
-	default:
-	}
-
 	if err := qc.Validate(gns.resources.VldStore); err != nil {
 		return err
 	}
@@ -225,13 +227,26 @@ func (gns *genesis) onReceiveNewView(qc *core.QuorumCert) error {
 	if !bytes.Equal(b0.Hash(), qc.BlockHash()) {
 		return fmt.Errorf("invalid qc reference")
 	}
+	gns.acceptQC(qc)
+	return nil
+}
+
+func (gns *genesis) acceptQC(qc *core.QuorumCert) {
+	gns.mtxNewView.Lock()
+	defer gns.mtxNewView.Unlock()
+
+	select {
+	case <-gns.done: // already done genesis
+		return
+	default:
+	}
+	b0 := gns.getB0()
 	b0.SetQuorumCert(qc)
 	gns.setQ0(qc)
 	if !gns.isLeader(gns.resources.Signer.PublicKey()) {
 		gns.resources.MsgSvc.SendNewView(b0.Proposer(), qc)
 	}
-	close(gns.done)
-	return nil
+	close(gns.done) // when qc is accepted, genesis creation is done
 }
 
 func (gns *genesis) setB0(val *core.Block) {
