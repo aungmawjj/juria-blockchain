@@ -46,6 +46,7 @@ func TestPacemaker_changeView(t *testing.T) {
 	assert := assert.New(t)
 
 	pm, b0 := setupPacemaker()
+	pm.leaderTimer = time.NewTimer(pm.config.LeaderTimeout)
 	pm.state.setLeaderIndex(1)
 
 	msgSvc := new(MockMsgService)

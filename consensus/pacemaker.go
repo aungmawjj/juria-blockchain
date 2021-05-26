@@ -18,7 +18,8 @@ type pacemaker struct {
 	state    *state
 	hotstuff *hotstuff.Hotstuff
 
-	viewTimer *time.Timer
+	viewTimer   *time.Timer
+	leaderTimer *time.Timer
 
 	// start timestamp in second of current view
 	viewStart int64
@@ -105,6 +106,9 @@ func (pm *pacemaker) viewChangeLoop() {
 	pm.viewTimer = time.NewTimer(pm.config.ViewWidth)
 	defer pm.viewTimer.Stop()
 
+	pm.leaderTimer = time.NewTimer(pm.config.LeaderTimeout)
+	defer pm.leaderTimer.Stop()
+
 	for {
 		select {
 		case <-pm.stopCh:
@@ -113,7 +117,7 @@ func (pm *pacemaker) viewChangeLoop() {
 		case <-pm.viewTimer.C:
 			pm.changeView()
 
-		case <-time.After(pm.config.LeaderTimeout):
+		case <-pm.leaderTimer.C:
 			pm.onLeaderTimeout()
 
 		case e := <-subQC.Events():
@@ -138,6 +142,7 @@ func (pm *pacemaker) changeView() {
 	pm.setViewStart()
 	leader := pm.resources.VldStore.GetValidator(pm.state.getLeaderIndex())
 	pm.resources.MsgSvc.SendNewView(leader, pm.hotstuff.GetQCHigh().(*hsQC).qc)
+	pm.leaderTimer.Reset(pm.config.LeaderTimeout)
 	logger.I().Infow("view changed",
 		"leader", leaderIdx, "qc", qcRefHeight(pm.hotstuff.GetQCHigh()))
 }
@@ -145,6 +150,9 @@ func (pm *pacemaker) changeView() {
 func (pm *pacemaker) onNewQCHigh(qc hotstuff.QC) {
 	pidx := pm.getProposerIndexForQC(qc)
 	logger.I().Debugw("updated qc", "proposer", pidx, "qc", qcRefHeight(qc))
+	if pidx == pm.state.getLeaderIndex() {
+		pm.leaderTimer.Reset(pm.config.LeaderTimeout)
+	}
 	if pm.isFirstQCForCurrentView(pidx) {
 		pm.approveViewLeader(pidx)
 	}
