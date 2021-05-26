@@ -20,7 +20,7 @@ func TestStorage_StateZero(t *testing.T) {
 
 	strg := newTestStorage()
 	assert.Nil(strg.GetMerkleRoot())
-	_, err := strg.GetBlockHeight()
+	_, err := strg.GetLastBlock()
 	assert.Error(err)
 	assert.Nil(strg.GetState([]byte("some key")))
 }
@@ -44,8 +44,7 @@ func TestStorage_Commit(t *testing.T) {
 	err := strg.Commit(data)
 	assert.NoError(err)
 
-	blkHeight, err := strg.GetBlockHeight()
-	assert.NoError(err)
+	blkHeight := strg.GetBlockHeight()
 	assert.EqualValues(0, blkHeight)
 
 	blk, err := strg.GetLastBlock()
@@ -109,7 +108,7 @@ func TestStorage_Commit(t *testing.T) {
 	err = strg.Commit(data)
 	assert.NoError(err)
 
-	blkHeight, err = strg.GetBlockHeight()
+	blkHeight = strg.GetBlockHeight()
 	assert.NoError(err)
 	assert.EqualValues(1, blkHeight)
 

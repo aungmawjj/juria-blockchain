@@ -22,6 +22,7 @@ const (
 	FlagTxExecTimeout = "execution-txExecTimeout"
 
 	// consensus
+	FlagChainID       = "chainid"
 	FlagBlockTxLimit  = "consensus-blockTxLimit"
 	FlagTxWaitTime    = "consensus-txWaitTime"
 	FlagBeatDelay     = "consensus-beatDelay"
@@ -64,6 +65,10 @@ func init() {
 	rootCmd.Flags().DurationVar(&nodeConfig.ExecutionConfig.TxExecTimeout,
 		FlagTxExecTimeout, nodeConfig.ExecutionConfig.TxExecTimeout,
 		"tx execution timeout")
+
+	rootCmd.Flags().Int64Var(&nodeConfig.ConsensusConfig.ChainID,
+		FlagChainID, nodeConfig.ConsensusConfig.ChainID,
+		"chainid is used to create genesis block")
 
 	rootCmd.Flags().IntVar(&nodeConfig.ConsensusConfig.BlockTxLimit,
 		FlagBlockTxLimit, nodeConfig.ConsensusConfig.BlockTxLimit,

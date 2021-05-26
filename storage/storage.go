@@ -62,8 +62,9 @@ func (strg *Storage) GetLastBlock() (*core.Block, error) {
 	return strg.chainStore.getLastBlock()
 }
 
-func (strg *Storage) GetBlockHeight() (uint64, error) {
-	return strg.chainStore.getBlockHeight()
+func (strg *Storage) GetBlockHeight() uint64 {
+	height, _ := strg.chainStore.getBlockHeight()
+	return height
 }
 
 func (strg *Storage) GetBlockByHeight(height uint64) (*core.Block, error) {
