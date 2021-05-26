@@ -52,7 +52,7 @@ func (rwc *rwcLoopBack) readBuf(b []byte) (int, error) {
 func (rwc *rwcLoopBack) Write(b []byte) (n int, err error) {
 	select {
 	case <-rwc.closedCh:
-		return 0, io.ErrClosedPipe
+		return 0, io.EOF
 	default:
 	}
 	n, err = rwc.buf.Write(b)
@@ -66,7 +66,7 @@ func (rwc *rwcLoopBack) Write(b []byte) (n int, err error) {
 func (rwc *rwcLoopBack) Close() error {
 	select {
 	case <-rwc.closedCh:
-		return io.ErrClosedPipe
+		return io.EOF
 	default:
 		close(rwc.closedCh)
 		rwc.buf.Reset()

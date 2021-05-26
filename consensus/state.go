@@ -4,7 +4,6 @@
 package consensus
 
 import (
-	"fmt"
 	"sync"
 	"sync/atomic"
 
@@ -69,8 +68,6 @@ func (state *state) getOlderBlocks(blk *core.Block) []*core.Block {
 func (state *state) getBlockOnLocalNode(hash []byte) *core.Block {
 	blk := state.getBlock(hash)
 	if blk == nil {
-		fmt.Println("block not found in state")
-		fmt.Println(hash)
 		blk, _ = state.resources.Storage.GetBlock(hash)
 	}
 	return blk

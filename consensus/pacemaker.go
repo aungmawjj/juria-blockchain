@@ -92,7 +92,7 @@ func (pm *pacemaker) onBeat() {
 
 func (pm *pacemaker) propose() {
 	blk := pm.hotstuff.OnPropose()
-	logger.I().Debugw("proposed block", "height", blk.Height(), "qcRef", qcRefHeight(blk.Justify()))
+	logger.I().Debugw("proposed block", "height", blk.Height(), "qc", qcRefHeight(blk.Justify()))
 	vote := blk.(*hsBlock).block.ProposerVote()
 	pm.hotstuff.OnReceiveVote(newHsVote(vote, pm.state))
 	pm.hotstuff.Update(blk)
@@ -138,14 +138,15 @@ func (pm *pacemaker) changeView() {
 	pm.setViewStart()
 	leader := pm.resources.VldStore.GetValidator(pm.state.getLeaderIndex())
 	pm.resources.MsgSvc.SendNewView(leader, pm.hotstuff.GetQCHigh().(*hsQC).qc)
-	logger.I().Infow("view changed", "leader", leaderIdx, "bexec", pm.hotstuff.GetBExec().Height())
+	logger.I().Infow("view changed",
+		"leader", leaderIdx, "qc", qcRefHeight(pm.hotstuff.GetQCHigh()))
 }
 
 func (pm *pacemaker) onNewQCHigh(qc hotstuff.QC) {
 	pidx := pm.getProposerIndexForQC(qc)
-	logger.I().Debugw("updated qc", "proposer", pidx, "qcRef", qcRefHeight(qc))
-	if pm.needViewTimerResetForNewQC(pidx) {
-		pm.resetViewTimer(pidx)
+	logger.I().Debugw("updated qc", "proposer", pidx, "qc", qcRefHeight(qc))
+	if pm.isFirstQCForCurrentView(pidx) {
+		pm.approveViewLeader(pidx)
 	}
 }
 
@@ -155,18 +156,18 @@ func (pm *pacemaker) getProposerIndexForQC(qc hotstuff.QC) int {
 	return pidx
 }
 
-func (pm *pacemaker) needViewTimerResetForNewQC(proposer int) bool {
+func (pm *pacemaker) isFirstQCForCurrentView(proposer int) bool {
 	leaderIdx := pm.state.getLeaderIndex()
 	pending := pm.getPendingViewChange()
 	return (!pending && proposer != leaderIdx) || (pending && proposer == leaderIdx)
 }
 
-func (pm *pacemaker) resetViewTimer(proposer int) {
+func (pm *pacemaker) approveViewLeader(proposer int) {
 	pm.setPendingViewChange(false)
 	pm.state.setLeaderIndex(proposer)
 	pm.setViewStart()
 	pm.viewTimer.Reset(pm.config.ViewWidth)
-	logger.I().Infow("view timer reset", "leader", pm.state.getLeaderIndex())
+	logger.I().Infow("approved leader", "leader", pm.state.getLeaderIndex())
 }
 
 func (pm *pacemaker) setViewStart() {

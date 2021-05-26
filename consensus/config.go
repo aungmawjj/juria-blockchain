@@ -29,5 +29,5 @@ var DefaultConfig = Config{
 	TxWaitTime:    1 * time.Second,
 	BeatDelay:     500 * time.Millisecond,
 	ViewWidth:     30 * time.Second,
-	LeaderTimeout: 6 * time.Second,
+	LeaderTimeout: 10 * time.Second,
 }

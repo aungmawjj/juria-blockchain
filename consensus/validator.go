@@ -58,7 +58,7 @@ func (vld *validator) proposalLoop() {
 
 		case e := <-sub.Events():
 			if err := vld.onReceiveProposal(e.(*core.Block)); err != nil {
-				logger.I().Warnw("on received proposal failed", "error", err)
+				logger.I().Warnf("on received proposal failed, %+v", err)
 			}
 		}
 	}
@@ -75,7 +75,7 @@ func (vld *validator) voteLoop() {
 
 		case e := <-sub.Events():
 			if err := vld.onReceiveVote(e.(*core.Vote)); err != nil {
-				logger.I().Warnw("received vote failed", "error", err)
+				logger.I().Warnf("received vote failed, %+v", err)
 			}
 		}
 	}
@@ -92,7 +92,7 @@ func (vld *validator) newViewLoop() {
 
 		case e := <-sub.Events():
 			if err := vld.onReceiveNewView(e.(*core.QuorumCert)); err != nil {
-				logger.I().Warnw("received new view failed", "error", err)
+				logger.I().Warnf("received new view failed, %+v", err)
 			}
 		}
 	}
@@ -105,6 +105,8 @@ func (vld *validator) onReceiveProposal(blk *core.Block) error {
 	if err := blk.Validate(vld.resources.VldStore); err != nil {
 		return err
 	}
+	pidx, _ := vld.resources.VldStore.GetValidatorIndex(blk.Proposer())
+	logger.I().Debugw("received proposal", "proposer", pidx, "height", blk.Height())
 	if err := vld.confirmSyncWithParent(blk.Proposer(), blk); err != nil {
 		return err
 	}
@@ -117,7 +119,11 @@ func (vld *validator) onReceiveProposal(blk *core.Block) error {
 func (vld *validator) confirmSyncWithParent(peer *core.PublicKey, blk *core.Block) error {
 	parent := vld.state.getBlockOnLocalNode(blk.ParentHash())
 	if parent == nil {
-		vld.syncMissingBlock(peer, blk.ParentHash())
+		var err error
+		parent, err = vld.syncMissingBlock(peer, blk.ParentHash())
+		if err != nil {
+			return err
+		}
 	}
 	if blk.Height() != parent.Height()+1 {
 		return fmt.Errorf("invalid block height")
@@ -170,7 +176,8 @@ func (vld *validator) updateHotstuff(blk *core.Block, voting bool) error {
 
 func (vld *validator) canVoteProposal(proposal *core.Block) error {
 	if !vld.state.isLeader(proposal.Proposer()) {
-		return fmt.Errorf("proposer is not leader")
+		pidx, _ := vld.resources.VldStore.GetValidatorIndex(proposal.Proposer())
+		return fmt.Errorf("proposer %d is not leader", pidx)
 	}
 	bh := vld.resources.Storage.GetBlockHeight()
 	if bh != proposal.ExecHeight() {

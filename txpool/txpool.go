@@ -5,7 +5,9 @@ package txpool
 
 import (
 	"bytes"
+	"encoding/base64"
 	"errors"
+	"fmt"
 
 	"github.com/aungmawjj/juria-blockchain/core"
 	"github.com/aungmawjj/juria-blockchain/emitter"
@@ -96,7 +98,7 @@ func (pool *TxPool) subscribeTxs() {
 	for e := range sub.Events() {
 		txList := e.(*core.TxList)
 		if err := pool.addTxList(txList); err != nil {
-			logger.I().Warnw("add tx list failed", "error", err)
+			logger.I().Warnf("add tx list failed %+v", err)
 		}
 	}
 }
@@ -175,7 +177,7 @@ func (pool *TxPool) verifyProposalTxs(hashes [][]byte) error {
 			return ErrOldTx
 		}
 		if pool.store.getTx(hash) == nil {
-			return errors.New("tx not found")
+			return fmt.Errorf("tx not found %s", base64.StdEncoding.EncodeToString(hash))
 		}
 	}
 	return nil
@@ -192,7 +194,10 @@ func (pool *TxPool) getTxsToExecute(hashes [][]byte) ([]*core.Transaction, [][]b
 			if tx != nil {
 				txs = append(txs, tx)
 			} else {
-				logger.I().Warnw("missing tx to execute")
+				// tx not found in local node
+				// all txs from accepted blocks should be sync
+				logger.I().Fatalw("missing tx to execute",
+					"tx", base64.StdEncoding.EncodeToString(tx.Hash()))
 			}
 		}
 	}

@@ -59,7 +59,7 @@ func TestPacemaker_changeView(t *testing.T) {
 	assert.EqualValues(pm.state.getLeaderIndex(), 0)
 }
 
-func Test_pacemaker_needViewTimerResetForNewQC(t *testing.T) {
+func Test_pacemaker_isFirstQCForCurrentView(t *testing.T) {
 	assert := assert.New(t)
 
 	pm1, _ := setupPacemaker()
@@ -81,7 +81,7 @@ func Test_pacemaker_needViewTimerResetForNewQC(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			assert.EqualValues(tt.want, tt.pm.needViewTimerResetForNewQC(tt.proposerIdx))
+			assert.EqualValues(tt.want, tt.pm.isFirstQCForCurrentView(tt.proposerIdx))
 		})
 	}
 }
@@ -93,7 +93,7 @@ func TestPacemaker_resetViewTimer(t *testing.T) {
 	pm.viewTimer = time.NewTimer(pm.config.ViewWidth)
 	pm.setPendingViewChange(true)
 
-	pm.resetViewTimer(1)
+	pm.approveViewLeader(1)
 
 	assert.False(pm.getPendingViewChange())
 	assert.EqualValues(pm.state.getLeaderIndex(), 1)

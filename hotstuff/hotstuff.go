@@ -6,7 +6,7 @@
 package hotstuff
 
 import (
-	"fmt"
+	"log"
 )
 
 // Hotstuff consensus engine
@@ -103,7 +103,7 @@ func (hs *Hotstuff) onCommit(b Block) {
 		hs.driver.Commit(b)
 
 	} else if !hs.GetBExec().Equal(b) {
-		panic(fmt.Sprintf("hotstuff safety breached!!!\n%+v\n%+v\n", b, hs.GetBExec()))
+		log.Fatalf("hotstuff safety breached bexec-new: %+v\n bexec: %+v", b, hs.GetBExec())
 	}
 }
 

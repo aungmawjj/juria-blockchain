@@ -67,7 +67,7 @@ func runNodes(juria, workdir string, count int) {
 	cmds := make([]*exec.Cmd, count)
 	for i := 0; i < count; i++ {
 		logfile, _ := os.Create(path.Join(dirs[i], "log.txt"))
-		cmd := exec.Command(juria, "-d", dirs[i], "-p", ports[i])
+		cmd := exec.Command(juria, "-d", dirs[i], "-p", ports[i], "--debug")
 		fmt.Println(strings.Join(cmd.Args, " "))
 		cmd.Stderr = logfile
 		cmd.Stdout = logfile

@@ -78,7 +78,7 @@ func (gns *genesis) broadcastProposalLoop() {
 		}
 		if gns.getQ0() == nil {
 			if err := gns.resources.MsgSvc.BroadcastProposal(gns.getB0()); err != nil {
-				logger.I().Errorw("broadcast proposal error", "error", err)
+				logger.I().Errorw("broadcast proposal failed", "error", err)
 			}
 		}
 		time.Sleep(2 * time.Second)
@@ -110,7 +110,7 @@ func (gns *genesis) proposalLoop() {
 
 		case e := <-sub.Events():
 			if err := gns.onReceiveProposal(e.(*core.Block)); err != nil {
-				logger.I().Errorw("receive proposal failed", "error", err)
+				logger.I().Warnf("receive proposal failed, %+v", err.Error())
 			}
 		}
 	}
@@ -127,7 +127,7 @@ func (gns *genesis) voteLoop() {
 
 		case e := <-sub.Events():
 			if err := gns.onReceiveVote(e.(*core.Vote)); err != nil {
-				logger.I().Errorw("receive vote failed", "error", err)
+				logger.I().Warnf("receive vote failed, %+v", err.Error())
 			}
 		}
 	}
@@ -144,7 +144,7 @@ func (gns *genesis) newViewLoop() {
 
 		case e := <-sub.Events():
 			if err := gns.onReceiveNewView(e.(*core.QuorumCert)); err != nil {
-				logger.I().Errorw("receive new view failed", "error", err)
+				logger.I().Warnf("receive new view failed, %+v", err.Error())
 			}
 		}
 	}
@@ -210,7 +210,7 @@ func (gns *genesis) broadcastQC() {
 		default:
 		}
 		if err := gns.resources.MsgSvc.BroadcastNewView(gns.getQ0()); err != nil {
-			logger.I().Errorw("broadcast proposal error", "error", err)
+			logger.I().Errorw("broadcast proposal failed", "error", err)
 		}
 		time.Sleep(time.Second)
 	}

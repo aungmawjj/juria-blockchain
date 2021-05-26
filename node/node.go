@@ -48,7 +48,8 @@ func Run(config Config) {
 	node.setupComponents()
 	logger.I().Infow("node setup done, starting consensus...")
 	node.consensus.Start()
-	logger.I().Infow("started consensus", "bexec", node.consensus.GetStatus().BExec)
+	status := node.consensus.GetStatus()
+	logger.I().Infow("started consensus", "bLeaf", status.BLeaf, "qc", status.QCHigh)
 	select {}
 }
 

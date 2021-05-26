@@ -63,7 +63,7 @@ func (hsd *hsDriver) VoteBlock(hsBlk hotstuff.Block) {
 	logger.I().Debugw("voted block",
 		"proposer", hsd.state.getLeaderIndex(),
 		"height", hsBlk.Height(),
-		"qcRef", qcRefHeight(hsBlk.Justify()),
+		"qc", qcRefHeight(hsBlk.Justify()),
 	)
 }
 
@@ -93,7 +93,7 @@ func (hsd *hsDriver) Commit(hsBlk hotstuff.Block) {
 	}
 	err := hsd.resources.Storage.Commit(data)
 	if err != nil {
-		logger.I().Fatalw("commit storage error", "error", err)
+		logger.I().Fatalf("commit storage error: %+v", err)
 	}
 	hsd.cleanStateOnCommited(bexe)
 	logger.I().Debugw("commited bock", "height", bexe.Height(), "elapsed", time.Since(start))

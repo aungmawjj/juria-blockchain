@@ -41,8 +41,9 @@ type Peer struct {
 	rwc     io.ReadWriteCloser
 	emitter *emitter.Emitter
 
-	statusMtx sync.RWMutex
-	writeMtx  sync.Mutex
+	mtxRWC    sync.RWMutex
+	mtxStatus sync.RWMutex
+	mtxWrite  sync.Mutex
 }
 
 // NewPeer godoc
@@ -67,29 +68,32 @@ func (p *Peer) Addr() multiaddr.Multiaddr {
 
 // Status gogoc
 func (p *Peer) Status() PeerStatus {
-	p.statusMtx.RLock()
-	defer p.statusMtx.RUnlock()
+	p.mtxStatus.RLock()
+	defer p.mtxStatus.RUnlock()
 
 	return p.status
 }
 
 // Disconnect gogoc
 func (p *Peer) Disconnect() error {
-	p.statusMtx.Lock()
-	defer p.statusMtx.Unlock()
+	p.mtxStatus.Lock()
+	defer p.mtxStatus.Unlock()
 
-	logger.I().Infow("peer disconnected", "addr", p.addr)
+	if p.status == PeerStatusConnected {
+		logger.I().Infow("peer disconnected", "addr", p.addr)
+	}
 	p.status = PeerStatusDisconnected
-	if p.rwc != nil {
-		return p.rwc.Close()
+	rwc := p.getRWC()
+	if rwc != nil {
+		return rwc.Close()
 	}
 	return nil
 }
 
 // SetConnecting gogoc
 func (p *Peer) SetConnecting() error {
-	p.statusMtx.Lock()
-	defer p.statusMtx.Unlock()
+	p.mtxStatus.Lock()
+	defer p.mtxStatus.Unlock()
 
 	if p.status != PeerStatusDisconnected {
 		return fmt.Errorf("Status must be disconnected")
@@ -100,12 +104,12 @@ func (p *Peer) SetConnecting() error {
 
 // OnConnected gogoc
 func (p *Peer) OnConnected(rwc io.ReadWriteCloser) {
-	p.statusMtx.Lock()
-	defer p.statusMtx.Unlock()
+	p.mtxStatus.Lock()
+	defer p.mtxStatus.Unlock()
 
 	logger.I().Infow("peer connected", "addr", p.addr)
 	p.status = PeerStatusConnected
-	p.rwc = rwc
+	p.setRWC(rwc)
 	go p.listen()
 }
 
@@ -114,7 +118,6 @@ func (p *Peer) listen() {
 	for {
 		msg, err := p.read()
 		if err != nil {
-			logger.I().Warnw("read message failed", "error", err, "peer", p.pubKey)
 			return
 		}
 		p.emitter.Emit(msg)
@@ -135,14 +138,14 @@ func (p *Peer) read() ([]byte, error) {
 
 func (p *Peer) readFixedSize(size uint32) ([]byte, error) {
 	b := make([]byte, size)
-	_, err := io.ReadFull(p.rwc, b)
+	_, err := io.ReadFull(p.getRWC(), b)
 	return b, err
 }
 
 // WriteMsg gogoc
 func (p *Peer) WriteMsg(msg []byte) error {
-	p.writeMtx.Lock()
-	defer p.writeMtx.Unlock()
+	p.mtxWrite.Lock()
+	defer p.mtxWrite.Unlock()
 
 	if p.Status() != PeerStatusConnected {
 		return fmt.Errorf("Peer not connected")
@@ -155,11 +158,23 @@ func (p *Peer) write(b []byte) error {
 	binary.BigEndian.PutUint32(payload, uint32(len(b)))
 	payload = append(payload, b...)
 
-	_, err := p.rwc.Write(payload)
+	_, err := p.getRWC().Write(payload)
 	return err
 }
 
 // SubscribeMsg gogoc
 func (p *Peer) SubscribeMsg() *emitter.Subscription {
 	return p.emitter.Subscribe(10)
+}
+
+func (p *Peer) setRWC(rwc io.ReadWriteCloser) {
+	p.mtxRWC.Lock()
+	defer p.mtxRWC.Unlock()
+	p.rwc = rwc
+}
+
+func (p *Peer) getRWC() io.ReadWriteCloser {
+	p.mtxRWC.RLock()
+	defer p.mtxRWC.RUnlock()
+	return p.rwc
 }
