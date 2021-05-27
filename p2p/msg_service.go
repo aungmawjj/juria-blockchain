@@ -120,7 +120,10 @@ func (svc *MsgService) RequestBlock(pubKey *core.PublicKey, hash []byte) (*core.
 		return nil, err
 	}
 	blk := core.NewBlock()
-	return blk, blk.Unmarshal(respData)
+	if err := blk.Unmarshal(respData); err != nil {
+		return nil, err
+	}
+	return blk, nil
 }
 
 func (svc *MsgService) RequestBlockByHeight(
@@ -133,7 +136,10 @@ func (svc *MsgService) RequestBlockByHeight(
 		return nil, err
 	}
 	blk := core.NewBlock()
-	return blk, blk.Unmarshal(respData)
+	if err := blk.Unmarshal(respData); err != nil {
+		return nil, err
+	}
+	return blk, nil
 }
 
 func (svc *MsgService) RequestTxList(pubKey *core.PublicKey, hashes [][]byte) (*core.TxList, error) {
@@ -145,7 +151,10 @@ func (svc *MsgService) RequestTxList(pubKey *core.PublicKey, hashes [][]byte) (*
 		return nil, err
 	}
 	txList := core.NewTxList()
-	return txList, txList.Unmarshal(respData)
+	if err := txList.Unmarshal(respData); err != nil {
+		return nil, err
+	}
+	return txList, nil
 }
 
 func (svc *MsgService) SetReqHandler(reqHandler ReqHandler) error {
