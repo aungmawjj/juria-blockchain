@@ -9,8 +9,8 @@ import (
 	"os/signal"
 	"time"
 
-	"github.com/aungmawjj/juria-blockchain/test/cluster"
-	"github.com/aungmawjj/juria-blockchain/test/experiment"
+	"github.com/aungmawjj/juria-blockchain/tests/cluster"
+	"github.com/aungmawjj/juria-blockchain/tests/experiment"
 )
 
 func runExperiment(cftry cluster.ClusterFactory, expm experiment.Experiment) error {
@@ -30,8 +30,8 @@ func runExperiment(cftry cluster.ClusterFactory, expm experiment.Experiment) err
 		if err != nil {
 			return
 		}
-		fmt.Println("Started cluster. wait for 10s ...")
-		time.Sleep(10 * time.Second)
+		fmt.Printf("Started cluster. wait for %s", cluster.StartCooldown)
+		time.Sleep(cluster.StartCooldown)
 		// TODO: health check
 
 		fmt.Println("Running experiment")

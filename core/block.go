@@ -6,10 +6,12 @@ package core
 import (
 	"bytes"
 	"encoding/binary"
+	"encoding/json"
 	"errors"
 
 	"github.com/aungmawjj/juria-blockchain/core/core_pb"
 	"golang.org/x/crypto/sha3"
+	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -25,6 +27,9 @@ type Block struct {
 	proposer   *PublicKey
 	quorumCert *QuorumCert
 }
+
+var _ json.Marshaler = (*Block)(nil)
+var _ json.Unmarshaler = (*Block)(nil)
 
 func NewBlock() *Block {
 	return &Block{
@@ -169,6 +174,19 @@ func (blk *Block) Marshal() ([]byte, error) {
 func (blk *Block) Unmarshal(b []byte) error {
 	data := new(core_pb.Block)
 	if err := proto.Unmarshal(b, data); err != nil {
+		return err
+	}
+	blk.setData(data)
+	return nil
+}
+
+func (blk *Block) MarshalJSON() ([]byte, error) {
+	return protojson.Marshal(blk.data)
+}
+
+func (blk *Block) UnmarshalJSON(b []byte) error {
+	data := new(core_pb.Block)
+	if err := protojson.Unmarshal(b, data); err != nil {
 		return err
 	}
 	blk.setData(data)

@@ -9,8 +9,8 @@ import (
 	"os"
 
 	"github.com/aungmawjj/juria-blockchain/node"
-	"github.com/aungmawjj/juria-blockchain/test/cluster"
-	"github.com/aungmawjj/juria-blockchain/test/experiment"
+	"github.com/aungmawjj/juria-blockchain/tests/cluster"
+	"github.com/aungmawjj/juria-blockchain/tests/experiment"
 	"github.com/fatih/color"
 )
 
@@ -28,6 +28,7 @@ func main() {
 		WorkDir:   WorkDir,
 		NodeCount: NodeCount,
 		PortN0:    node.DefaultConfig.Port,
+		ApiPortN0: node.DefaultConfig.APIPort,
 	})
 	check(err)
 
@@ -36,16 +37,20 @@ func main() {
 	expms = append(expms, &experiment.RestartAllNodes{})
 
 	bold := color.New(color.Bold)
-	boldRed := color.New(color.Bold, color.FgRed)
-	boldGreen := color.New(color.Bold, color.FgGreen)
+
+	fmt.Printf("Running Experiments. Total: %d\n", len(expms))
+	for i, expm := range expms {
+		bold.Printf("%3d. %s\n", i, expm.Name())
+	}
+
 	for i, expm := range expms {
 		bold.Printf("\nExperiment %d. %s\n", i, expm.Name())
 		err := runExperiment(cftry, expm)
 		if err != nil {
-			fmt.Printf("%s\t%s\n", boldRed.Sprint("FAIL"), expm.Name())
+			bold.Printf("%s %s\n", color.RedString("FAIL"), expm.Name())
 			fmt.Printf("%+v\n", err)
 		} else {
-			fmt.Printf("%s\t%s\n", boldGreen.Sprint("PASS"), expm.Name())
+			bold.Printf("%s %s\n", color.GreenString("PASS"), expm.Name())
 		}
 		fmt.Println()
 	}

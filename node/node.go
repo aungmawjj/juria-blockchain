@@ -20,16 +20,6 @@ import (
 	"go.uber.org/zap"
 )
 
-type components struct {
-	vldStore  core.ValidatorStore
-	storage   *storage.Storage
-	host      *p2p.Host
-	msgSvc    *p2p.MsgService
-	txpool    *txpool.TxPool
-	execution *execution.Execution
-	consensus *consensus.Consensus
-}
-
 type Node struct {
 	config Config
 
@@ -37,7 +27,13 @@ type Node struct {
 	vldKeys  []*core.PublicKey
 	vldAddrs []multiaddr.Multiaddr
 
-	components
+	vldStore  core.ValidatorStore
+	storage   *storage.Storage
+	host      *p2p.Host
+	msgSvc    *p2p.MsgService
+	txpool    *txpool.TxPool
+	execution *execution.Execution
+	consensus *consensus.Consensus
 }
 
 func Run(config Config) {
@@ -105,6 +101,7 @@ func (node *Node) setupComponents() {
 	node.msgSvc.SetReqHandler(&p2p.TxListReqHandler{
 		GetTxList: node.GetTxList,
 	})
+	serveNodeAPI(node)
 }
 
 func (node *Node) setupStorage() error {

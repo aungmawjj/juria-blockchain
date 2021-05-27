@@ -3,7 +3,7 @@
 
 package experiment
 
-import "github.com/aungmawjj/juria-blockchain/test/cluster"
+import "github.com/aungmawjj/juria-blockchain/tests/cluster"
 
 type Experiment interface {
 	Name() string

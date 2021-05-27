@@ -6,10 +6,12 @@ package core
 import (
 	"bytes"
 	"encoding/binary"
+	"encoding/json"
 	"errors"
 
 	"github.com/aungmawjj/juria-blockchain/core/core_pb"
 	"golang.org/x/crypto/sha3"
+	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -24,6 +26,9 @@ type Transaction struct {
 	data   *core_pb.Transaction
 	sender *PublicKey
 }
+
+var _ json.Unmarshaler = (*Transaction)(nil)
+var _ json.Marshaler = (*Transaction)(nil)
 
 func NewTransaction() *Transaction {
 	return &Transaction{
@@ -112,9 +117,25 @@ func (tx *Transaction) Unmarshal(b []byte) error {
 	return nil
 }
 
+func (tx *Transaction) MarshalJSON() ([]byte, error) {
+	return protojson.Marshal(tx.data)
+}
+
+func (tx *Transaction) UnmarshalJSON(b []byte) error {
+	data := new(core_pb.Transaction)
+	if err := protojson.Unmarshal(b, data); err != nil {
+		return err
+	}
+	tx.setData(data)
+	return nil
+}
+
 type TxCommit struct {
 	data *core_pb.TxCommit
 }
+
+var _ json.Marshaler = (*TxCommit)(nil)
+var _ json.Unmarshaler = (*TxCommit)(nil)
 
 func NewTxCommit() *TxCommit {
 	return &TxCommit{
@@ -160,6 +181,19 @@ func (txc *TxCommit) Marshal() ([]byte, error) {
 func (txc *TxCommit) Unmarshal(b []byte) error {
 	data := new(core_pb.TxCommit)
 	if err := proto.Unmarshal(b, data); err != nil {
+		return err
+	}
+	txc.data = data
+	return nil
+}
+
+func (txc *TxCommit) MarshalJSON() ([]byte, error) {
+	return protojson.Marshal(txc.data)
+}
+
+func (txc *TxCommit) UnmarshalJSON(b []byte) error {
+	data := new(core_pb.TxCommit)
+	if err := protojson.Unmarshal(b, data); err != nil {
 		return err
 	}
 	txc.data = data

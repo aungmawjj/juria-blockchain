@@ -13,7 +13,9 @@ import (
 const (
 	FlagDebug   = "debug"
 	FlagDataDir = "datadir"
+
 	FlagPort    = "port"
+	FlagAPIPort = "apiPort"
 
 	// storage
 	FlagMerkleBranchFactor = "storage-merkleBranchFactor"
@@ -57,6 +59,9 @@ func init() {
 
 	rootCmd.Flags().IntVarP(&nodeConfig.Port,
 		FlagPort, "p", nodeConfig.Port, "p2p port")
+
+	rootCmd.Flags().IntVarP(&nodeConfig.APIPort,
+		FlagAPIPort, "P", nodeConfig.APIPort, "node api port")
 
 	rootCmd.Flags().Uint8Var(&nodeConfig.StorageConfig.MerkleBranchFactor,
 		FlagMerkleBranchFactor, nodeConfig.StorageConfig.MerkleBranchFactor,

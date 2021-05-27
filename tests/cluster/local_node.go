@@ -38,6 +38,7 @@ func (node *localNode) Start() error {
 	node.cmd = exec.Command(node.juriaPath,
 		"-d", node.datadir,
 		"-p", strconv.Itoa(node.port),
+		"-P", strconv.Itoa(node.apiPort),
 	)
 	node.cmd.Stderr = node.logFile
 	node.cmd.Stdout = node.logFile

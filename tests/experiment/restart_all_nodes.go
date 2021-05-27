@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/aungmawjj/juria-blockchain/test/cluster"
+	"github.com/aungmawjj/juria-blockchain/tests/cluster"
 )
 
 type RestartAllNodes struct{}
@@ -28,7 +28,7 @@ func (expm *RestartAllNodes) Run(cls *cluster.Cluster) error {
 	if err := cls.Start(); err != nil {
 		return err
 	}
-	fmt.Println("Started cluster, wait for 10s ...")
-	time.Sleep(10 * time.Second)
+	fmt.Printf("Started cluster, wait for %s", cluster.StartCooldown)
+	time.Sleep(cluster.StartCooldown)
 	return nil
 }

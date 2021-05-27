@@ -105,6 +105,7 @@ func (ftry *localFactory) GetCluster(name string) (*Cluster, error) {
 			juriaPath: ftry.params.JuriaPath,
 			datadir:   path.Join(clusterDir, strconv.Itoa(i)),
 			port:      ftry.params.PortN0 + i,
+			apiPort:   ftry.params.ApiPortN0 + i,
 		}
 	}
 	return &Cluster{nodes}, nil
