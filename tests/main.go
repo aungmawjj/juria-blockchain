@@ -4,56 +4,54 @@
 package main
 
 import (
-	"fmt"
 	"log"
 	"os"
+	"path"
 
 	"github.com/aungmawjj/juria-blockchain/node"
 	"github.com/aungmawjj/juria-blockchain/tests/cluster"
 	"github.com/aungmawjj/juria-blockchain/tests/experiment"
-	"github.com/fatih/color"
 )
 
-var (
+const (
 	JuriaPath = "./juria"
 	WorkDir   = "./workdir"
 	NodeCount = 7
 )
 
+// Running experiments
+const (
+	RunRestartCluster          = true
+	RunRestartRandomValidators = true
+)
+
 func main() {
+	clustersDir := path.Join(WorkDir, "clusters")
+
 	os.Mkdir(WorkDir, 0755)
+	os.Mkdir(clustersDir, 0755)
 
 	cftry, err := cluster.NewLocalFactory(cluster.LocalFactoryParams{
 		JuriaPath: JuriaPath,
-		WorkDir:   WorkDir,
+		WorkDir:   clustersDir,
 		NodeCount: NodeCount,
 		PortN0:    node.DefaultConfig.Port,
 		ApiPortN0: node.DefaultConfig.APIPort,
 	})
 	check(err)
 
+	runExperiments(cftry, setupExperiments())
+}
+
+func setupExperiments() []experiment.Experiment {
 	expms := make([]experiment.Experiment, 0)
-
-	expms = append(expms, &experiment.RestartAllNodes{})
-
-	bold := color.New(color.Bold)
-
-	fmt.Printf("Running Experiments. Total: %d\n", len(expms))
-	for i, expm := range expms {
-		bold.Printf("%3d. %s\n", i, expm.Name())
+	if RunRestartCluster {
+		expms = append(expms, &experiment.RestartCluster{})
 	}
-
-	for i, expm := range expms {
-		bold.Printf("\nExperiment %d. %s\n", i, expm.Name())
-		err := runExperiment(cftry, expm)
-		if err != nil {
-			bold.Printf("%s %s\n", color.RedString("FAIL"), expm.Name())
-			fmt.Printf("%+v\n", err)
-		} else {
-			bold.Printf("%s %s\n", color.GreenString("PASS"), expm.Name())
-		}
-		fmt.Println()
+	if RunRestartRandomValidators {
+		expms = append(expms, &experiment.RestartRandomValidators{})
 	}
+	return expms
 }
 
 func check(err error) {

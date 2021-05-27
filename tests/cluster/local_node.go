@@ -56,5 +56,5 @@ func (node *localNode) Stop() {
 }
 
 func (node *localNode) GetEndpoint() string {
-	return fmt.Sprintf("http://172.0.0.1:%d", node.apiPort)
+	return fmt.Sprintf("http://127.0.0.1:%d", node.apiPort)
 }

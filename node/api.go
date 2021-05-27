@@ -4,6 +4,7 @@
 package node
 
 import (
+	"encoding/base64"
 	"fmt"
 	"io"
 	"net/http"
@@ -12,10 +13,6 @@ import (
 	"github.com/aungmawjj/juria-blockchain/logger"
 	"github.com/gin-gonic/gin"
 )
-
-type RequestByHash struct {
-	Hash []byte `json:"hash"`
-}
 
 type nodeAPI struct {
 	node *Node
@@ -32,10 +29,11 @@ func serveNodeAPI(node *Node) {
 	r.GET("/consensus", api.getConsensusStatus)
 
 	r.GET("/txpool", api.getTxPoolStatus)
-	r.POST("/transaction", api.submitTX)
-	r.GET("/transaction/commit", api.getTxCommit)
+	r.POST("/transactions/:hash", api.submitTX)
+	r.GET("/transactions/:hash/commit", api.getTxCommit)
 
-	r.GET("/block", api.getBlock)
+	r.GET("/blocks/:hash", api.getBlock)
+	r.GET("/blocksbyh/:height", api.getBlockByHeight)
 
 	go func() {
 		err := r.Run(fmt.Sprintf(":%d", node.config.APIPort))
@@ -69,12 +67,12 @@ func (api *nodeAPI) submitTX(c *gin.Context) {
 }
 
 func (api *nodeAPI) getTxCommit(c *gin.Context) {
-	req := new(RequestByHash)
-	if err := c.ShouldBindQuery(req); err != nil {
+	hash, err := api.getHash(c)
+	if err != nil {
 		c.String(http.StatusBadRequest, "cannot parse request")
 		return
 	}
-	txc, err := api.node.storage.GetTxCommit(req.Hash)
+	txc, err := api.node.storage.GetTxCommit(hash)
 	if err != nil {
 		c.String(http.StatusInternalServerError, err.Error())
 		return
@@ -83,12 +81,27 @@ func (api *nodeAPI) getTxCommit(c *gin.Context) {
 }
 
 func (api *nodeAPI) getBlock(c *gin.Context) {
-	req := new(RequestByHash)
-	if err := c.ShouldBindQuery(req); err != nil {
+	hash, err := api.getHash(c)
+	if err != nil {
 		c.String(http.StatusBadRequest, "cannot parse request")
 		return
 	}
-	blk, err := api.node.GetBlock(req.Hash)
+	blk, err := api.node.GetBlock(hash)
+	if err != nil {
+		c.String(http.StatusInternalServerError, err.Error())
+		return
+	}
+	c.JSON(http.StatusOK, blk)
+}
+
+func (api *nodeAPI) getHash(c *gin.Context) ([]byte, error) {
+	hashstr := c.Param("hash")
+	return base64.StdEncoding.DecodeString(hashstr)
+}
+
+func (api *nodeAPI) getBlockByHeight(c *gin.Context) {
+	height := c.GetUint64("height")
+	blk, err := api.node.storage.GetBlockByHeight(height)
 	if err != nil {
 		c.String(http.StatusInternalServerError, err.Error())
 		return

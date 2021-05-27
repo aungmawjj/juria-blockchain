@@ -6,7 +6,7 @@ package cluster
 import "time"
 
 const (
-	StartCooldown = 15 * time.Second
+	StartCooldown = 10 * time.Second
 )
 
 type Node interface {
