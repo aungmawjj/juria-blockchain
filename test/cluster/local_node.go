@@ -8,14 +8,15 @@ import (
 	"os"
 	"os/exec"
 	"path"
+	"strconv"
 )
 
 type localNode struct {
 	juriaPath string
 
 	datadir string
-	port    string
-	apiPort string
+	port    int
+	apiPort int
 
 	running bool
 	cmd     *exec.Cmd
@@ -34,23 +35,25 @@ func (node *localNode) Start() error {
 		return err
 	}
 	node.logFile = f
-	cmd := exec.Command(node.juriaPath,
+	node.cmd = exec.Command(node.juriaPath,
 		"-d", node.datadir,
-		"-p", node.port,
+		"-p", strconv.Itoa(node.port),
 	)
-	cmd.Stderr = node.logFile
-	cmd.Stdout = node.logFile
-	return cmd.Start()
+	node.cmd.Stderr = node.logFile
+	node.cmd.Stdout = node.logFile
+	node.running = true
+	return node.cmd.Start()
 }
 
 func (node *localNode) Stop() {
 	if !node.running {
 		return
 	}
+	node.running = false
 	node.cmd.Process.Kill()
 	node.logFile.Close()
 }
 
 func (node *localNode) GetEndpoint() string {
-	return fmt.Sprintf("http://172.0.0.1:%s", node.apiPort)
+	return fmt.Sprintf("http://172.0.0.1:%d", node.apiPort)
 }

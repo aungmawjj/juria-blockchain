@@ -128,6 +128,9 @@ func (vld *validator) getParentBlock(proposal *core.Block) (*core.Block, error) 
 
 func (vld *validator) syncMissingCommitedBlocks(proposal *core.Block) error {
 	commitHeight := vld.resources.Storage.GetBlockHeight()
+	if proposal.ExecHeight() <= commitHeight {
+		return nil // already sync commited blocks
+	}
 	// seems like I left behind. Lets check with qcRef to confirm
 	// only qc is trusted and proposal is not
 	if proposal.IsGenesis() {
