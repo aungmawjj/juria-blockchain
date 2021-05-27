@@ -16,6 +16,8 @@ type hsDriver struct {
 	resources *Resources
 	config    Config
 
+	checkTxDelay time.Duration
+
 	state *state
 }
 
@@ -74,7 +76,7 @@ func (hsd *hsDriver) delayVoteWhenNoTxs() {
 		select {
 		case <-timer.C:
 			return
-		case <-time.After(time.Millisecond):
+		case <-time.After(hsd.checkTxDelay):
 		}
 	}
 }

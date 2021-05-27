@@ -80,6 +80,7 @@ func TestHsDriver_CreateLeaf(t *testing.T) {
 
 func TestHsDriver_VoteBlock(t *testing.T) {
 	hsd := setupTestHsDriver()
+	hsd.checkTxDelay = time.Millisecond
 	hsd.config.TxWaitTime = 2 * time.Millisecond
 
 	proposer := core.GenerateKey(nil)

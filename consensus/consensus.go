@@ -4,6 +4,8 @@
 package consensus
 
 import (
+	"time"
+
 	"github.com/aungmawjj/juria-blockchain/core"
 	"github.com/aungmawjj/juria-blockchain/hotstuff"
 	"github.com/aungmawjj/juria-blockchain/logger"
@@ -90,9 +92,10 @@ func (cons *Consensus) getInitialBlockAndQC() (*core.Block, *core.QuorumCert) {
 
 func (cons *Consensus) setupHsDriver() {
 	cons.hsDriver = &hsDriver{
-		resources: cons.resources,
-		config:    cons.config,
-		state:     cons.state,
+		resources:    cons.resources,
+		config:       cons.config,
+		checkTxDelay: 10 * time.Millisecond,
+		state:        cons.state,
 	}
 }
 
