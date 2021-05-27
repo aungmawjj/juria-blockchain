@@ -4,6 +4,7 @@
 package execution
 
 import (
+	"encoding/json"
 	"time"
 
 	"github.com/aungmawjj/juria-blockchain/core"
@@ -56,6 +57,19 @@ func (exec *Execution) Query(codeAddr, input []byte) ([]byte, error) {
 		input: input,
 		State: newStateTracker(exec.state, codeAddr),
 	})
+}
+
+func (exec *Execution) VerifyTx(tx *core.Transaction) error {
+	if len(tx.CodeAddr()) != 0 { // invoke tx
+		return nil
+	}
+	// deployment tx
+	input := new(DeploymentInput)
+	err := json.Unmarshal(tx.Input(), input)
+	if err != nil {
+		return err
+	}
+	return exec.codeRegistry.install(input)
 }
 
 type blkExecutor struct {

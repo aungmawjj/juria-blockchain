@@ -15,26 +15,27 @@ func TestCodeRegistry(t *testing.T) {
 
 	trk := newStateTracker(newMapStateStore(), codeRegistryAddr)
 	reg := newCodeRegistry()
-	dep := &codeDeployment{
-		codeAddr: bytes.Repeat([]byte{1}, 32),
-		codeInfo: CodeInfo{
+
+	codeAddr := bytes.Repeat([]byte{1}, 32)
+	dep := &DeploymentInput{
+		CodeInfo: CodeInfo{
 			DriverType: DriverTypeNative,
 			CodeID:     []byte(NativeCodeIDJuriaCoin),
 		},
 	}
 
-	cc, err := reg.getInstance(dep.codeAddr, trk)
+	cc, err := reg.getInstance(codeAddr, trk)
 
 	assert.Error(err, "code not deployed yet")
 	assert.Nil(cc)
 
-	cc, err = reg.deploy(dep, trk)
+	cc, err = reg.deploy(codeAddr, dep, trk)
 
 	assert.Error(err, "native driver not registered yet")
 	assert.Nil(cc)
 
 	reg.registerDriver(DriverTypeNative, newNativeCodeDriver())
-	cc, err = reg.deploy(dep, trk)
+	cc, err = reg.deploy(codeAddr, dep, trk)
 
 	assert.NoError(err)
 	assert.NotNil(cc)
@@ -43,7 +44,7 @@ func TestCodeRegistry(t *testing.T) {
 
 	assert.Error(err, "registered driver twice")
 
-	cc, err = reg.getInstance(dep.codeAddr, trk)
+	cc, err = reg.getInstance(codeAddr, trk)
 
 	assert.NoError(err)
 	assert.NotNil(cc)

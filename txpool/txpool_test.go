@@ -25,6 +25,17 @@ func (m *MockStorage) HasTx(hash []byte) bool {
 	return args.Bool(0)
 }
 
+type MockExecution struct {
+	mock.Mock
+}
+
+var _ Execution = (*MockExecution)(nil)
+
+func (m *MockExecution) VerifyTx(tx *core.Transaction) error {
+	args := m.Called(tx)
+	return args.Error(0)
+}
+
 type MockMsgService struct {
 	mock.Mock
 }
@@ -56,11 +67,12 @@ func TestTxPool_SubmitTx(t *testing.T) {
 	priv := core.GenerateKey(nil)
 
 	storage := new(MockStorage)
+	execution := new(MockExecution)
 	msgSvc := new(MockMsgService)
 
 	msgSvc.On("SubscribeTxList", mock.Anything).Return(emitter.New().Subscribe(10))
 
-	pool := New(storage, msgSvc)
+	pool := New(storage, execution, msgSvc)
 	pool.broadcaster.batchSize = 2         // broadcast after two successful submitTx
 	pool.broadcaster.timeout = time.Minute // to avoid timeout broadcast
 	pool.broadcaster.timer.Reset(time.Minute)
@@ -73,10 +85,12 @@ func TestTxPool_SubmitTx(t *testing.T) {
 	tx3 := core.NewTransaction().SetNonce(3).Sign(priv)
 
 	storage.On("HasTx", tx1.Hash()).Return(false)
+	execution.On("VerifyTx", tx1).Return(nil)
 	err := pool.SubmitTx(tx1)
 
 	assert.NoError(err)
 	storage.AssertExpectations(t)
+	execution.AssertExpectations(t)
 
 	storage.On("HasTx", tx2.Hash()).Return(true) // assume tx2 already executed
 	err = pool.SubmitTx(tx2)
@@ -85,11 +99,13 @@ func TestTxPool_SubmitTx(t *testing.T) {
 	storage.AssertExpectations(t)
 
 	storage.On("HasTx", tx3.Hash()).Return(false)
+	execution.On("VerifyTx", tx3).Return(nil)
 	msgSvc.On("BroadcastTxList", &core.TxList{tx1, tx3}).Return(nil)
 	err = pool.SubmitTx(tx3)
 
 	assert.NoError(err)
 	storage.AssertExpectations(t)
+	execution.AssertExpectations(t)
 
 	time.Sleep(time.Millisecond)
 	msgSvc.AssertExpectations(t)
@@ -104,12 +120,13 @@ func TestTxPool_SubscribeTxList(t *testing.T) {
 	priv := core.GenerateKey(nil)
 
 	storage := new(MockStorage)
+	execution := new(MockExecution)
 	msgSvc := new(MockMsgService)
 
 	txEmitter := emitter.New()
 	msgSvc.On("SubscribeTxList", mock.Anything).Return(txEmitter.Subscribe(10))
 
-	pool := New(storage, msgSvc)
+	pool := New(storage, execution, msgSvc)
 	pool.broadcaster.timeout = time.Minute // to avoid timeout broadcast
 	pool.broadcaster.timer.Reset(time.Minute)
 
@@ -122,6 +139,9 @@ func TestTxPool_SubscribeTxList(t *testing.T) {
 	storage.On("HasTx", tx1.Hash()).Return(false)
 	storage.On("HasTx", tx2.Hash()).Return(true)
 	storage.On("HasTx", tx3.Hash()).Return(false)
+
+	execution.On("VerifyTx", tx1).Return(nil)
+	execution.On("VerifyTx", tx3).Return(nil)
 
 	txEmitter.Emit(&core.TxList{tx1, tx2, tx3})
 
@@ -137,11 +157,12 @@ func TestTxPool_Sync(t *testing.T) {
 	priv := core.GenerateKey(nil)
 
 	storage := new(MockStorage)
+	execution := new(MockExecution)
 	msgSvc := new(MockMsgService)
 
 	msgSvc.On("SubscribeTxList", mock.Anything).Return(emitter.New().Subscribe(10))
 
-	pool := New(storage, msgSvc)
+	pool := New(storage, execution, msgSvc)
 	pool.broadcaster.timeout = time.Minute // to avoid timeout broadcast
 	pool.broadcaster.timer.Reset(time.Minute)
 
@@ -154,6 +175,9 @@ func TestTxPool_Sync(t *testing.T) {
 	storage.On("HasTx", tx1.Hash()).Return(false)
 	storage.On("HasTx", tx2.Hash()).Return(true)
 	storage.On("HasTx", tx3.Hash()).Return(false)
+
+	execution.On("VerifyTx", tx1).Return(nil)
+	execution.On("VerifyTx", tx3).Return(nil)
 
 	err := pool.SyncTxs(priv.PublicKey(), [][]byte{tx2.Hash()})
 
@@ -190,11 +214,12 @@ func TestTxPool_VerifyTxs(t *testing.T) {
 	priv := core.GenerateKey(nil)
 
 	storage := new(MockStorage)
+	execution := new(MockExecution)
 	msgSvc := new(MockMsgService)
 
 	msgSvc.On("SubscribeTxList", mock.Anything).Return(emitter.New().Subscribe(10))
 
-	pool := New(storage, msgSvc)
+	pool := New(storage, execution, msgSvc)
 	pool.broadcaster.timeout = time.Minute // to avoid timeout broadcast
 	pool.broadcaster.timer.Reset(time.Minute)
 
@@ -207,6 +232,9 @@ func TestTxPool_VerifyTxs(t *testing.T) {
 	storage.On("HasTx", tx1.Hash()).Return(false)
 	storage.On("HasTx", tx2.Hash()).Return(true)
 	storage.On("HasTx", tx3.Hash()).Return(false)
+
+	execution.On("VerifyTx", tx1).Return(nil)
+	execution.On("VerifyTx", tx3).Return(nil)
 
 	pool.SubmitTx(tx1)
 
@@ -231,11 +259,12 @@ func TestTxPool_GetTxsToExecute(t *testing.T) {
 	priv := core.GenerateKey(nil)
 
 	storage := new(MockStorage)
+	execution := new(MockExecution)
 	msgSvc := new(MockMsgService)
 
 	msgSvc.On("SubscribeTxList", mock.Anything).Return(emitter.New().Subscribe(10))
 
-	pool := New(storage, msgSvc)
+	pool := New(storage, execution, msgSvc)
 	pool.broadcaster.timeout = time.Minute // to avoid timeout broadcast
 	pool.broadcaster.timer.Reset(time.Minute)
 
@@ -248,6 +277,9 @@ func TestTxPool_GetTxsToExecute(t *testing.T) {
 	storage.On("HasTx", tx1.Hash()).Return(false)
 	storage.On("HasTx", tx2.Hash()).Return(true)
 	storage.On("HasTx", tx3.Hash()).Return(false)
+
+	execution.On("VerifyTx", tx1).Return(nil)
+	execution.On("VerifyTx", tx3).Return(nil)
 
 	pool.SubmitTx(tx1)
 	pool.SubmitTx(tx3)

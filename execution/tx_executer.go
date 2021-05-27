@@ -72,13 +72,14 @@ func (txe *txExecutor) executeChaincode() (err error) {
 }
 
 func (txe *txExecutor) executeDeployment() error {
-	input, dep, err := txe.parseDeploymentInput()
+	input := new(DeploymentInput)
+	err := json.Unmarshal(txe.tx.Input(), input)
 	if err != nil {
 		return err
 	}
 
 	regTrk := txe.rootTrk.spawn(codeRegistryAddr)
-	cc, err := txe.codeRegistry.deploy(dep, regTrk)
+	cc, err := txe.codeRegistry.deploy(txe.tx.Hash(), input, regTrk)
 	if err != nil {
 		return err
 	}
@@ -91,20 +92,6 @@ func (txe *txExecutor) executeDeployment() error {
 	txe.rootTrk.merge(regTrk)
 	txe.rootTrk.merge(initTrk)
 	return nil
-}
-
-func (txe *txExecutor) parseDeploymentInput() (*DeploymentInput, *codeDeployment, error) {
-	input := new(DeploymentInput)
-	err := json.Unmarshal(txe.tx.Input(), input)
-	if err != nil {
-		return nil, nil, err
-	}
-	dep := &codeDeployment{
-		codeAddr:    txe.tx.Hash(),
-		codeInfo:    input.CodeInfo,
-		installData: input.InstallData,
-	}
-	return input, dep, nil
 }
 
 func (txe *txExecutor) executeInvoke() error {

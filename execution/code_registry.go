@@ -32,12 +32,6 @@ type CodeInfo struct {
 	CodeID     []byte     `json:"codeID"`
 }
 
-type codeDeployment struct {
-	codeAddr    []byte
-	codeInfo    CodeInfo
-	installData []byte
-}
-
 type codeRegistry struct {
 	drivers map[DriverType]CodeDriver
 }
@@ -56,16 +50,23 @@ func (reg *codeRegistry) registerDriver(driverType DriverType, driver CodeDriver
 	return nil
 }
 
-func (reg *codeRegistry) deploy(dep *codeDeployment, state State) (chaincode.Chaincode, error) {
-	driver, err := reg.getDriver(dep.codeInfo.DriverType)
+func (reg *codeRegistry) install(input *DeploymentInput) error {
+	driver, err := reg.getDriver(input.CodeInfo.DriverType)
+	if err != nil {
+		return err
+	}
+	return driver.Install(input.CodeInfo.CodeID, input.InstallData)
+}
+
+func (reg *codeRegistry) deploy(
+	codeAddr []byte, input *DeploymentInput, state State,
+) (chaincode.Chaincode, error) {
+	driver, err := reg.getDriver(input.CodeInfo.DriverType)
 	if err != nil {
 		return nil, err
 	}
-	if err := driver.Install(dep.codeInfo.CodeID, dep.installData); err != nil {
-		return nil, err
-	}
-	reg.setCodeInfo(dep.codeAddr, &dep.codeInfo, state)
-	return driver.GetInstance(dep.codeInfo.CodeID)
+	reg.setCodeInfo(codeAddr, &input.CodeInfo, state)
+	return driver.GetInstance(input.CodeInfo.CodeID)
 }
 
 func (reg *codeRegistry) getInstance(codeAddr []byte, state StateRO) (chaincode.Chaincode, error) {

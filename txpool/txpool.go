@@ -24,6 +24,10 @@ type Storage interface {
 	HasTx(hash []byte) bool
 }
 
+type Execution interface {
+	VerifyTx(tx *core.Transaction) error
+}
+
 type MsgService interface {
 	SubscribeTxList(buffer int) *emitter.Subscription
 	BroadcastTxList(txList *core.TxList) error
@@ -35,16 +39,18 @@ var (
 )
 
 type TxPool struct {
-	storage Storage
-	msgSvc  MsgService
+	storage   Storage
+	execution Execution
+	msgSvc    MsgService
 
 	store       *txStore
 	broadcaster *broadcaster
 }
 
-func New(storage Storage, msgSvc MsgService) *TxPool {
+func New(storage Storage, execution Execution, msgSvc MsgService) *TxPool {
 	pool := &TxPool{
 		storage:     storage,
+		execution:   execution,
 		msgSvc:      msgSvc,
 		store:       newTxStore(),
 		broadcaster: newBroadcaster(msgSvc),
@@ -110,6 +116,9 @@ func (pool *TxPool) submitTx(tx *core.Transaction) error {
 	if pool.storage.HasTx(tx.Hash()) {
 		return ErrOldTx
 	}
+	if err := pool.execution.VerifyTx(tx); err != nil {
+		return err
+	}
 	pool.store.addNewTx(tx)
 	pool.broadcaster.queue <- tx
 	return nil
@@ -135,9 +144,13 @@ func (pool *TxPool) addNewTx(tx *core.Transaction) error {
 	if err := tx.Validate(); err != nil {
 		return err
 	}
-	if !pool.storage.HasTx(tx.Hash()) {
-		pool.store.addNewTx(tx)
+	if pool.storage.HasTx(tx.Hash()) {
+		return nil
 	}
+	if err := pool.execution.VerifyTx(tx); err != nil {
+		return err
+	}
+	pool.store.addNewTx(tx)
 	return nil
 }
 
