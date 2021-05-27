@@ -39,7 +39,7 @@ func (store *simpleValidatorStore) ValidatorCount() int {
 }
 
 func (store *simpleValidatorStore) MajorityCount() int {
-	return majorityCount(len(store.validators))
+	return MajorityCount(len(store.validators))
 }
 
 func (store *simpleValidatorStore) IsValidator(pubKey *PublicKey) bool {
@@ -58,8 +58,8 @@ func (store *simpleValidatorStore) GetValidatorIndex(pubKey *PublicKey) int {
 	return store.vMap[pubKey.String()]
 }
 
-// majorityCount returns 2f + 1 members
-func majorityCount(validatorCount int) int {
+// MajorityCount returns 2f + 1 members
+func MajorityCount(validatorCount int) int {
 	// n=3f+1 -> f=floor((n-1)3) -> m=n-f -> m=ceil((2n+1)/3)
 	return int(math.Ceil(float64(2*validatorCount+1) / 3))
 }

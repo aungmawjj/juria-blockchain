@@ -8,32 +8,29 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"path"
 
 	"github.com/aungmawjj/juria-blockchain/node"
 	"github.com/aungmawjj/juria-blockchain/test/cluster"
 )
 
 const (
-	Juria     = "./juria"
-	WorkDir   = "workdir"
-	NodeCount = 4
+	JuriaPath = "./juria"
+	WorkDir   = "./workdir"
+	NodeCount = 7
 )
 
 func main() {
-	os.RemoveAll(WorkDir)
-	err := os.Mkdir(WorkDir, 0755)
-	check(err)
+	os.Mkdir(WorkDir, 0755)
 
-	ftry := &cluster.LocalClusterFactory{
-		JuriaPath: Juria,
-		Workdir:   WorkDir,
+	lcc, err := cluster.SetupLocalCluster(cluster.LocalClusterParams{
+		JuriaPath: JuriaPath,
+		Workdir:   path.Join(WorkDir, "cluster_0"),
 		NodeCount: NodeCount,
 		PortN0:    node.DefaultConfig.Port,
-	}
-	cluster := ftry.GetCluster("cluster_1")
-	err = cluster.Setup()
+	})
 	check(err)
-	err = cluster.Start()
+	err = lcc.Start()
 	check(err)
 
 	fmt.Println("started cluster")
@@ -44,7 +41,7 @@ func main() {
 	// Block until a signal is received.
 	s := <-c
 	fmt.Println("\nGot signal:", s)
-	cluster.Stop()
+	lcc.Stop()
 	fmt.Println("stopped cluster")
 }
 

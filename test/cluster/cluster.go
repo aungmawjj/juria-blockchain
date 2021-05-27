@@ -5,17 +5,13 @@ package cluster
 
 type Node interface {
 	Start() error
-	Stop() error
+	Stop()
 	GetEndpoint() string
 }
 
 type Cluster interface {
-	Setup() error
 	Start() error
-	Stop() error
+	Stop()
+	NodeCount() int
 	GetNode(idx int) Node
-}
-
-type ClusterFactory interface {
-	GetCluster(name string) Cluster
 }

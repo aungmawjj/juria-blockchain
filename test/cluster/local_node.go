@@ -16,7 +16,6 @@ type localNode struct {
 	datadir string
 	port    string
 	apiPort string
-	debug   bool
 
 	running bool
 	cmd     *exec.Cmd
@@ -27,7 +26,7 @@ var _ Node = (*localNode)(nil)
 
 func (node *localNode) Start() error {
 	if node.running {
-		return fmt.Errorf("node is already running")
+		return nil
 	}
 	f, err := os.OpenFile(path.Join(node.datadir, "log.txt"),
 		os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0600)
@@ -39,21 +38,17 @@ func (node *localNode) Start() error {
 		"-d", node.datadir,
 		"-p", node.port,
 	)
-	if node.debug {
-		cmd.Args = append(cmd.Args, "--debug")
-	}
 	cmd.Stderr = node.logFile
 	cmd.Stdout = node.logFile
 	return cmd.Start()
 }
 
-func (node *localNode) Stop() error {
+func (node *localNode) Stop() {
 	if !node.running {
-		return fmt.Errorf("node is not running")
+		return
 	}
 	node.cmd.Process.Kill()
 	node.logFile.Close()
-	return nil
 }
 
 func (node *localNode) GetEndpoint() string {
