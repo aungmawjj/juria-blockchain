@@ -48,7 +48,10 @@ func (cs *chainStore) getBlock(hash []byte) (*core.Block, error) {
 		return nil, err
 	}
 	blk := core.NewBlock()
-	return blk, blk.Unmarshal(b)
+	if err := blk.Unmarshal(b); err != nil {
+		return nil, err
+	}
+	return blk, nil
 }
 
 func (cs *chainStore) getLastQC() (*core.QuorumCert, error) {
@@ -57,7 +60,10 @@ func (cs *chainStore) getLastQC() (*core.QuorumCert, error) {
 		return nil, err
 	}
 	qc := core.NewQuorumCert()
-	return qc, qc.Unmarshal(b)
+	if err := qc.Unmarshal(b); err != nil {
+		return nil, err
+	}
+	return qc, nil
 }
 
 func (cs *chainStore) getBlockCommit(hash []byte) (*core.BlockCommit, error) {
@@ -66,7 +72,10 @@ func (cs *chainStore) getBlockCommit(hash []byte) (*core.BlockCommit, error) {
 		return nil, err
 	}
 	bcm := core.NewBlockCommit()
-	return bcm, bcm.Unmarshal(b)
+	if err := bcm.Unmarshal(b); err != nil {
+		return nil, err
+	}
+	return bcm, nil
 }
 
 func (cs *chainStore) getTx(hash []byte) (*core.Transaction, error) {
@@ -75,7 +84,10 @@ func (cs *chainStore) getTx(hash []byte) (*core.Transaction, error) {
 		return nil, err
 	}
 	tx := core.NewTransaction()
-	return tx, tx.Unmarshal(b)
+	if err := tx.Unmarshal(b); err != nil {
+		return nil, err
+	}
+	return tx, nil
 }
 
 func (cs *chainStore) hasTx(hash []byte) bool {
@@ -88,7 +100,10 @@ func (cs *chainStore) getTxCommit(hash []byte) (*core.TxCommit, error) {
 		return nil, err
 	}
 	txc := core.NewTxCommit()
-	return txc, txc.Unmarshal(val)
+	if err := txc.Unmarshal(val); err != nil {
+		return nil, err
+	}
+	return txc, nil
 }
 
 func (cs *chainStore) setBlockHeight(height uint64) updateFunc {
