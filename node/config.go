@@ -20,7 +20,7 @@ type Config struct {
 }
 
 var DefaultConfig = Config{
-	Port:            9040,
+	Port:            15150,
 	StorageConfig:   storage.DefaultConfig,
 	ExecutionConfig: execution.DefaultConfig,
 	ConsensusConfig: consensus.DefaultConfig,
