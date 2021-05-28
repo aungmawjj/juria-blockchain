@@ -4,6 +4,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"os"
 	"path"
@@ -17,6 +18,8 @@ const (
 	JuriaPath = "./juria"
 	WorkDir   = "./workdir"
 	NodeCount = 7
+
+	ClusterDebug = true
 )
 
 // Running experiments
@@ -26,6 +29,8 @@ const (
 )
 
 func main() {
+	fmt.Println()
+	fmt.Println("NodeCount =", NodeCount)
 	clustersDir := path.Join(WorkDir, "clusters")
 
 	os.Mkdir(WorkDir, 0755)
@@ -37,6 +42,7 @@ func main() {
 		NodeCount: NodeCount,
 		PortN0:    node.DefaultConfig.Port,
 		ApiPortN0: node.DefaultConfig.APIPort,
+		Debug:     ClusterDebug,
 	})
 	check(err)
 

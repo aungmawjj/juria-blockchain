@@ -44,7 +44,6 @@ func serveNodeAPI(node *Node) {
 }
 
 func (api *nodeAPI) getConsensusStatus(c *gin.Context) {
-	fmt.Println(api.node.consensus.GetStatus())
 	c.JSON(http.StatusOK, api.node.consensus.GetStatus())
 }
 

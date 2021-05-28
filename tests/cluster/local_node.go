@@ -17,6 +17,7 @@ type localNode struct {
 	datadir string
 	port    int
 	apiPort int
+	debug   bool
 
 	running bool
 	cmd     *exec.Cmd
@@ -40,6 +41,9 @@ func (node *localNode) Start() error {
 		"-p", strconv.Itoa(node.port),
 		"-P", strconv.Itoa(node.apiPort),
 	)
+	if node.debug {
+		node.cmd.Args = append(node.cmd.Args, "--debug")
+	}
 	node.cmd.Stderr = node.logFile
 	node.cmd.Stdout = node.logFile
 	node.running = true

@@ -21,6 +21,7 @@ type LocalFactoryParams struct {
 	NodeCount int
 	PortN0    int // node zero port
 	ApiPortN0 int // node zero api port
+	Debug     bool
 }
 
 type localFactory struct {
@@ -106,6 +107,7 @@ func (ftry *localFactory) GetCluster(name string) (*Cluster, error) {
 			datadir:   path.Join(clusterDir, strconv.Itoa(i)),
 			port:      ftry.params.PortN0 + i,
 			apiPort:   ftry.params.ApiPortN0 + i,
+			debug:     ftry.params.Debug,
 		}
 	}
 	return &Cluster{nodes}, nil

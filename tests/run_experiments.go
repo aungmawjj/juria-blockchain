@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
-	"time"
 
 	"github.com/aungmawjj/juria-blockchain/tests/cluster"
 	"github.com/aungmawjj/juria-blockchain/tests/experiment"
@@ -62,8 +61,8 @@ func runSingleExperiment(cftry cluster.ClusterFactory, expm experiment.Experimen
 		if err != nil {
 			return
 		}
-		fmt.Printf("Started cluster. wait for %s\n", cluster.StartCooldown)
-		time.Sleep(cluster.StartCooldown)
+		fmt.Println("Started cluster")
+		testutil.Sleep(cluster.StartCooldown)
 		if err := testutil.HealthCheckAll(cls); err != nil {
 			fmt.Printf("health check failed before experiment, %+v\n", err)
 			cls.Stop()
@@ -76,8 +75,7 @@ func runSingleExperiment(cftry cluster.ClusterFactory, expm experiment.Experimen
 		if err != nil {
 			return
 		}
-
-		// TODO: health check
+		err = testutil.HealthCheckAll(cls)
 	}()
 
 	killed := make(chan os.Signal, 1)
@@ -90,6 +88,6 @@ func runSingleExperiment(cftry cluster.ClusterFactory, expm experiment.Experimen
 	case <-done:
 	}
 	cls.Stop()
-	fmt.Println("Stopped cluster.")
+	fmt.Println("Stopped cluster")
 	return err
 }
