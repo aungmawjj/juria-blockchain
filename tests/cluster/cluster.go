@@ -16,7 +16,7 @@ type Node interface {
 }
 
 type ClusterFactory interface {
-	GetCluster(name string) (*Cluster, error)
+	SetupCluster(name string) (*Cluster, error)
 }
 
 type Cluster struct {

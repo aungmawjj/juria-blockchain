@@ -88,7 +88,7 @@ func (ftry *localFactory) setup() error {
 	return nil
 }
 
-func (ftry *localFactory) GetCluster(name string) (*Cluster, error) {
+func (ftry *localFactory) SetupCluster(name string) (*Cluster, error) {
 	clusterDir := path.Join(ftry.params.WorkDir, name)
 	err := os.RemoveAll(clusterDir) // no error if path not exist
 	if err != nil {

@@ -47,7 +47,7 @@ func runExperiments(cftry cluster.ClusterFactory, expms []experiment.Experiment)
 
 func runSingleExperiment(cftry cluster.ClusterFactory, expm experiment.Experiment) error {
 	var err error
-	cls, err := cftry.GetCluster(expm.Name())
+	cls, err := cftry.SetupCluster(expm.Name())
 	if err != nil {
 		return err
 	}
