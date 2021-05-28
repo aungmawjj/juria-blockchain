@@ -19,17 +19,11 @@ type Config struct {
 
 	// view duration for a leader
 	ViewWidth time.Duration
-
-	// if leader cannot create next qc in this duration, change view
-	// minDur (minimum duration) should be (3 * (TxWaitTime + BeatDelay))
-	// in case of view change, the next leader might not get qc for minDur
-	LeaderTimeout time.Duration
 }
 
 var DefaultConfig = Config{
-	BlockTxLimit:  200,
-	TxWaitTime:    1 * time.Second,
-	BeatDelay:     500 * time.Millisecond,
-	ViewWidth:     30 * time.Second,
-	LeaderTimeout: 10 * time.Second,
+	BlockTxLimit: 200,
+	TxWaitTime:   1 * time.Second,
+	BeatDelay:    200 * time.Millisecond,
+	ViewWidth:    30 * time.Second,
 }

@@ -5,7 +5,6 @@ package consensus
 
 import (
 	"testing"
-	"time"
 
 	"github.com/aungmawjj/juria-blockchain/core"
 	"github.com/aungmawjj/juria-blockchain/hotstuff"
@@ -46,7 +45,6 @@ func TestPacemaker_changeView(t *testing.T) {
 	assert := assert.New(t)
 
 	pm, b0 := setupPacemaker()
-	pm.leaderTimer = time.NewTimer(pm.config.LeaderTimeout)
 	pm.state.setLeaderIndex(1)
 
 	msgSvc := new(MockMsgService)
@@ -91,7 +89,6 @@ func TestPacemaker_resetViewTimer(t *testing.T) {
 	assert := assert.New(t)
 
 	pm, _ := setupPacemaker()
-	pm.viewTimer = time.NewTimer(pm.config.ViewWidth)
 	pm.setPendingViewChange(true)
 
 	pm.approveViewLeader(1)
