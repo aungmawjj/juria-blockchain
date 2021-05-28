@@ -116,15 +116,9 @@ func (hc *healthChecker) makeInterrupt() {
 }
 
 func (hc *healthChecker) checkSafety() error {
-	sResp, err := hc.shouldGetStatus()
+	height, err := hc.getBexecMinimum()
 	if err != nil {
 		return err
-	}
-	var height uint64 = 0 // lowest committed block height on all nodes
-	for _, status := range sResp {
-		if height == 0 || status.BExec < height {
-			height = status.BExec
-		}
 	}
 	select {
 	case <-hc.interrupt:
@@ -148,37 +142,63 @@ func (hc *healthChecker) checkSafety() error {
 	return nil
 }
 
-func (hc *healthChecker) checkLiveness() error {
+func (hc *healthChecker) getBexecMinimum() (uint64, error) {
 	sResp, err := hc.shouldGetStatus()
+	if err != nil {
+		return 0, err
+	}
+	var ret uint64 = 0
+	for _, status := range sResp {
+		if ret == 0 || status.BExec < ret {
+			ret = status.BExec
+		}
+	}
+	return ret, nil
+}
+
+func (hc *healthChecker) checkLiveness() error {
+	lastHeight, err := hc.getBexecMaximum()
 	if err != nil {
 		return err
 	}
-	var lastHeight uint64 = 0 // highest committed block height on all nodes
-	for _, status := range sResp {
-		if status.BExec > lastHeight {
-			lastHeight = status.BExec
-		}
-	}
-	time.Sleep(consensus.DefaultConfig.LeaderTimeout)
-	if hc.majority {
-		maxFaulty := hc.cls.NodeCount() - core.MajorityCount(hc.cls.NodeCount())
-		time.Sleep(time.Duration(maxFaulty) * consensus.DefaultConfig.LeaderTimeout)
-	}
+	hc.waitForLivenessCheck()
 	select {
 	case <-hc.interrupt:
 		return nil
 	default:
 	}
-	sResp2, err := hc.shouldGetStatus()
+	sResp, err := hc.shouldGetStatus()
 	if err != nil {
 		return err
 	}
-	for i, status := range sResp2 {
+	for i, status := range sResp {
 		if status.BExec <= lastHeight {
 			return fmt.Errorf("node %d is not commiting new blocks", i)
 		}
 	}
 	return nil
+}
+
+func (hc *healthChecker) getBexecMaximum() (uint64, error) {
+	sResp, err := hc.shouldGetStatus()
+	if err != nil {
+		return 0, err
+	}
+	var ret uint64 = 0
+	for _, status := range sResp {
+		if status.BExec > ret {
+			ret = status.BExec
+		}
+	}
+	return ret, nil
+}
+
+func (hc *healthChecker) waitForLivenessCheck() {
+	time.Sleep(consensus.DefaultConfig.LeaderTimeout)
+	if hc.majority {
+		maxFaulty := hc.cls.NodeCount() - core.MajorityCount(hc.cls.NodeCount())
+		time.Sleep(time.Duration(maxFaulty) * consensus.DefaultConfig.LeaderTimeout)
+	}
 }
 
 func (hc *healthChecker) checkRotation() error {
@@ -187,7 +207,6 @@ func (hc *healthChecker) checkRotation() error {
 
 	lastView := make(map[int]*consensus.Status)
 	changedView := make(map[int]*consensus.Status)
-
 	for {
 		select {
 		case <-hc.interrupt:
@@ -197,47 +216,56 @@ func (hc *healthChecker) checkRotation() error {
 			return fmt.Errorf("cluster failed to rotate leader")
 
 		case <-time.After(3 * time.Second):
-		}
-
-		sResp, err := hc.shouldGetStatus()
-		if err != nil {
-			return err
-		}
-		for i, status := range sResp {
-			if hc.hasViewChanged(status, lastView[i]) {
-				changedView[i] = status
-				lastView[i] = status
+			if err := hc.updateViewChangeStatus(lastView, changedView); err != nil {
+				return err
 			}
-			if lastView[i] == nil {
-				lastView[i] = status
+			if len(changedView) >= hc.minimumHealthyNode() {
+				return hc.shouldEqualLeader(changedView)
 			}
 		}
-		if len(changedView) >= hc.minimumHealthyNode() {
-			leaderIdx := -1
-			for _, status := range changedView {
-				if leaderIdx == -1 {
-					leaderIdx = status.LeaderIndex
-				} else if leaderIdx != status.LeaderIndex {
-					return fmt.Errorf("inconsistant view change")
-				}
-			}
-			return nil
-		}
-
 	}
 }
 
-func (hc *healthChecker) hasViewChanged(status, prev *consensus.Status) bool {
-	if prev == nil {
+func (hc *healthChecker) updateViewChangeStatus(last, changed map[int]*consensus.Status) error {
+	sResp, err := hc.shouldGetStatus()
+	if err != nil {
+		return err
+	}
+	for i, status := range sResp {
+		if hc.hasViewChanged(status, last[i]) {
+			changed[i] = status
+			last[i] = status
+		}
+		if last[i] == nil {
+			last[i] = status
+		}
+	}
+	return nil
+}
+
+func (hc *healthChecker) hasViewChanged(status, last *consensus.Status) bool {
+	if last == nil {
 		return false
 	}
 	if status.PendingViewChange {
 		return false
 	}
-	if prev.PendingViewChange {
+	if last.PendingViewChange {
 		return true
 	}
-	return status.LeaderIndex != prev.LeaderIndex
+	return status.LeaderIndex != last.LeaderIndex
+}
+
+func (hc *healthChecker) shouldEqualLeader(changedView map[int]*consensus.Status) error {
+	leaderIdx := -1
+	for _, status := range changedView {
+		if leaderIdx == -1 {
+			leaderIdx = status.LeaderIndex
+		} else if leaderIdx != status.LeaderIndex {
+			return fmt.Errorf("inconsistant view change")
+		}
+	}
+	return nil
 }
 
 func (hc *healthChecker) shouldGetStatus() (map[int]*consensus.Status, error) {
