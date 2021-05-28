@@ -31,7 +31,7 @@ func TestTreeCalc_Height(t *testing.T) {
 	}
 }
 
-func TestTreeCalc_BlockCount(t *testing.T) {
+func TestTreeCalc_GroupCount(t *testing.T) {
 	tests := []struct {
 		name      string
 		bfactor   uint8
@@ -44,13 +44,13 @@ func TestTreeCalc_BlockCount(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := NewTreeCalc(tt.bfactor).BlockCount(tt.nodeCount)
+			got := NewTreeCalc(tt.bfactor).GroupCount(tt.nodeCount)
 			assert.Equal(t, tt.want, got)
 		})
 	}
 }
 
-func TestTreeCalc_FirstNodeInBlock(t *testing.T) {
+func TestTreeCalc_FirstNodeInGroup(t *testing.T) {
 	tests := []struct {
 		name    string
 		bfactor uint8
@@ -63,13 +63,13 @@ func TestTreeCalc_FirstNodeInBlock(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := NewTreeCalc(tt.bfactor).FirstNodeOfBlock(tt.blkIdx)
+			got := NewTreeCalc(tt.bfactor).FirstNodeOfGroup(tt.blkIdx)
 			assert.Equal(t, tt.want, got)
 		})
 	}
 }
 
-func TestTreeCalc_BlockOfNode(t *testing.T) {
+func TestTreeCalc_GroupOfNode(t *testing.T) {
 	tests := []struct {
 		name    string
 		bfactor uint8
@@ -83,13 +83,13 @@ func TestTreeCalc_BlockOfNode(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := NewTreeCalc(tt.bfactor).BlockOfNode(tt.nodeIdx)
+			got := NewTreeCalc(tt.bfactor).GroupOfNode(tt.nodeIdx)
 			assert.Equal(t, tt.want, got)
 		})
 	}
 }
 
-func TestTreeCalc_NodeIndexInBlock(t *testing.T) {
+func TestTreeCalc_NodeIndexInGroup(t *testing.T) {
 	tests := []struct {
 		name    string
 		bfactor uint8
@@ -103,7 +103,7 @@ func TestTreeCalc_NodeIndexInBlock(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := NewTreeCalc(tt.bfactor).NodeIndexInBlock(tt.nodeIdx)
+			got := NewTreeCalc(tt.bfactor).NodeIndexInGroup(tt.nodeIdx)
 			assert.Equal(t, tt.want, got)
 		})
 	}

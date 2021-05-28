@@ -90,8 +90,8 @@ type Node struct {
 	Data     []byte
 }
 
-// Block is a group of child nodes under the same parent node
-type Block struct {
+// Group is a Group of child nodes under the same parent node
+type Group struct {
 	hashFunc       crypto.Hash
 	tc             *TreeCalc
 	store          Store
@@ -99,20 +99,20 @@ type Block struct {
 	nodes          []*Node
 }
 
-// NewBlock creates a new Block
-func NewBlock(h crypto.Hash, tc *TreeCalc, store Store, parentPosition *Position) *Block {
-	return &Block{
+// NewGroup creates a new Group
+func NewGroup(h crypto.Hash, tc *TreeCalc, store Store, pPos *Position) *Group {
+	return &Group{
 		hashFunc:       h,
 		tc:             tc,
 		store:          store,
-		parentPosition: parentPosition,
+		parentPosition: pPos,
 		nodes:          make([]*Node, int(tc.BranchFactor())),
 	}
 }
 
 // Load loads the child nodes from the store
-func (b *Block) Load(rowNodeCount *big.Int) *Block {
-	offset := b.tc.FirstNodeOfBlock(b.parentPosition.Index())
+func (b *Group) Load(rowNodeCount *big.Int) *Group {
+	offset := b.tc.FirstNodeOfGroup(b.parentPosition.Index())
 	for i := range b.nodes {
 		index := big.NewInt(0).Add(offset, big.NewInt(int64(i)))
 		if rowNodeCount.Cmp(index) != 1 {
@@ -128,15 +128,15 @@ func (b *Block) Load(rowNodeCount *big.Int) *Block {
 }
 
 // SetNode sets the node at the corresponding index in the block
-func (b *Block) SetNode(n *Node) *Block {
-	if b.tc.NodeIndexInBlock(n.Position.Index()) < len(b.nodes) {
-		b.nodes[b.tc.NodeIndexInBlock(n.Position.Index())] = n
+func (b *Group) SetNode(n *Node) *Group {
+	if b.tc.NodeIndexInGroup(n.Position.Index()) < len(b.nodes) {
+		b.nodes[b.tc.NodeIndexInGroup(n.Position.Index())] = n
 	}
 	return b
 }
 
 // MakeParent compute the sum of the child nodes and returns the parent node
-func (b *Block) MakeParent() *Node {
+func (b *Group) MakeParent() *Node {
 	return &Node{
 		Position: b.parentPosition,
 		Data:     b.Sum(),
@@ -144,7 +144,7 @@ func (b *Block) MakeParent() *Node {
 }
 
 // Sum sums the child nodes
-func (b *Block) Sum() []byte {
+func (b *Group) Sum() []byte {
 	if b.IsEmpty() {
 		return nil
 	}
@@ -158,7 +158,7 @@ func (b *Block) Sum() []byte {
 }
 
 // IsEmpty checks whether all the child nodes are nil
-func (b *Block) IsEmpty() bool {
+func (b *Group) IsEmpty() bool {
 	for _, n := range b.nodes {
 		if n != nil {
 			return false

@@ -48,34 +48,29 @@ func (tree *Tree) Update(leaves []*Node, newLeafCount *big.Int) *UpdateResult {
 		Leaves:    leaves,
 		Branches:  make([]*Node, 0),
 	}
-
 	nodes := leaves
 	rowNodeCount := newLeafCount
 
 	for i := res.Height; i > 1; i-- {
-		bpmap, nbmap := tree.groupNodesByBlock(nodes)
-		blocks := tree.createBlocks(bpmap)
-		parents := make([]*Node, 0, len(blocks)) // parent nodes
-
-		for _, b := range blocks { // the body of the loop can run in parallel
-			b.Load(rowNodeCount) // load blocks from store
-			for _, n := range nbmap[b.parentPosition.String()] {
-				b.SetNode(n) // set updated nodes in blocks
+		groups, gnodes := tree.groupNodesByParent(nodes)
+		parents := make([]*Node, 0, len(groups))
+		for _, g := range groups { // the body of the loop can run in parallel
+			g.Load(rowNodeCount)
+			for _, n := range gnodes[g.parentPosition.String()] {
+				g.SetNode(n) // set updated nodes in blocks
 			}
-			p := b.MakeParent()
+			p := g.MakeParent()
 			parents = append(parents, p)
 			res.Branches = append(res.Branches, p)
 		}
 		nodes = parents
-		rowNodeCount = tree.calc.BlockCount(rowNodeCount)
+		rowNodeCount = tree.calc.GroupCount(rowNodeCount)
 	}
-
 	if res.Height > 1 {
 		res.Root = res.Branches[len(res.Branches)-1]
 	} else {
 		res.Root = res.Leaves[0]
 	}
-
 	return res
 }
 
@@ -104,32 +99,33 @@ func (tree *Tree) Verify(leaves []*Node) bool {
 	return bytes.Equal(root.Data, res.Root.Data)
 }
 
-func (tree *Tree) groupNodesByBlock(nodes []*Node) (map[string]*Position, map[string][]*Node) {
-	nbps := tree.getBlockPositions(nodes)
-	bpmap := nbps.UniqueMap()
-	nbmap := make(map[string][]*Node, len(bpmap))
-	for key := range bpmap {
-		nbmap[key] = make([]*Node, 0)
+func (tree *Tree) groupNodesByParent(nodes []*Node) (map[string]*Group, map[string][]*Node) {
+	ngmap := tree.getGroupPositions(nodes)
+	bpos := ngmap.UniqueMap()
+	groups := tree.makeGroups(bpos)
+	gnodes := make(map[string][]*Node, len(bpos))
+	for key := range bpos {
+		gnodes[key] = make([]*Node, 0)
 	}
-	for i, p := range nbps {
-		nbmap[p.String()] = append(nbmap[p.String()], nodes[i])
+	for i, p := range ngmap {
+		gnodes[p.String()] = append(gnodes[p.String()], nodes[i])
 	}
-	return bpmap, nbmap
+	return groups, gnodes
 }
 
-func (tree *Tree) getBlockPositions(nodes []*Node) Positions {
+func (tree *Tree) getGroupPositions(nodes []*Node) Positions {
 	positions := make(Positions, len(nodes))
 	for i, n := range nodes {
-		bIndex := tree.calc.BlockOfNode(n.Position.Index())
+		bIndex := tree.calc.GroupOfNode(n.Position.Index())
 		positions[i] = NewPosition(n.Position.Level()+1, bIndex)
 	}
 	return positions
 }
 
-func (tree *Tree) createBlocks(pmap map[string]*Position) map[string]*Block {
-	blocks := make(map[string]*Block, len(pmap))
+func (tree *Tree) makeGroups(pmap map[string]*Position) map[string]*Group {
+	groups := make(map[string]*Group, len(pmap))
 	for _, p := range pmap {
-		blocks[p.String()] = NewBlock(tree.hashFunc, tree.calc, tree.store, p)
+		groups[p.String()] = NewGroup(tree.hashFunc, tree.calc, tree.store, p)
 	}
-	return blocks
+	return groups
 }

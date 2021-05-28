@@ -40,7 +40,7 @@ func TestPosition(t *testing.T) {
 	}
 }
 
-func TestBlock_Load_Sum(t *testing.T) {
+func TestGroup_Load_Sum(t *testing.T) {
 	s1 := NewMapStore()
 	s2 := storeWith3Nodes()
 
@@ -59,7 +59,7 @@ func TestBlock_Load_Sum(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			assert := assert.New(t)
 
-			b := NewBlock(crypto.SHA1, NewTreeCalc(tt.bfactor), tt.store, tt.parentPosition)
+			b := NewGroup(crypto.SHA1, NewTreeCalc(tt.bfactor), tt.store, tt.parentPosition)
 			b.Load(big.NewInt(100))
 
 			assert.EqualValues(tt.bfactor, len(b.nodes))
@@ -70,10 +70,10 @@ func TestBlock_Load_Sum(t *testing.T) {
 	}
 }
 
-func TestBlock_SetNode(t *testing.T) {
+func TestGroup_SetNode(t *testing.T) {
 	store := storeWith3Nodes()
 
-	b := NewBlock(crypto.SHA1, NewTreeCalc(2), store, NewPosition(1, big.NewInt(0)))
+	b := NewGroup(crypto.SHA1, NewTreeCalc(2), store, NewPosition(1, big.NewInt(0)))
 	b.Load(big.NewInt(2))
 	b.SetNode(&Node{
 		Position: NewPosition(0, big.NewInt(1)),
