@@ -10,12 +10,16 @@ import (
 	"os/signal"
 
 	"github.com/aungmawjj/juria-blockchain/tests/cluster"
-	"github.com/aungmawjj/juria-blockchain/tests/experiment"
 	"github.com/aungmawjj/juria-blockchain/tests/testutil"
 	"github.com/fatih/color"
 )
 
-func runExperiments(cftry cluster.ClusterFactory, expms []experiment.Experiment) {
+type Experiment interface {
+	Name() string
+	Run(c *cluster.Cluster) error
+}
+
+func runExperiments(cftry cluster.ClusterFactory, expms []Experiment) {
 	bold := color.New(color.Bold)
 	boldGrean := color.New(color.Bold, color.FgGreen)
 	boldRed := color.New(color.Bold, color.FgRed)
@@ -45,7 +49,7 @@ func runExperiments(cftry cluster.ClusterFactory, expms []experiment.Experiment)
 	}
 }
 
-func runSingleExperiment(cftry cluster.ClusterFactory, expm experiment.Experiment) error {
+func runSingleExperiment(cftry cluster.ClusterFactory, expm Experiment) error {
 	var err error
 	cls, err := cftry.SetupCluster(expm.Name())
 	if err != nil {

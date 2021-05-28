@@ -1,7 +1,7 @@
 // Copyright (C) 2021 Aung Maw
 // Licensed under the GNU General Public License v3.0
 
-package experiment
+package experiments
 
 import (
 	"fmt"
@@ -12,19 +12,16 @@ import (
 	"github.com/aungmawjj/juria-blockchain/tests/testutil"
 )
 
-type RestartRandomValidators struct{}
+type MajorityKeepRunning struct{}
 
-var _ Experiment = (*RestartRandomValidators)(nil)
-
-func (expm *RestartRandomValidators) Name() string {
-	return "restart_random_validators"
+func (expm *MajorityKeepRunning) Name() string {
+	return "majority_keep_running"
 }
 
-// Stop (f) out of (3f + 1) random validators
-// Verify health of remaining validators
-// Restart stopping validators
-// Wait for 10s to sync
-func (expm *RestartRandomValidators) Run(cls *cluster.Cluster) error {
+// Keep majority (2f+1) validators running while stopping the rest
+// The blockchain should keep remain healthy
+// When the stopped nodes up again, they should sync the history
+func (expm *MajorityKeepRunning) Run(cls *cluster.Cluster) error {
 	total := cls.NodeCount()
 	faulty := testutil.PickUniqueRandoms(total, total-core.MajorityCount(total))
 	for i := range faulty {
@@ -41,7 +38,7 @@ func (expm *RestartRandomValidators) Run(cls *cluster.Cluster) error {
 			return err
 		}
 	}
-	fmt.Printf("Restarted nodes: %v\n", faulty)
+	fmt.Printf("Started nodes: %v\n", faulty)
 	testutil.Sleep(10 * time.Second)
 	return nil
 }

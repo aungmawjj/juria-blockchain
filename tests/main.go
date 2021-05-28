@@ -11,21 +11,14 @@ import (
 
 	"github.com/aungmawjj/juria-blockchain/node"
 	"github.com/aungmawjj/juria-blockchain/tests/cluster"
-	"github.com/aungmawjj/juria-blockchain/tests/experiment"
+	"github.com/aungmawjj/juria-blockchain/tests/experiments"
 )
 
 const (
-	JuriaPath = "./juria"
-	WorkDir   = "./workdir"
-	NodeCount = 7
-
+	JuriaPath    = "./juria"
+	WorkDir      = "./workdir"
+	NodeCount    = 7
 	ClusterDebug = true
-)
-
-// Running experiments
-const (
-	RunRestartCluster          = true
-	RunRestartRandomValidators = true
 )
 
 func main() {
@@ -49,14 +42,11 @@ func main() {
 	runExperiments(cftry, setupExperiments())
 }
 
-func setupExperiments() []experiment.Experiment {
-	expms := make([]experiment.Experiment, 0)
-	if RunRestartCluster {
-		expms = append(expms, &experiment.RestartCluster{})
-	}
-	if RunRestartRandomValidators {
-		expms = append(expms, &experiment.RestartRandomValidators{})
-	}
+func setupExperiments() []Experiment {
+	expms := make([]Experiment, 0)
+	expms = append(expms, &experiments.RestartCluster{})
+	expms = append(expms, &experiments.RestartRandomValidators{})
+	expms = append(expms, &experiments.MajorityKeepRunning{})
 	return expms
 }
 

@@ -1,7 +1,7 @@
 // Copyright (C) 2021 Aung Maw
 // Licensed under the GNU General Public License v3.0
 
-package experiment
+package experiments
 
 import (
 	"fmt"
@@ -12,8 +12,6 @@ import (
 )
 
 type RestartCluster struct{}
-
-var _ Experiment = (*RestartCluster)(nil)
 
 func (expm *RestartCluster) Name() string {
 	return "restart_cluster"
