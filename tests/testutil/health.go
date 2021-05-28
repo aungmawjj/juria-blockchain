@@ -55,9 +55,11 @@ on each node leader change must occur before timeout
 after leader change, all leaderIdx should be equal
 */
 type healthChecker struct {
-	cls       *cluster.Cluster
-	majority  bool // should (majority or all) nodes healthy
+	cls      *cluster.Cluster
+	majority bool // should (majority or all) nodes healthy
+
 	interrupt chan struct{}
+	mtxIntr   sync.Mutex
 }
 
 func (hc *healthChecker) run() error {
@@ -102,6 +104,9 @@ func (hc *healthChecker) runParallel() error {
 }
 
 func (hc *healthChecker) makeInterrupt() {
+	hc.mtxIntr.Lock()
+	defer hc.mtxIntr.Unlock()
+
 	select {
 	case <-hc.interrupt:
 		return
