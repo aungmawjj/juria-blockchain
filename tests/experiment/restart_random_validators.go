@@ -42,6 +42,6 @@ func (expm *RestartRandomValidators) Run(cls *cluster.Cluster) error {
 		}
 	}
 	fmt.Printf("Restarted nodes: %v\n", faulty)
-	testutil.Sleep(20 * time.Second)
+	testutil.Sleep(10 * time.Second)
 	return nil
 }

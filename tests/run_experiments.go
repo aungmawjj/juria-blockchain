@@ -70,11 +70,12 @@ func runSingleExperiment(cftry cluster.ClusterFactory, expm experiment.Experimen
 			return
 		}
 
-		fmt.Println("Running experiment")
+		fmt.Println("==> Running experiment")
 		err = expm.Run(cls)
 		if err != nil {
 			return
 		}
+		fmt.Println("==> Finished experiment")
 		err = testutil.HealthCheckAll(cls)
 	}()
 

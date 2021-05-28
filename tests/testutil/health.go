@@ -12,7 +12,6 @@ import (
 	"github.com/aungmawjj/juria-blockchain/consensus"
 	"github.com/aungmawjj/juria-blockchain/core"
 	"github.com/aungmawjj/juria-blockchain/tests/cluster"
-	"github.com/fatih/color"
 )
 
 func HealthCheckAll(cls *cluster.Cluster) error {
@@ -63,16 +62,6 @@ type healthChecker struct {
 }
 
 func (hc *healthChecker) run() error {
-	err := hc.runParallel()
-	if err != nil {
-		color.Red("Health check FAIL: %s", err)
-	} else {
-		color.Green("Health check PASS")
-	}
-	return err
-}
-
-func (hc *healthChecker) runParallel() error {
 	hc.interrupt = make(chan struct{})
 
 	var wg sync.WaitGroup
@@ -161,7 +150,7 @@ func (hc *healthChecker) checkLiveness() error {
 	if err != nil {
 		return err
 	}
-	hc.waitForLivenessCheck()
+	time.Sleep(hc.getLivenessWaitTime())
 	select {
 	case <-hc.interrupt:
 		return nil
@@ -193,16 +182,20 @@ func (hc *healthChecker) getBexecMaximum() (uint64, error) {
 	return ret, nil
 }
 
-func (hc *healthChecker) waitForLivenessCheck() {
-	time.Sleep(consensus.DefaultConfig.LeaderTimeout)
+func (hc *healthChecker) getLivenessWaitTime() time.Duration {
+	d := consensus.DefaultConfig.LeaderTimeout
 	if hc.majority {
-		maxFaulty := hc.cls.NodeCount() - core.MajorityCount(hc.cls.NodeCount())
-		time.Sleep(time.Duration(maxFaulty) * consensus.DefaultConfig.LeaderTimeout)
+		d += time.Duration(hc.getMaxFaultyCount()) * consensus.DefaultConfig.LeaderTimeout
 	}
+	return d
+}
+
+func (hc *healthChecker) getMaxFaultyCount() int {
+	return hc.cls.NodeCount() - core.MajorityCount(hc.cls.NodeCount())
 }
 
 func (hc *healthChecker) checkRotation() error {
-	timeout := time.NewTimer(consensus.DefaultConfig.ViewWidth + 10*time.Second)
+	timeout := time.NewTimer(hc.getRotationTimeout())
 	defer timeout.Stop()
 
 	lastView := make(map[int]*consensus.Status)
@@ -224,6 +217,14 @@ func (hc *healthChecker) checkRotation() error {
 			}
 		}
 	}
+}
+
+func (hc *healthChecker) getRotationTimeout() time.Duration {
+	d := consensus.DefaultConfig.ViewWidth + 10*time.Second
+	if hc.majority {
+		d += time.Duration(hc.getMaxFaultyCount()) * consensus.DefaultConfig.LeaderTimeout
+	}
+	return d
 }
 
 func (hc *healthChecker) updateViewChangeStatus(last, changed map[int]*consensus.Status) error {
