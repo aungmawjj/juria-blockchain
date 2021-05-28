@@ -58,9 +58,7 @@ func runSingleExperiment(cftry cluster.ClusterFactory, expm Experiment) error {
 
 	done := make(chan struct{})
 	go func() {
-		defer func() {
-			done <- struct{}{}
-		}()
+		defer close(done)
 		err = cls.Start()
 		if err != nil {
 			return
@@ -77,6 +75,7 @@ func runSingleExperiment(cftry cluster.ClusterFactory, expm Experiment) error {
 		fmt.Println("==> Running experiment")
 		err = expm.Run(cls)
 		if err != nil {
+			fmt.Println("==> Experiment failed")
 			return
 		}
 		fmt.Println("==> Finished experiment")

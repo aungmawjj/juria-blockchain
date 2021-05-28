@@ -12,7 +12,7 @@ import (
 )
 
 var (
-	NativeCodeIDJuriaCoin = string(bytes.Repeat([]byte{1}, 32))
+	NativeCodeIDJuriaCoin = bytes.Repeat([]byte{1}, 32)
 )
 
 type nativeCodeDriver struct{}
@@ -30,7 +30,7 @@ func (drv *nativeCodeDriver) Install(codeID, data []byte) error {
 
 func (drv *nativeCodeDriver) GetInstance(codeID []byte) (chaincode.Chaincode, error) {
 	switch string(codeID) {
-	case NativeCodeIDJuriaCoin:
+	case string(NativeCodeIDJuriaCoin):
 		return new(juriacoin.JuriaCoin), nil
 	default:
 		return nil, errors.New("unknown native chaincode id")

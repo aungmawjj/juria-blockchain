@@ -35,9 +35,9 @@ func New(state StateRO, config Config) *Execution {
 	return exec
 }
 
-func (exec *Execution) Execute(
-	blk *core.Block, txs []*core.Transaction,
-) (*core.BlockCommit, []*core.TxCommit) {
+func (exec *Execution) Execute(blk *core.Block, txs []*core.Transaction) (
+	*core.BlockCommit, []*core.TxCommit,
+) {
 	bexe := &blkExecutor{
 		codeRegistry: exec.codeRegistry,
 		state:        exec.state,
@@ -49,7 +49,8 @@ func (exec *Execution) Execute(
 }
 
 func (exec *Execution) Query(codeAddr, input []byte) ([]byte, error) {
-	cc, err := exec.codeRegistry.getInstance(codeAddr, newStateTracker(exec.state, codeRegistryAddr))
+	cc, err := exec.codeRegistry.getInstance(
+		codeAddr, newStateTracker(exec.state, codeRegistryAddr))
 	if err != nil {
 		return nil, err
 	}

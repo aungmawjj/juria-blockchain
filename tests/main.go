@@ -21,6 +21,14 @@ const (
 	ClusterDebug = true
 )
 
+func setupExperiments() []Experiment {
+	expms := make([]Experiment, 0)
+	expms = append(expms, &experiments.RestartCluster{})
+	expms = append(expms, &experiments.RestartRandomValidators{})
+	expms = append(expms, &experiments.MajorityKeepRunning{})
+	return expms
+}
+
 func main() {
 	fmt.Println()
 	fmt.Println("NodeCount =", NodeCount)
@@ -40,14 +48,6 @@ func main() {
 	check(err)
 
 	runExperiments(cftry, setupExperiments())
-}
-
-func setupExperiments() []Experiment {
-	expms := make([]Experiment, 0)
-	expms = append(expms, &experiments.RestartCluster{})
-	expms = append(expms, &experiments.RestartRandomValidators{})
-	expms = append(expms, &experiments.MajorityKeepRunning{})
-	return expms
 }
 
 func check(err error) {

@@ -17,7 +17,7 @@ import (
 func HealthCheckAll(cls *cluster.Cluster) error {
 	fmt.Println("Health check all nodes")
 	hc := &healthChecker{
-		cls:      cls,
+		cluster:  cls,
 		majority: false,
 	}
 	return hc.run()
@@ -26,7 +26,7 @@ func HealthCheckAll(cls *cluster.Cluster) error {
 func HealthCheckMajority(cls *cluster.Cluster) error {
 	fmt.Println("Health check majority nodes")
 	hc := &healthChecker{
-		cls:      cls,
+		cluster:  cls,
 		majority: true,
 	}
 	return hc.run()
@@ -49,12 +49,12 @@ should get txCommit with txHash from nodes
 
 Rotation
 make a timeout channel for (viewWidth + leaderTimeout)
-get status every 3s
+get status every 1s
 on each node leader change must occur before timeout
 after leader change, all leaderIdx should be equal
 */
 type healthChecker struct {
-	cls      *cluster.Cluster
+	cluster  *cluster.Cluster
 	majority bool // should (majority or all) nodes healthy
 
 	interrupt chan struct{}
@@ -182,16 +182,20 @@ func (hc *healthChecker) getBexecMaximum() (uint64, error) {
 	return ret, nil
 }
 
+func (hc *healthChecker) leaderTimeout() time.Duration {
+	return (consensus.DefaultConfig.BeatDelay + consensus.DefaultConfig.TxWaitTime) * 5
+}
+
 func (hc *healthChecker) getLivenessWaitTime() time.Duration {
-	d := consensus.DefaultConfig.LeaderTimeout
+	d := hc.leaderTimeout()
 	if hc.majority {
-		d += time.Duration(hc.getMaxFaultyCount()) * consensus.DefaultConfig.LeaderTimeout
+		d += time.Duration(hc.getMaxFaultyCount()) * hc.leaderTimeout()
 	}
 	return d
 }
 
 func (hc *healthChecker) getMaxFaultyCount() int {
-	return hc.cls.NodeCount() - core.MajorityCount(hc.cls.NodeCount())
+	return hc.cluster.NodeCount() - core.MajorityCount(hc.cluster.NodeCount())
 }
 
 func (hc *healthChecker) checkRotation() error {
@@ -201,6 +205,12 @@ func (hc *healthChecker) checkRotation() error {
 	lastView := make(map[int]*consensus.Status)
 	changedView := make(map[int]*consensus.Status)
 	for {
+		if err := hc.updateViewChangeStatus(lastView, changedView); err != nil {
+			return err
+		}
+		if len(changedView) >= hc.minimumHealthyNode() {
+			return hc.shouldEqualLeader(changedView)
+		}
 		select {
 		case <-hc.interrupt:
 			return nil
@@ -208,21 +218,15 @@ func (hc *healthChecker) checkRotation() error {
 		case <-timeout.C:
 			return fmt.Errorf("cluster failed to rotate leader")
 
-		case <-time.After(3 * time.Second):
-			if err := hc.updateViewChangeStatus(lastView, changedView); err != nil {
-				return err
-			}
-			if len(changedView) >= hc.minimumHealthyNode() {
-				return hc.shouldEqualLeader(changedView)
-			}
+		case <-time.After(1 * time.Second):
 		}
 	}
 }
 
 func (hc *healthChecker) getRotationTimeout() time.Duration {
-	d := consensus.DefaultConfig.ViewWidth + 10*time.Second
+	d := consensus.DefaultConfig.ViewWidth + 5*time.Second
 	if hc.majority {
-		d += time.Duration(hc.getMaxFaultyCount()) * consensus.DefaultConfig.LeaderTimeout
+		d += time.Duration(hc.getMaxFaultyCount()) * hc.leaderTimeout()
 	}
 	return d
 }
@@ -270,17 +274,17 @@ func (hc *healthChecker) shouldEqualLeader(changedView map[int]*consensus.Status
 }
 
 func (hc *healthChecker) shouldGetStatus() (map[int]*consensus.Status, error) {
-	return GetStatusMany(hc.cls, hc.minimumHealthyNode())
+	return GetStatusMany(hc.cluster, hc.minimumHealthyNode())
 }
 
 func (hc *healthChecker) shouldGetBlockByHeight(height uint64) (map[int]*core.Block, error) {
-	return GetBlockByHeightMany(hc.cls, hc.minimumHealthyNode(), height)
+	return GetBlockByHeightMany(hc.cluster, hc.minimumHealthyNode(), height)
 }
 
 func (hc *healthChecker) minimumHealthyNode() int {
-	min := hc.cls.NodeCount()
+	min := hc.cluster.NodeCount()
 	if hc.majority {
-		min = core.MajorityCount(hc.cls.NodeCount())
+		min = core.MajorityCount(hc.cluster.NodeCount())
 	}
 	return min
 }
