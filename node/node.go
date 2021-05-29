@@ -89,8 +89,8 @@ func (node *Node) setupComponents() {
 	}
 	logger.I().Infow("setup p2p host", "port", node.config.Port)
 	node.msgSvc = p2p.NewMsgService(node.host)
-	node.txpool = txpool.New(node.storage, node.execution, node.msgSvc)
 	node.execution = execution.New(node.storage, node.config.ExecutionConfig)
+	node.txpool = txpool.New(node.storage, node.execution, node.msgSvc)
 	node.setupConsensus()
 	node.msgSvc.SetReqHandler(&p2p.BlockReqHandler{
 		GetBlock: node.GetBlock,

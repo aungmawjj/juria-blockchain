@@ -40,8 +40,8 @@ get status, select lowest bexec height
 get bexec block, all bexec.MerkleRoot must be equal
 
 Liveness
-get status, remember heighest bexec
-wait for leaderTimeout duration
+get status, remember heighest bexec and commitedTxCount
+wait for 20s
 for majority check, wait more for ((total - majority) * leaderTimeout)
 get status again
 bexec must be higher than previous one
@@ -97,7 +97,7 @@ func (hc *healthChecker) makeInterrupt() {
 }
 
 func (hc *healthChecker) checkSafety() error {
-	height, err := hc.getBexecMinimum()
+	height, err := hc.getMinimumBexec()
 	if err != nil {
 		return err
 	}
@@ -131,7 +131,7 @@ func (hc *healthChecker) shouldEqualMerkleRoot(height uint64) error {
 	return nil
 }
 
-func (hc *healthChecker) getBexecMinimum() (uint64, error) {
+func (hc *healthChecker) getMinimumBexec() (uint64, error) {
 	sResp, err := hc.shouldGetStatus()
 	if err != nil {
 		return 0, err
@@ -146,49 +146,74 @@ func (hc *healthChecker) getBexecMinimum() (uint64, error) {
 }
 
 func (hc *healthChecker) checkLiveness() error {
-	lastHeight, err := hc.getBexecMaximum()
+	status, err := hc.shouldGetStatus()
 	if err != nil {
 		return err
 	}
+	lastHeight := hc.getMaximumBexec(status)
 	time.Sleep(hc.getLivenessWaitTime())
 	select {
 	case <-hc.interrupt:
 		return nil
 	default:
 	}
-	return hc.shouldCommitNewBlocks(lastHeight)
+	prevStatus := status
+	status, err = hc.shouldGetStatus()
+	if err != nil {
+		return err
+	}
+	if err := hc.shouldCommitNewBlocks(status, lastHeight); err != nil {
+		return err
+	}
+	return hc.shouldCommitTxs(prevStatus, status)
 }
 
-func (hc *healthChecker) getBexecMaximum() (uint64, error) {
-	sResp, err := hc.shouldGetStatus()
-	if err != nil {
-		return 0, err
-	}
-	var ret uint64 = 0
-	for _, status := range sResp {
-		if status.BExec > ret {
-			ret = status.BExec
+func (hc *healthChecker) getMaximumBexec(status map[int]*consensus.Status) uint64 {
+	var bexec uint64 = 0
+	var txCount int = 0
+	for _, s := range status {
+		if s.BExec > bexec {
+			bexec = s.BExec
+		}
+		if s.CommitedTxCount > txCount {
+			txCount = s.CommitedTxCount
 		}
 	}
-	return ret, nil
+	return bexec
 }
 
 func (hc *healthChecker) getLivenessWaitTime() time.Duration {
-	d := LeaderTimeout()
+	d := 20 * time.Second
 	if hc.majority {
 		d += time.Duration(hc.getFaultyCount()) * LeaderTimeout()
 	}
 	return d
 }
 
-func (hc *healthChecker) shouldCommitNewBlocks(lastHeight uint64) error {
-	sResp, err := hc.shouldGetStatus()
-	if err != nil {
-		return err
-	}
+func (hc *healthChecker) shouldCommitNewBlocks(
+	prevStatus map[int]*consensus.Status, lastHeight uint64,
+) error {
 	validCount := 0
-	for _, status := range sResp {
+	for _, status := range prevStatus {
 		if status.BExec > lastHeight {
+			validCount++
+		}
+	}
+	if validCount < hc.minimumHealthyNode() {
+		return fmt.Errorf("%d nodes are not commiting new blocks",
+			hc.cluster.NodeCount()-validCount)
+	}
+	return nil
+}
+
+func (hc *healthChecker) shouldCommitTxs(
+	prevStatus, status map[int]*consensus.Status,
+) error {
+	validCount := 0
+	for i, s := range status {
+		if prevStatus == nil && s.CommitedTxCount > 0 {
+			validCount++
+		} else if s.CommitedTxCount > prevStatus[i].CommitedTxCount {
 			validCount++
 		}
 	}

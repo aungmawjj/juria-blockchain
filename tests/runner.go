@@ -4,6 +4,7 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -20,22 +21,30 @@ type Experiment interface {
 	Run(c *cluster.Cluster) error
 }
 
-func runExperiments(cftry cluster.ClusterFactory, expms []Experiment) (pass, fail int) {
+type ExperimentRunner struct {
+	experiments []Experiment
+	cfactory    cluster.ClusterFactory
+
+	loadReqPerSec int
+	jClient       *testutil.JuriaCoinClient
+}
+
+func (r *ExperimentRunner) run() (pass, fail int) {
 	bold := color.New(color.Bold)
 	boldGrean := color.New(color.Bold, color.FgGreen)
 	boldRed := color.New(color.Bold, color.FgRed)
 
 	fmt.Println("\nRunning Experiments")
-	for i, expm := range expms {
+	for i, expm := range r.experiments {
 		bold.Printf("%3d. %s\n", i, expm.Name())
 	}
 
 	killed := make(chan os.Signal, 1)
 	signal.Notify(killed, os.Interrupt)
 
-	for i, expm := range expms {
+	for i, expm := range r.experiments {
 		bold.Printf("\nExperiment %d. %s\n", i, expm.Name())
-		err := runSingleExperiment(cftry, expm)
+		err := r.runSingleExperiment(expm)
 		if err != nil {
 			fail++
 			fmt.Printf("%s %s\n", boldRed.Sprint("FAIL"), bold.Sprint(expm.Name()))
@@ -53,14 +62,15 @@ func runExperiments(cftry cluster.ClusterFactory, expms []Experiment) (pass, fai
 	return pass, fail
 }
 
-func runSingleExperiment(cftry cluster.ClusterFactory, expm Experiment) error {
+func (r *ExperimentRunner) runSingleExperiment(expm Experiment) error {
 	var err error
-	cls, err := cftry.SetupCluster(expm.Name())
+	cls, err := r.cfactory.SetupCluster(expm.Name())
 	if err != nil {
 		return err
 	}
 
 	done := make(chan struct{})
+	loadCtx, stopLoad := context.WithCancel(context.Background())
 	go func() {
 		defer close(done)
 		err = cls.Start()
@@ -69,6 +79,16 @@ func runSingleExperiment(cftry cluster.ClusterFactory, expm Experiment) error {
 		}
 		fmt.Println("Started cluster")
 		testutil.Sleep(10 * time.Second)
+
+		fmt.Println("Setting up load generator")
+		err = r.jClient.SetupOnCluster(cls)
+		if err != nil {
+			return
+		}
+		go r.runLoadGenerator(loadCtx)
+
+		testutil.Sleep(10 * time.Second)
+
 		if err := testutil.HealthCheckAll(cls); err != nil {
 			fmt.Printf("health check failed before experiment, %+v\n", err)
 			cls.Stop()
@@ -95,7 +115,22 @@ func runSingleExperiment(cftry cluster.ClusterFactory, expm Experiment) error {
 		err = errors.New("interrupted")
 	case <-done:
 	}
+	stopLoad()
 	cls.Stop()
 	fmt.Println("Stopped cluster")
 	return err
+}
+
+func (r *ExperimentRunner) runLoadGenerator(ctx context.Context) {
+	ticker := time.NewTicker(time.Second / time.Duration(r.loadReqPerSec))
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			r.jClient.TransferAsync()
+		}
+	}
 }

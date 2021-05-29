@@ -86,6 +86,8 @@ func TestHsDriver_VoteBlock(t *testing.T) {
 	proposer := core.GenerateKey(nil)
 	blk := core.NewBlock().Sign(proposer)
 
+	hsd.resources.VldStore = core.NewValidatorStore([]*core.PublicKey{blk.Proposer()})
+
 	txPool := new(MockTxPool)
 	txPool.On("GetStatus").Return(txpool.Status{}) // no txs in the pool
 	txPool.On("SetTxsPending", blk.Transactions())

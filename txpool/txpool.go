@@ -38,6 +38,15 @@ var (
 	ErrOldTx = errors.New("transaction already executed")
 )
 
+type TxStatus uint8
+
+const (
+	TxStatusNotFound TxStatus = iota
+	TxStatusQueue
+	TxStatusPending
+	TxStatusCommited
+)
+
 type TxPool struct {
 	storage   Storage
 	execution Execution
@@ -93,6 +102,10 @@ func (pool *TxPool) RemoveTxs(hashes [][]byte) {
 
 func (pool *TxPool) GetTx(hash []byte) *core.Transaction {
 	return pool.store.getTx(hash)
+}
+
+func (pool *TxPool) GetTxStatus(hash []byte) TxStatus {
+	return pool.getTxStatus(hash)
 }
 
 func (pool *TxPool) GetStatus() Status {
@@ -216,4 +229,15 @@ func (pool *TxPool) getTxsToExecute(hashes [][]byte) ([]*core.Transaction, [][]b
 	}
 	pool.store.setTxsPending(hashes)
 	return txs, executedTxs
+}
+
+func (pool *TxPool) getTxStatus(hash []byte) TxStatus {
+	status := pool.store.getTxStatus(hash)
+	if status != TxStatusNotFound {
+		return status
+	}
+	if pool.storage.HasTx(hash) {
+		return TxStatusCommited
+	}
+	return TxStatusNotFound
 }

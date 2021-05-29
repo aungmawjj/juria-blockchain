@@ -19,9 +19,11 @@ type state struct {
 	qcs    map[string]*core.QuorumCert // qc by block hash
 	mtxQCs sync.RWMutex
 
-	mtxUpdate sync.Mutex
+	mtxUpdate sync.Mutex // lock for hotstuff update call
 
 	leaderIndex int64
+
+	commitedTxCount uint64
 }
 
 func newState(resources *Resources) *state {
@@ -80,13 +82,13 @@ func (state *state) deleteQC(blkHash []byte) {
 	delete(state.qcs, string(blkHash))
 }
 
-func (state *state) getOlderBlocks(blk *core.Block) []*core.Block {
+func (state *state) getOlderBlocks(height uint64) []*core.Block {
 	state.mtxBlocks.RLock()
 	defer state.mtxBlocks.RUnlock()
 
 	ret := make([]*core.Block, 0)
 	for _, b := range state.blocks {
-		if b.Height() < blk.Height() {
+		if b.Height() < height {
 			ret = append(ret, b)
 		}
 	}
@@ -122,4 +124,12 @@ func (state *state) getLeaderIndex() int {
 
 func (state *state) getFaultyCount() int {
 	return state.resources.VldStore.ValidatorCount() - state.resources.VldStore.MajorityCount()
+}
+
+func (state *state) addCommitedTxCount(count int) {
+	atomic.AddUint64(&state.commitedTxCount, uint64(count))
+}
+
+func (state *state) getCommitedTxCount() int {
+	return int(atomic.LoadUint64(&state.commitedTxCount))
 }

@@ -13,8 +13,9 @@ import (
 
 type Consensus struct {
 	resources *Resources
+	config    Config
 
-	config Config
+	startTime int64
 
 	state     *state
 	hsDriver  *hsDriver
@@ -48,6 +49,7 @@ func (cons *Consensus) GetBlock(hash []byte) *core.Block {
 }
 
 func (cons *Consensus) start() {
+	cons.startTime = time.Now().UnixNano()
 	b0, q0 := cons.getInitialBlockAndQC()
 	cons.setupState(b0)
 	cons.setupHsDriver()
@@ -128,7 +130,8 @@ func (cons *Consensus) getStatus() (status Status) {
 	if cons.pacemaker == nil {
 		return status
 	}
-	status.Started = true
+	status.StartTime = cons.startTime
+	status.CommitedTxCount = cons.state.getCommitedTxCount()
 	status.BlockPoolSize = cons.state.getBlockPoolSize()
 	status.QCPoolSize = cons.state.getQCPoolSize()
 	status.LeaderIndex = cons.state.getLeaderIndex()

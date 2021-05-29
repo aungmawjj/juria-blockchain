@@ -6,6 +6,7 @@ package testutil
 import (
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"sync"
 	"time"
@@ -20,7 +21,8 @@ func checkResponse(resp *http.Response, err error) error {
 		return err
 	}
 	if resp.StatusCode != 200 {
-		return fmt.Errorf("status code not 200")
+		msg, _ := ioutil.ReadAll(resp.Body)
+		return fmt.Errorf("status code not 200 %s", string(msg))
 	}
 	return nil
 }

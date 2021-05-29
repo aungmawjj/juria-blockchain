@@ -16,6 +16,7 @@ const (
 	colBlockHeight                           // last block height
 	colLastQC                                // qc for last commited block to be used on restart
 	colBlockCommitByHash                     // block commit by block hash
+	colTxCount                               // total commited tx count
 	colTxByHash                              // tx by hash
 	colTxCommitByHash                        // tx commit info by tx hash
 	colStateValueByKey                       // state value by state key

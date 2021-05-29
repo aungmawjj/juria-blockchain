@@ -169,6 +169,20 @@ func (store *txStore) getTx(hash []byte) *core.Transaction {
 	return item.tx
 }
 
+func (store *txStore) getTxStatus(hash []byte) TxStatus {
+	store.mtx.RLock()
+	defer store.mtx.RUnlock()
+
+	item := store.txItems[string(hash)]
+	if item == nil {
+		return TxStatusNotFound
+	}
+	if item.inQueue() {
+		return TxStatusQueue
+	}
+	return TxStatusPending
+}
+
 func (store *txStore) getStatus() (status Status) {
 	store.mtx.RLock()
 	defer store.mtx.RUnlock()

@@ -4,6 +4,7 @@
 package core
 
 import (
+	"encoding/json"
 	"testing"
 	"time"
 
@@ -36,6 +37,15 @@ func TestTransaction(t *testing.T) {
 
 	tx = NewTransaction()
 	err = tx.Unmarshal(b)
+	assert.NoError(err)
+
+	assert.NoError(tx.Validate())
+
+	b, err = json.Marshal(tx)
+	assert.NoError(err)
+
+	tx = NewTransaction()
+	err = json.Unmarshal(b, tx)
 	assert.NoError(err)
 
 	assert.NoError(tx.Validate())

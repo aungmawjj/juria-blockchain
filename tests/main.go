@@ -14,19 +14,20 @@ import (
 	"github.com/aungmawjj/juria-blockchain/node"
 	"github.com/aungmawjj/juria-blockchain/tests/cluster"
 	"github.com/aungmawjj/juria-blockchain/tests/experiments"
+	"github.com/aungmawjj/juria-blockchain/tests/testutil"
 )
 
 const (
-	WorkDir      = "./workdir"
-	NodeCount    = 7
-	ClusterDebug = true
+	WorkDir       = "./workdir"
+	NodeCount     = 7
+	ClusterDebug  = true
+	LoadReqPerSec = 10
 )
 
 func setupExperiments() []Experiment {
 	expms := make([]Experiment, 0)
 	expms = append(expms, &experiments.RestartCluster{})
 	expms = append(expms, &experiments.MajorityKeepRunning{})
-	expms = append(expms, &experiments.RestartMajority{})
 	return expms
 }
 
@@ -40,7 +41,7 @@ func main() {
 	os.Mkdir(WorkDir, 0755)
 	os.Mkdir(clustersDir, 0755)
 
-	cftry, err := cluster.NewLocalFactory(cluster.LocalFactoryParams{
+	cfactory, err := cluster.NewLocalFactory(cluster.LocalFactoryParams{
 		JuriaPath: "./juria",
 		WorkDir:   clustersDir,
 		NodeCount: NodeCount,
@@ -50,9 +51,14 @@ func main() {
 	})
 	check(err)
 
-	expms := setupExperiments()
-	pass, fail := runExperiments(cftry, expms)
-	fmt.Printf("\nTotal: %d  |  Pass: %d  |  Fail: %d\n", len(expms), pass, fail)
+	r := &ExperimentRunner{
+		experiments:   setupExperiments(),
+		cfactory:      cfactory,
+		jClient:       testutil.NewJuriaCoinClient(100),
+		loadReqPerSec: LoadReqPerSec,
+	}
+	pass, fail := r.run()
+	fmt.Printf("\nTotal: %d  |  Pass: %d  |  Fail: %d\n", len(r.experiments), pass, fail)
 }
 
 func check(err error) {

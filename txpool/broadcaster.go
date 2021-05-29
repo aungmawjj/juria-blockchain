@@ -25,7 +25,7 @@ func newBroadcaster(msgSvc MsgService) *broadcaster {
 		msgSvc:    msgSvc,
 		queue:     make(chan *core.Transaction, 1000),
 		batchSize: 100,
-		timeout:   2 * time.Millisecond,
+		timeout:   5 * time.Millisecond,
 	}
 	b.txBatch = make([]*core.Transaction, 0, b.batchSize)
 	b.timer = time.NewTimer(b.timeout)
@@ -41,6 +41,7 @@ func (b *broadcaster) run() {
 			if len(b.txBatch) > 0 {
 				b.broadcastBatch()
 			}
+			b.timer.Reset(b.timeout)
 
 		case tx := <-b.queue:
 			b.txBatch = append(b.txBatch, tx)
@@ -54,5 +55,4 @@ func (b *broadcaster) run() {
 func (b *broadcaster) broadcastBatch() {
 	b.msgSvc.BroadcastTxList((*core.TxList)(&b.txBatch))
 	b.txBatch = make([]*core.Transaction, 0, b.batchSize)
-	b.timer.Reset(b.timeout)
 }

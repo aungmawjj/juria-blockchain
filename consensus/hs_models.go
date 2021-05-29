@@ -115,3 +115,11 @@ func qcRefHeight(qc hotstuff.QC) (height uint64) {
 	}
 	return height
 }
+
+func qcRefProposer(qc hotstuff.QC) *core.PublicKey {
+	ref := qc.Block()
+	if ref == nil {
+		return nil
+	}
+	return ref.(*hsBlock).block.Proposer()
+}

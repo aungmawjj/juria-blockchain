@@ -188,7 +188,7 @@ func (pm *pacemaker) nextLeader() int {
 
 func (pm *pacemaker) onNewQCHigh(qc hotstuff.QC) (leaderTReset, viewTReset bool) {
 	pm.state.setQC(qc.(*hsQC).qc)
-	pidx := pm.resources.VldStore.GetValidatorIndex(qc.Block().(*hsBlock).block.Proposer())
+	pidx := pm.resources.VldStore.GetValidatorIndex(qcRefProposer(qc))
 	logger.I().Debugw("updated qc", "proposer", pidx, "qc", qcRefHeight(qc))
 	if pidx == pm.state.getLeaderIndex() { // if qc is from current leader
 		leaderTReset = true
