@@ -36,10 +36,10 @@ func getRequestWithRetry(url string) (*http.Response, error) {
 			return resp, err
 		}
 		retry++
-		if retry > 3 {
+		if retry > 5 {
 			return nil, err
 		}
-		time.Sleep(5 * time.Millisecond)
+		time.Sleep(200 * time.Millisecond)
 		resp, err = http.Get(url)
 	}
 }
@@ -56,7 +56,7 @@ func GetStatus(node cluster.Node) (*consensus.Status, error) {
 	return ret, nil
 }
 
-func GetStatusMany(cls *cluster.Cluster, min int) (map[int]*consensus.Status, error) {
+func GetStatusAll(cls *cluster.Cluster) map[int]*consensus.Status {
 	resps := make(map[int]*consensus.Status)
 	var mtx sync.Mutex
 	var wg sync.WaitGroup
@@ -73,10 +73,7 @@ func GetStatusMany(cls *cluster.Cluster, min int) (map[int]*consensus.Status, er
 		}(i)
 	}
 	wg.Wait()
-	if len(resps) < min {
-		return nil, fmt.Errorf("cannot get status from %d nodes", min)
-	}
-	return resps, nil
+	return resps
 }
 
 func GetBlockByHeight(node cluster.Node, height uint64) (*core.Block, error) {
@@ -91,7 +88,7 @@ func GetBlockByHeight(node cluster.Node, height uint64) (*core.Block, error) {
 	return ret, nil
 }
 
-func GetBlockByHeightMany(cls *cluster.Cluster, min int, height uint64) (map[int]*core.Block, error) {
+func GetBlockByHeightAll(cls *cluster.Cluster, height uint64) map[int]*core.Block {
 	resps := make(map[int]*core.Block)
 	var mtx sync.Mutex
 	var wg sync.WaitGroup
@@ -108,8 +105,5 @@ func GetBlockByHeightMany(cls *cluster.Cluster, min int, height uint64) (map[int
 		}(i)
 	}
 	wg.Wait()
-	if len(resps) < min {
-		return nil, fmt.Errorf("cannot get block %d from %d nodes", height, min)
-	}
-	return resps, nil
+	return resps
 }

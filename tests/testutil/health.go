@@ -218,7 +218,7 @@ func (hc *healthChecker) shouldCommitTxs(
 		}
 	}
 	if validCount < hc.minimumHealthyNode() {
-		return fmt.Errorf("%d nodes are not commiting new blocks",
+		return fmt.Errorf("%d nodes are not commiting new txs",
 			hc.cluster.NodeCount()-validCount)
 	}
 	return nil
@@ -308,11 +308,22 @@ func (hc *healthChecker) shouldEqualLeader(changedView map[int]*consensus.Status
 }
 
 func (hc *healthChecker) shouldGetStatus() (map[int]*consensus.Status, error) {
-	return GetStatusMany(hc.cluster, hc.minimumHealthyNode())
+	ret := GetStatusAll(hc.cluster)
+	min := hc.minimumHealthyNode()
+	if len(ret) < min {
+		return nil, fmt.Errorf("failed to get status from %d nodes", min-len(ret))
+	}
+	return ret, nil
 }
 
 func (hc *healthChecker) shouldGetBlockByHeight(height uint64) (map[int]*core.Block, error) {
-	return GetBlockByHeightMany(hc.cluster, hc.minimumHealthyNode(), height)
+	ret := GetBlockByHeightAll(hc.cluster, height)
+	min := hc.minimumHealthyNode()
+	if len(ret) < min {
+		return nil, fmt.Errorf("failed to get block %d from %d nodes",
+			height, min-len(ret))
+	}
+	return ret, nil
 }
 
 func (hc *healthChecker) minimumHealthyNode() int {
