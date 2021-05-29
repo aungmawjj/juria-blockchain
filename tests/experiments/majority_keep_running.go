@@ -24,15 +24,14 @@ func (expm *MajorityKeepRunning) Name() string {
 func (expm *MajorityKeepRunning) Run(cls *cluster.Cluster) error {
 	total := cls.NodeCount()
 	faulty := testutil.PickUniqueRandoms(total, total-core.MajorityCount(total))
-	for i := range faulty {
-		cls.GetNode(faulty[i]).Stop()
+	for _, i := range faulty {
+		cls.GetNode(i).Stop()
 	}
-
 	fmt.Printf("Stopped %d out of %d nodes: %v\n", len(faulty), total, faulty)
+
 	if err := testutil.HealthCheckMajority(cls); err != nil {
 		return err
 	}
-
 	for _, fi := range faulty {
 		if err := cls.GetNode(fi).Start(); err != nil {
 			return err

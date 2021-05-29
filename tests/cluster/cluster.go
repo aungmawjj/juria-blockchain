@@ -3,12 +3,6 @@
 
 package cluster
 
-import "time"
-
-const (
-	StartCooldown = 10 * time.Second
-)
-
 type Node interface {
 	Start() error
 	Stop()

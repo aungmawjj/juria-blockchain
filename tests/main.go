@@ -24,8 +24,8 @@ const (
 func setupExperiments() []Experiment {
 	expms := make([]Experiment, 0)
 	expms = append(expms, &experiments.RestartCluster{})
-	expms = append(expms, &experiments.RestartRandomValidators{})
 	expms = append(expms, &experiments.MajorityKeepRunning{})
+	expms = append(expms, &experiments.RestartMajority{})
 	return expms
 }
 
@@ -47,7 +47,9 @@ func main() {
 	})
 	check(err)
 
-	runExperiments(cftry, setupExperiments())
+	expms := setupExperiments()
+	pass, fail := runExperiments(cftry, expms)
+	fmt.Printf("\nTotal: %d\t|\tPass: %d\t|\tFail: %d\n", len(expms), pass, fail)
 }
 
 func check(err error) {

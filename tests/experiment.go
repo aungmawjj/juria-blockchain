@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"time"
 
 	"github.com/aungmawjj/juria-blockchain/tests/cluster"
 	"github.com/aungmawjj/juria-blockchain/tests/testutil"
@@ -19,7 +20,7 @@ type Experiment interface {
 	Run(c *cluster.Cluster) error
 }
 
-func runExperiments(cftry cluster.ClusterFactory, expms []Experiment) {
+func runExperiments(cftry cluster.ClusterFactory, expms []Experiment) (pass, fail int) {
 	bold := color.New(color.Bold)
 	boldGrean := color.New(color.Bold, color.FgGreen)
 	boldRed := color.New(color.Bold, color.FgRed)
@@ -33,20 +34,23 @@ func runExperiments(cftry cluster.ClusterFactory, expms []Experiment) {
 	signal.Notify(killed, os.Interrupt)
 
 	for i, expm := range expms {
-		select {
-		case <-killed:
-			return
-		default:
-		}
 		bold.Printf("\nExperiment %d. %s\n", i, expm.Name())
 		err := runSingleExperiment(cftry, expm)
 		if err != nil {
+			fail++
 			fmt.Printf("%s %s\n", boldRed.Sprint("FAIL"), bold.Sprint(expm.Name()))
 			fmt.Printf("error: %+v\n", err)
 		} else {
+			pass++
 			fmt.Printf("%s %s\n", boldGrean.Sprint("PASS"), bold.Sprint(expm.Name()))
 		}
+		select {
+		case <-killed:
+			return pass, fail
+		default:
+		}
 	}
+	return pass, fail
 }
 
 func runSingleExperiment(cftry cluster.ClusterFactory, expm Experiment) error {
@@ -64,7 +68,7 @@ func runSingleExperiment(cftry cluster.ClusterFactory, expm Experiment) error {
 			return
 		}
 		fmt.Println("Started cluster")
-		testutil.Sleep(cluster.StartCooldown)
+		testutil.Sleep(10 * time.Second)
 		if err := testutil.HealthCheckAll(cls); err != nil {
 			fmt.Printf("health check failed before experiment, %+v\n", err)
 			cls.Stop()

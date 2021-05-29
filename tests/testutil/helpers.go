@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"math/rand"
 	"time"
+
+	"github.com/aungmawjj/juria-blockchain/consensus"
 )
 
 // Sleep print duration and call time.Sleep
@@ -26,4 +28,22 @@ func PickUniqueRandoms(total, count int) []int {
 		ret = append(ret, v)
 	}
 	return ret
+}
+
+func GetUnselectedIndexes(total int, selected []int) []int {
+	smap := make(map[int]struct{}, len(selected))
+	for _, idx := range selected {
+		smap[idx] = struct{}{}
+	}
+	ret := make([]int, 0, total-len(selected))
+	for i := 0; i < total; i++ {
+		if _, found := smap[i]; !found {
+			ret = append(ret, i)
+		}
+	}
+	return ret
+}
+
+func LeaderTimeout() time.Duration {
+	return (consensus.DefaultConfig.BeatDelay + consensus.DefaultConfig.TxWaitTime) * 5
 }

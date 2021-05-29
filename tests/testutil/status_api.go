@@ -107,7 +107,7 @@ func GetBlockByHeightMany(cls *cluster.Cluster, min int, height uint64) (map[int
 	}
 	wg.Wait()
 	if len(resps) < min {
-		return nil, fmt.Errorf("cannot get block by height from %d nodes", min)
+		return nil, fmt.Errorf("cannot get block %d from %d nodes", height, min)
 	}
 	return resps, nil
 }
