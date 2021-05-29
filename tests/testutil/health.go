@@ -117,11 +117,11 @@ func (hc *healthChecker) shouldEqualMerkleRoot(height uint64) error {
 	var mRoot []byte
 	equalCount := 1
 	for _, blk := range bResp {
-		if mRoot == nil {
+		if blk.MerkleRoot() == nil {
+			equalCount++
+		} else if mRoot == nil {
 			mRoot = blk.MerkleRoot()
-			continue
-		}
-		if bytes.Equal(mRoot, blk.MerkleRoot()) {
+		} else if bytes.Equal(mRoot, blk.MerkleRoot()) {
 			equalCount++
 		}
 	}
@@ -176,7 +176,7 @@ func (hc *healthChecker) getBexecMaximum() (uint64, error) {
 func (hc *healthChecker) getLivenessWaitTime() time.Duration {
 	d := LeaderTimeout()
 	if hc.majority {
-		d += time.Duration(hc.getMaxFaultyCount()) * LeaderTimeout()
+		d += time.Duration(hc.getFaultyCount()) * LeaderTimeout()
 	}
 	return d
 }
@@ -199,7 +199,7 @@ func (hc *healthChecker) shouldCommitNewBlocks(lastHeight uint64) error {
 	return nil
 }
 
-func (hc *healthChecker) getMaxFaultyCount() int {
+func (hc *healthChecker) getFaultyCount() int {
 	return hc.cluster.NodeCount() - core.MajorityCount(hc.cluster.NodeCount())
 }
 
@@ -231,7 +231,7 @@ func (hc *healthChecker) checkRotation() error {
 func (hc *healthChecker) getRotationTimeout() time.Duration {
 	d := consensus.DefaultConfig.ViewWidth + 5*time.Second
 	if hc.majority {
-		d += time.Duration(hc.getMaxFaultyCount()) * LeaderTimeout()
+		d += time.Duration(hc.getFaultyCount()) * LeaderTimeout()
 	}
 	return d
 }

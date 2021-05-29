@@ -58,7 +58,7 @@ func TestPacemaker_changeView(t *testing.T) {
 	assert.EqualValues(pm.state.getLeaderIndex(), 0)
 }
 
-func Test_pacemaker_isFirstQCForCurrentView(t *testing.T) {
+func Test_pacemaker_isNewViewApproval(t *testing.T) {
 	assert := assert.New(t)
 
 	pm1, _ := setupPacemaker()
@@ -80,7 +80,7 @@ func Test_pacemaker_isFirstQCForCurrentView(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			assert.EqualValues(tt.want, tt.pm.isFirstQCForCurrentView(tt.proposerIdx))
+			assert.EqualValues(tt.want, tt.pm.isNewViewApproval(tt.proposerIdx))
 		})
 	}
 }

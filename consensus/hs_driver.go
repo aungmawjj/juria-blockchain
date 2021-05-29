@@ -59,11 +59,15 @@ func (hsd *hsDriver) BroadcastProposal(hsBlk hotstuff.Block) {
 func (hsd *hsDriver) VoteBlock(hsBlk hotstuff.Block) {
 	blk := hsBlk.(*hsBlock).block
 	vote := blk.Vote(hsd.resources.Signer)
-	hsd.delayVoteWhenNoTxs()
-	hsd.resources.MsgSvc.SendVote(blk.Proposer(), vote)
 	hsd.resources.TxPool.SetTxsPending(blk.Transactions())
+	hsd.delayVoteWhenNoTxs()
+	proposer := hsd.resources.VldStore.GetValidatorIndex(blk.Proposer())
+	if proposer != hsd.state.getLeaderIndex() {
+		return // view changed happened
+	}
+	hsd.resources.MsgSvc.SendVote(blk.Proposer(), vote)
 	logger.I().Debugw("voted block",
-		"proposer", hsd.state.getLeaderIndex(),
+		"proposer", proposer,
 		"height", hsBlk.Height(),
 		"qc", qcRefHeight(hsBlk.Justify()),
 	)

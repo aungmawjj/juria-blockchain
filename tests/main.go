@@ -7,7 +7,9 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"os/exec"
 	"path"
+	"strings"
 
 	"github.com/aungmawjj/juria-blockchain/node"
 	"github.com/aungmawjj/juria-blockchain/tests/cluster"
@@ -15,7 +17,6 @@ import (
 )
 
 const (
-	JuriaPath    = "./juria"
 	WorkDir      = "./workdir"
 	NodeCount    = 7
 	ClusterDebug = true
@@ -30,15 +31,17 @@ func setupExperiments() []Experiment {
 }
 
 func main() {
-	fmt.Println()
+	cmd := exec.Command("go", "build", "../cmd/juria")
+	fmt.Printf("\n$ %s\n\n", strings.Join(cmd.Args, " "))
+	check(cmd.Run())
+
 	fmt.Println("NodeCount =", NodeCount)
 	clustersDir := path.Join(WorkDir, "clusters")
-
 	os.Mkdir(WorkDir, 0755)
 	os.Mkdir(clustersDir, 0755)
 
 	cftry, err := cluster.NewLocalFactory(cluster.LocalFactoryParams{
-		JuriaPath: JuriaPath,
+		JuriaPath: "./juria",
 		WorkDir:   clustersDir,
 		NodeCount: NodeCount,
 		PortN0:    node.DefaultConfig.Port,
@@ -49,7 +52,7 @@ func main() {
 
 	expms := setupExperiments()
 	pass, fail := runExperiments(cftry, expms)
-	fmt.Printf("\nTotal: %d\t|\tPass: %d\t|\tFail: %d\n", len(expms), pass, fail)
+	fmt.Printf("\nTotal: %d  |  Pass: %d  |  Fail: %d\n", len(expms), pass, fail)
 }
 
 func check(err error) {

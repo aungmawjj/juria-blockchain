@@ -42,7 +42,7 @@ func NewHost(privKey *core.PrivateKey, localAddr multiaddr.Multiaddr) (*Host, er
 	}
 	host.libHost = libHost
 	host.libHost.SetStreamHandler(protocolID, host.handleStream)
-	host.reconnectInterval = 5 * time.Second
+	host.reconnectInterval = 1 * time.Second
 	go host.reconnectLoop()
 	return host, nil
 }

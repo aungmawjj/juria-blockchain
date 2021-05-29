@@ -119,3 +119,7 @@ func (state *state) setLeaderIndex(idx int) {
 func (state *state) getLeaderIndex() int {
 	return int(atomic.LoadInt64(&state.leaderIndex))
 }
+
+func (state *state) getFaultyCount() int {
+	return state.resources.VldStore.ValidatorCount() - state.resources.VldStore.MajorityCount()
+}

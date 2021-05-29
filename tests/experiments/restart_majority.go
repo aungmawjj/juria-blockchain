@@ -21,11 +21,13 @@ func (expm *RestartMajority) Name() string {
 func (expm *RestartMajority) Run(cls *cluster.Cluster) error {
 	total := cls.NodeCount()
 	majority := testutil.PickUniqueRandoms(total, core.MajorityCount(total))
+	// majority = []int{6, 2, 4, 5, 0} // reproduce prev error {0, 6, 4, 2, 1}
 	for _, i := range majority {
 		cls.GetNode(i).Stop()
 	}
 	fmt.Printf("Stopped %d out of %d nodes: %v\n", len(majority), total, majority)
-	testutil.Sleep(10 * time.Second)
+	// wait for (f+1)*leaderTimeout
+	testutil.Sleep(testutil.LeaderTimeout() * time.Duration(total-len(majority)+1))
 	for _, i := range majority {
 		if err := cls.GetNode(i).Start(); err != nil {
 			return err
