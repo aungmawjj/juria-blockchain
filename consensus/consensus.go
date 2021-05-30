@@ -22,6 +22,7 @@ type Consensus struct {
 	hotstuff  *hotstuff.Hotstuff
 	validator *validator
 	pacemaker *pacemaker
+	rotator   *rotator
 }
 
 func New(resources *Resources, config Config) *Consensus {
@@ -56,9 +57,11 @@ func (cons *Consensus) start() {
 	cons.setupHotstuff(b0, q0)
 	cons.setupValidator()
 	cons.setupPacemaker()
+	cons.setupRotator()
 
 	cons.validator.start()
 	cons.pacemaker.start()
+	cons.rotator.start()
 }
 
 func (cons *Consensus) stop() {
@@ -66,6 +69,7 @@ func (cons *Consensus) stop() {
 		return
 	}
 	cons.pacemaker.stop()
+	cons.rotator.stop()
 	cons.validator.stop()
 }
 
@@ -126,6 +130,15 @@ func (cons *Consensus) setupPacemaker() {
 	}
 }
 
+func (cons *Consensus) setupRotator() {
+	cons.rotator = &rotator{
+		resources: cons.resources,
+		config:    cons.config,
+		state:     cons.state,
+		hotstuff:  cons.hotstuff,
+	}
+}
+
 func (cons *Consensus) getStatus() (status Status) {
 	if cons.pacemaker == nil {
 		return status
@@ -135,8 +148,8 @@ func (cons *Consensus) getStatus() (status Status) {
 	status.BlockPoolSize = cons.state.getBlockPoolSize()
 	status.QCPoolSize = cons.state.getQCPoolSize()
 	status.LeaderIndex = cons.state.getLeaderIndex()
-	status.ViewStart = cons.pacemaker.getViewStart()
-	status.PendingViewChange = cons.pacemaker.getPendingViewChange()
+	status.ViewStart = cons.rotator.getViewStart()
+	status.PendingViewChange = cons.rotator.getPendingViewChange()
 
 	status.BVote = cons.hotstuff.GetBVote().Height()
 	status.BLeaf = cons.hotstuff.GetBLeaf().Height()

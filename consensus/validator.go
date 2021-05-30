@@ -44,6 +44,7 @@ func (vld *validator) stop() {
 	default:
 	}
 	close(vld.stopCh)
+	logger.I().Info("stopped validator")
 	vld.stopCh = nil
 }
 

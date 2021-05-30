@@ -11,7 +11,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func setupPacemaker() (*pacemaker, *core.Block) {
+func setupRotator() (*rotator, *core.Block) {
 	key1 := core.GenerateKey(nil)
 	key2 := core.GenerateKey(nil)
 	vlds := []*core.PublicKey{
@@ -33,7 +33,7 @@ func setupPacemaker() (*pacemaker, *core.Block) {
 		state:     state,
 	}
 	hotstuff := hotstuff.New(hsDriver, newHsBlock(b0, state), newHsQC(q0, state))
-	return &pacemaker{
+	return &rotator{
 		resources: resources,
 		config:    DefaultConfig,
 		state:     state,
@@ -41,58 +41,58 @@ func setupPacemaker() (*pacemaker, *core.Block) {
 	}, b0
 }
 
-func TestPacemaker_changeView(t *testing.T) {
+func TestRotator_changeView(t *testing.T) {
 	assert := assert.New(t)
 
-	pm, b0 := setupPacemaker()
-	pm.state.setLeaderIndex(1)
+	rot, b0 := setupRotator()
+	rot.state.setLeaderIndex(1)
 
 	msgSvc := new(MockMsgService)
-	msgSvc.On("SendNewView", pm.resources.VldStore.GetValidator(0), b0.QuorumCert()).Return(nil)
-	pm.resources.MsgSvc = msgSvc
+	msgSvc.On("SendNewView", rot.resources.VldStore.GetValidator(0), b0.QuorumCert()).Return(nil)
+	rot.resources.MsgSvc = msgSvc
 
-	pm.changeView()
+	rot.changeView()
 
 	msgSvc.AssertExpectations(t)
-	assert.True(pm.getPendingViewChange())
-	assert.EqualValues(pm.state.getLeaderIndex(), 0)
+	assert.True(rot.getPendingViewChange())
+	assert.EqualValues(rot.state.getLeaderIndex(), 0)
 }
 
-func Test_pacemaker_isNewViewApproval(t *testing.T) {
+func Test_rotator_isNewViewApproval(t *testing.T) {
 	assert := assert.New(t)
 
-	pm1, _ := setupPacemaker()
-	pm2, _ := setupPacemaker()
+	rot1, _ := setupRotator()
+	rot2, _ := setupRotator()
 
-	pm1.setPendingViewChange(true)
-	pm2.setPendingViewChange(false)
+	rot1.setPendingViewChange(true)
+	rot2.setPendingViewChange(false)
 
 	tests := []struct {
 		name        string
-		pm          *pacemaker
+		rot         *rotator
 		proposerIdx int
 		want        bool
 	}{
-		{"pending and same leader", pm1, 0, true},
-		{"not pending and different leader", pm2, 1, true},
-		{"pending and different leader", pm1, 1, false},
-		{"not pending and same leader", pm2, 0, false},
+		{"pending and same leader", rot1, 0, true},
+		{"not pending and different leader", rot2, 1, true},
+		{"pending and different leader", rot1, 1, false},
+		{"not pending and same leader", rot2, 0, false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			assert.EqualValues(tt.want, tt.pm.isNewViewApproval(tt.proposerIdx))
+			assert.EqualValues(tt.want, tt.rot.isNewViewApproval(tt.proposerIdx))
 		})
 	}
 }
 
-func TestPacemaker_resetViewTimer(t *testing.T) {
+func TestRotator_resetViewTimer(t *testing.T) {
 	assert := assert.New(t)
 
-	pm, _ := setupPacemaker()
-	pm.setPendingViewChange(true)
+	rot, _ := setupRotator()
+	rot.setPendingViewChange(true)
 
-	pm.approveViewLeader(1)
+	rot.approveViewLeader(1)
 
-	assert.False(pm.getPendingViewChange())
-	assert.EqualValues(pm.state.getLeaderIndex(), 1)
+	assert.False(rot.getPendingViewChange())
+	assert.EqualValues(rot.state.getLeaderIndex(), 1)
 }
