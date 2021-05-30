@@ -111,21 +111,22 @@ func (hsd *hsDriver) Commit(hsBlk hotstuff.Block) {
 }
 
 func (hsd *hsDriver) cleanStateOnCommited(bexec *core.Block) {
-	hsd.resources.TxPool.RemoveTxs(bexec.Transactions())
-
 	// qc for bexe is no longer needed here after commited to storage
 	hsd.state.deleteQC(bexec.Hash())
+	hsd.resources.TxPool.RemoveTxs(bexec.Transactions())
+	hsd.state.setCommited(bexec)
 
-	folks := hsd.state.getOlderBlocks(bexec.Height())
+	folks := hsd.state.getUncommitedOlderBlocks(bexec)
 	for _, blk := range folks {
 		// put transactions from folked block back to queue
 		hsd.resources.TxPool.PutTxsToQueue(blk.Transactions())
+		hsd.state.deleteBlock(blk.Hash())
 		hsd.state.deleteQC(blk.Hash())
 	}
-	hsd.deleteMuchOlderBlocks(bexec)
+	hsd.deleteCommitedOlderBlocks(bexec)
 }
 
-func (hsd *hsDriver) deleteMuchOlderBlocks(bexec *core.Block) {
+func (hsd *hsDriver) deleteCommitedOlderBlocks(bexec *core.Block) {
 	height := int64(bexec.Height()) - 10
 	if height < 0 {
 		return
@@ -133,5 +134,6 @@ func (hsd *hsDriver) deleteMuchOlderBlocks(bexec *core.Block) {
 	blks := hsd.state.getOlderBlocks(uint64(height))
 	for _, blk := range blks {
 		hsd.state.deleteBlock(blk.Hash())
+		hsd.state.deleteCommited(blk.Hash())
 	}
 }

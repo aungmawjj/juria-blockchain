@@ -16,6 +16,9 @@ type state struct {
 	blocks    map[string]*core.Block
 	mtxBlocks sync.RWMutex
 
+	commited    map[string]struct{}
+	mtxCommited sync.RWMutex
+
 	qcs    map[string]*core.QuorumCert // qc by block hash
 	mtxQCs sync.RWMutex
 
@@ -30,6 +33,7 @@ func newState(resources *Resources) *state {
 	return &state{
 		resources: resources,
 		blocks:    make(map[string]*core.Block),
+		commited:  make(map[string]struct{}),
 		qcs:       make(map[string]*core.QuorumCert),
 	}
 }
@@ -82,14 +86,43 @@ func (state *state) deleteQC(blkHash []byte) {
 	delete(state.qcs, string(blkHash))
 }
 
+func (state *state) setCommited(blk *core.Block) {
+	state.mtxCommited.Lock()
+	defer state.mtxCommited.Unlock()
+	state.commited[string(blk.Hash())] = struct{}{}
+}
+
+func (state *state) deleteCommited(blkhash []byte) {
+	state.mtxCommited.Lock()
+	defer state.mtxCommited.Unlock()
+	delete(state.commited, string(blkhash))
+}
+
 func (state *state) getOlderBlocks(height uint64) []*core.Block {
 	state.mtxBlocks.RLock()
 	defer state.mtxBlocks.RUnlock()
-
 	ret := make([]*core.Block, 0)
 	for _, b := range state.blocks {
 		if b.Height() < height {
 			ret = append(ret, b)
+		}
+	}
+	return ret
+}
+
+func (state *state) getUncommitedOlderBlocks(blk *core.Block) []*core.Block {
+	state.mtxBlocks.RLock()
+	defer state.mtxBlocks.RUnlock()
+
+	state.mtxCommited.RLock()
+	defer state.mtxCommited.RUnlock()
+
+	ret := make([]*core.Block, 0)
+	for _, b := range state.blocks {
+		if b.Height() < blk.Height() {
+			if _, commited := state.commited[string(blk.Hash())]; !commited {
+				ret = append(ret, b)
+			}
 		}
 	}
 	return ret
