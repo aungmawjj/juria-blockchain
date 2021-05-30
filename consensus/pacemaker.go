@@ -18,6 +18,10 @@ type pacemaker struct {
 	state    *state
 	hotstuff *hotstuff.Hotstuff
 
+	leaderTimeout time.Duration
+	leaderTimer   *time.Timer
+	viewTimer     *time.Timer
+
 	// start timestamp in second of current view
 	viewStart int64
 	mtxVS     sync.RWMutex
@@ -27,7 +31,6 @@ type pacemaker struct {
 	mtxPVC            sync.RWMutex
 
 	leaderTimeoutCount int
-	mtxLtCount         sync.RWMutex
 
 	stopCh chan struct{}
 }
@@ -106,41 +109,27 @@ func (pm *pacemaker) viewChangeLoop() {
 	subQC := pm.hotstuff.SubscribeNewQCHigh()
 	defer subQC.Unsubscribe()
 
-	leaderTimeout := (pm.config.TxWaitTime + pm.config.BeatDelay) * 5
+	pm.leaderTimeout = (pm.config.TxWaitTime + pm.config.BeatDelay) * 5
 
-	viewTimer := time.NewTimer(pm.config.ViewWidth)
-	defer viewTimer.Stop()
+	pm.viewTimer = time.NewTimer(pm.config.ViewWidth)
+	defer pm.viewTimer.Stop()
 
-	leaderTimer := time.NewTimer(leaderTimeout)
-	defer leaderTimer.Stop()
+	pm.leaderTimer = time.NewTimer(pm.leaderTimeout)
+	defer pm.leaderTimer.Stop()
 
 	for {
 		select {
 		case <-pm.stopCh:
 			return
 
-		case <-viewTimer.C:
-			pm.changeView()
-			pm.drainResetTimer(leaderTimer, leaderTimeout)
+		case <-pm.viewTimer.C:
+			pm.onViewTimeout()
 
-		case <-leaderTimer.C:
+		case <-pm.leaderTimer.C:
 			pm.onLeaderTimeout()
-			pm.drainStopTimer(viewTimer)
-			if pm.getLeaderTimeoutCount() > pm.state.getFaultyCount() {
-				leaderTimer.Stop()
-				pm.setPendingViewChange(false)
-			} else {
-				leaderTimer.Reset(leaderTimeout)
-			}
 
 		case e := <-subQC.Events():
-			ltreset, vtreset := pm.onNewQCHigh(e.(hotstuff.QC))
-			if ltreset {
-				pm.drainResetTimer(leaderTimer, leaderTimeout)
-			}
-			if vtreset {
-				pm.drainResetTimer(viewTimer, pm.config.ViewWidth)
-			}
+			pm.onNewQCHigh(e.(hotstuff.QC))
 		}
 	}
 }
@@ -163,8 +152,20 @@ func (pm *pacemaker) drainStopTimer(timer *time.Timer) {
 
 func (pm *pacemaker) onLeaderTimeout() {
 	logger.I().Warnw("leader timeout", "leader", pm.state.getLeaderIndex())
-	pm.setLeaderTimeoutCount(pm.getLeaderTimeoutCount() + 1)
+	pm.leaderTimeoutCount++
 	pm.changeView()
+	pm.drainStopTimer(pm.viewTimer)
+	if pm.leaderTimeoutCount > pm.state.getFaultyCount() {
+		pm.leaderTimer.Stop()
+		pm.setPendingViewChange(false)
+	} else {
+		pm.leaderTimer.Reset(pm.leaderTimeout)
+	}
+}
+
+func (pm *pacemaker) onViewTimeout() {
+	pm.changeView()
+	pm.drainResetTimer(pm.leaderTimer, pm.leaderTimeout)
 }
 
 func (pm *pacemaker) changeView() {
@@ -186,19 +187,25 @@ func (pm *pacemaker) nextLeader() int {
 	return leaderIdx
 }
 
-func (pm *pacemaker) onNewQCHigh(qc hotstuff.QC) (leaderTReset, viewTReset bool) {
+func (pm *pacemaker) onNewQCHigh(qc hotstuff.QC) {
 	pm.state.setQC(qc.(*hsQC).qc)
-	pidx := pm.resources.VldStore.GetValidatorIndex(qcRefProposer(qc))
-	logger.I().Debugw("updated qc", "proposer", pidx, "qc", qcRefHeight(qc))
-	if pidx == pm.state.getLeaderIndex() { // if qc is from current leader
-		leaderTReset = true
+	proposer := pm.resources.VldStore.GetValidatorIndex(qcRefProposer(qc))
+	logger.I().Debugw("updated qc", "proposer", proposer, "qc", qcRefHeight(qc))
+	var ltreset, vtreset bool
+	if proposer == pm.state.getLeaderIndex() { // if qc is from current leader
+		ltreset = true
 	}
-	if pm.isNewViewApproval(pidx) {
-		leaderTReset = true
-		viewTReset = true
-		pm.approveViewLeader(pidx)
+	if pm.isNewViewApproval(proposer) {
+		ltreset = true
+		vtreset = true
+		pm.approveViewLeader(proposer)
 	}
-	return leaderTReset, viewTReset
+	if ltreset {
+		pm.drainResetTimer(pm.leaderTimer, pm.leaderTimeout)
+	}
+	if vtreset {
+		pm.drainResetTimer(pm.viewTimer, pm.config.ViewWidth)
+	}
 }
 
 func (pm *pacemaker) isNewViewApproval(proposer int) bool {
@@ -213,7 +220,7 @@ func (pm *pacemaker) approveViewLeader(proposer int) {
 	pm.state.setLeaderIndex(proposer)
 	pm.setViewStart()
 	logger.I().Infow("approved leader", "leader", pm.state.getLeaderIndex())
-	pm.setLeaderTimeoutCount(0)
+	pm.leaderTimeoutCount = 0
 }
 
 func (pm *pacemaker) setViewStart() {
@@ -238,16 +245,4 @@ func (pm *pacemaker) getPendingViewChange() bool {
 	pm.mtxPVC.RLock()
 	defer pm.mtxPVC.RUnlock()
 	return pm.pendingViewChange
-}
-
-func (pm *pacemaker) getLeaderTimeoutCount() int {
-	pm.mtxLtCount.RLock()
-	defer pm.mtxLtCount.RUnlock()
-	return pm.leaderTimeoutCount
-}
-
-func (pm *pacemaker) setLeaderTimeoutCount(count int) {
-	pm.mtxLtCount.Lock()
-	defer pm.mtxLtCount.Unlock()
-	pm.leaderTimeoutCount = count
 }
