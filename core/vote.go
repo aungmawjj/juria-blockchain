@@ -45,13 +45,14 @@ func (vote *Vote) Validate(vs ValidatorStore) error {
 	return nil
 }
 
-func (vote *Vote) setData(data *core_pb.Vote) *Vote {
+func (vote *Vote) setData(data *core_pb.Vote) error {
 	vote.data = data
 	sig, err := newSignature(vote.data.Signature)
-	if err == nil {
-		vote.voter = sig.pubKey
+	if err != nil {
+		return err
 	}
-	return vote
+	vote.voter = sig.pubKey
+	return nil
 }
 
 func (vote *Vote) BlockHash() []byte { return vote.data.BlockHash }
@@ -68,6 +69,5 @@ func (vote *Vote) Unmarshal(b []byte) error {
 	if err := proto.Unmarshal(b, data); err != nil {
 		return err
 	}
-	vote.setData(data)
-	return nil
+	return vote.setData(data)
 }

@@ -30,20 +30,24 @@ func TestQuorumCert(t *testing.T) {
 	blockHash := []byte{1}
 	votes := make([]*Vote, len(privKeys))
 	for i, priv := range privKeys {
-		votes[i] = NewVote().setData(&core_pb.Vote{
+		vote := NewVote()
+		vote.setData(&core_pb.Vote{
 			BlockHash: blockHash,
 			Signature: priv.Sign(blockHash).data,
 		})
+		votes[i] = vote
 	}
 
-	nilSigVote := NewVote().setData(&core_pb.Vote{
+	nilSigVote := NewVote()
+	nilSigVote.setData(&core_pb.Vote{
 		BlockHash: blockHash,
 		Signature: nil,
 	})
 
-	invalidSigVote := NewVote().setData(&core_pb.Vote{
+	invalidSigVote := NewVote()
+	invalidSigVote.setData(&core_pb.Vote{
 		BlockHash: blockHash,
-		Signature: privKeys[0].Sign(blockHash).data,
+		Signature: privKeys[4].Sign([]byte("wrong data")).data,
 	})
 
 	qc := NewQuorumCert().Build([]*Vote{votes[2], votes[1], votes[0]})
@@ -65,23 +69,24 @@ func TestQuorumCert(t *testing.T) {
 	qc = NewQuorumCert().Build([]*Vote{votes[1], votes[3], votes[0], votes[4]})
 	qcInvalidValidator, _ := qc.Marshal()
 
-	qc = NewQuorumCert().Build([]*Vote{votes[2], votes[1], votes[4], invalidSigVote})
+	qc = NewQuorumCert().Build([]*Vote{votes[2], votes[1], votes[0], invalidSigVote})
 	qcInvalidSig, _ := qc.Marshal()
 
 	// test validate
 	tests := []struct {
-		name    string
-		b       []byte
-		wantErr bool
+		name         string
+		b            []byte
+		unmarshalErr bool
+		validateErr  bool
 	}{
-		{"valid", qcValid, false},
-		{"valid full", qcValidFull, false},
-		{"nil qc", nil, true},
-		{"not enough sig", qcNotEnoughSig, true},
-		{"nil sig", qcNilSig, true},
-		{"duplicate key", qcDuplicateKey, true},
-		{"invalid validator", qcInvalidValidator, true},
-		{"invalid sig", qcInvalidSig, true},
+		{"valid", qcValid, false, false},
+		{"valid full", qcValidFull, false, false},
+		{"nil qc", nil, false, true},
+		{"not enough sig", qcNotEnoughSig, false, true},
+		{"nil sig", qcNilSig, true, true},
+		{"duplicate key", qcDuplicateKey, false, true},
+		{"invalid validator", qcInvalidValidator, false, true},
+		{"invalid sig", qcInvalidSig, false, true},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -89,11 +94,13 @@ func TestQuorumCert(t *testing.T) {
 
 			qc := NewQuorumCert()
 			err := qc.Unmarshal(tt.b)
+			if tt.unmarshalErr {
+				assert.Error(err)
+				return
+			}
 			assert.NoError(err)
-
 			err = qc.Validate(vs)
-
-			if tt.wantErr {
+			if tt.validateErr {
 				assert.Error(err)
 			} else {
 				assert.NoError(err)

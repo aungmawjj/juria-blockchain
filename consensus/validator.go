@@ -117,7 +117,7 @@ func (vld *validator) onReceiveProposal(proposal *core.Block) error {
 }
 
 func (vld *validator) getParentBlock(proposal *core.Block) (*core.Block, error) {
-	parent := vld.state.getBlockOnLocalNode(proposal.ParentHash())
+	parent := vld.state.getBlock(proposal.ParentHash())
 	if parent != nil {
 		return parent, nil
 	}
@@ -137,7 +137,7 @@ func (vld *validator) syncMissingCommitedBlocks(proposal *core.Block) error {
 	if proposal.IsGenesis() {
 		return fmt.Errorf("genesis block proposal")
 	}
-	qcRef := vld.state.getBlockOnLocalNode(proposal.QuorumCert().BlockHash())
+	qcRef := vld.state.getBlock(proposal.QuorumCert().BlockHash())
 	if qcRef == nil {
 		var err error
 		qcRef, err = vld.requestBlock(
@@ -161,7 +161,7 @@ func (vld *validator) syncForwardCommitedBlocks(peer *core.PublicKey, start, end
 		if err != nil {
 			return err
 		}
-		parent := vld.state.getBlockOnLocalNode(blk.ParentHash())
+		parent := vld.state.getBlock(blk.ParentHash())
 		if parent == nil {
 			return fmt.Errorf("cannot connect chain, parent not found")
 		}
@@ -176,7 +176,7 @@ func (vld *validator) syncForwardCommitedBlocks(peer *core.PublicKey, start, end
 func (vld *validator) syncMissingParentBlocksRecursive(
 	peer *core.PublicKey, blk *core.Block,
 ) (*core.Block, error) {
-	parent := vld.state.getBlockOnLocalNode(blk.ParentHash())
+	parent := vld.state.getBlock(blk.ParentHash())
 	if parent != nil {
 		return parent, nil // not missing
 	}

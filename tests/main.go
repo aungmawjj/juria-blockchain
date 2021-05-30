@@ -54,7 +54,7 @@ func main() {
 	r := &ExperimentRunner{
 		experiments:   setupExperiments(),
 		cfactory:      cfactory,
-		loadClient:    testutil.NewJuriaCoinLoad(100),
+		loadClient:    testutil.NewJuriaCoinLoadClient(100),
 		loadReqPerSec: LoadReqPerSec,
 	}
 	pass, fail := r.run()

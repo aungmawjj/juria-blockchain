@@ -5,8 +5,10 @@ package execution
 
 import (
 	"bytes"
+	"fmt"
 	"sort"
 	"sync"
+	"time"
 
 	"github.com/aungmawjj/juria-blockchain/core"
 )
@@ -83,6 +85,7 @@ func (trk *stateTracker) getStateChanges() []*core.StateChange {
 	trk.mtx.RLock()
 	defer trk.mtx.RUnlock()
 
+	start := time.Now()
 	keys := make([]string, 0, len(trk.changes))
 	for key := range trk.changes {
 		keys = append(keys, key)
@@ -93,6 +96,9 @@ func (trk *stateTracker) getStateChanges() []*core.StateChange {
 	for i, key := range keys {
 		value := trk.changes[key]
 		scList[i] = core.NewStateChange().SetKey([]byte(key)).SetValue(value)
+	}
+	if len(scList) > 0 {
+		fmt.Println("get sorted sc list", time.Since(start))
 	}
 	return scList
 }

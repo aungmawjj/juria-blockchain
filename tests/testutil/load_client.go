@@ -10,6 +10,6 @@ import (
 
 type LoadClient interface {
 	SetupOnCluster(cls *cluster.Cluster) error
-	SubmitTx() (*core.Transaction, error)
+	SubmitTx() (int, *core.Transaction, error)
 	SubmitTxAndWait() error
 }

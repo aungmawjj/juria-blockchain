@@ -127,7 +127,7 @@ func (hsd *hsDriver) cleanStateOnCommited(bexec *core.Block) {
 }
 
 func (hsd *hsDriver) deleteCommitedOlderBlocks(bexec *core.Block) {
-	height := int64(bexec.Height()) - 10
+	height := int64(bexec.Height()) - 20
 	if height < 0 {
 		return
 	}

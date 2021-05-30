@@ -62,7 +62,9 @@ func TestMsgService_BroadcastProposal(t *testing.T) {
 		}
 	}()
 
-	blk := core.NewBlock().SetHeight(10)
+	qc := core.NewQuorumCert().Build(
+		[]*core.Vote{core.NewBlock().SetHeight(9).Vote(core.GenerateKey(nil))})
+	blk := core.NewBlock().SetHeight(10).SetQuorumCert(qc).Sign(core.GenerateKey(nil))
 	err := svc.BroadcastProposal(blk)
 
 	if !assert.NoError(err) {
@@ -161,8 +163,8 @@ func TestMsgService_BroadcastTxList(t *testing.T) {
 	}()
 
 	txs := &core.TxList{
-		core.NewTransaction().SetNonce(1),
-		core.NewTransaction().SetNonce(2),
+		core.NewTransaction().SetNonce(1).Sign(core.GenerateKey(nil)),
+		core.NewTransaction().SetNonce(2).Sign(core.GenerateKey(nil)),
 	}
 	err := svc.BroadcastTxList(txs)
 
@@ -186,7 +188,9 @@ func TestMsgService_BroadcastTxList(t *testing.T) {
 func TestMsgService_RequestBlock(t *testing.T) {
 	assert := assert.New(t)
 
-	blk := core.NewBlock().SetHeight(10).Sign(core.GenerateKey(nil))
+	qc := core.NewQuorumCert().Build(
+		[]*core.Vote{core.NewBlock().SetHeight(9).Vote(core.GenerateKey(nil))})
+	blk := core.NewBlock().SetHeight(10).SetQuorumCert(qc).Sign(core.GenerateKey(nil))
 
 	blkReqHandler := &BlockReqHandler{
 		GetBlock: func(hash []byte) (*core.Block, error) {
@@ -212,8 +216,8 @@ func TestMsgService_RequestTxList(t *testing.T) {
 	assert := assert.New(t)
 
 	var txs = &core.TxList{
-		core.NewTransaction().SetNonce(1),
-		core.NewTransaction().SetNonce(2),
+		core.NewTransaction().SetNonce(1).Sign(core.GenerateKey(nil)),
+		core.NewTransaction().SetNonce(2).Sign(core.GenerateKey(nil)),
 	}
 
 	txListReqHandler := &TxListReqHandler{

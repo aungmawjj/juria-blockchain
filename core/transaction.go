@@ -67,10 +67,11 @@ func (tx *Transaction) Validate() error {
 	return nil
 }
 
-func (tx *Transaction) setData(data *core_pb.Transaction) *Transaction {
+func (tx *Transaction) setData(data *core_pb.Transaction) error {
 	tx.data = data
-	tx.sender, _ = NewPublicKey(tx.data.Sender)
-	return tx
+	var err error
+	tx.sender, err = NewPublicKey(tx.data.Sender)
+	return err
 }
 
 func (tx *Transaction) SetNonce(val int64) *Transaction {
@@ -113,8 +114,7 @@ func (tx *Transaction) Unmarshal(b []byte) error {
 	if err := proto.Unmarshal(b, data); err != nil {
 		return err
 	}
-	tx.setData(data)
-	return nil
+	return tx.setData(data)
 }
 
 func (tx *Transaction) MarshalJSON() ([]byte, error) {
@@ -126,8 +126,7 @@ func (tx *Transaction) UnmarshalJSON(b []byte) error {
 	if err := protojson.Unmarshal(b, data); err != nil {
 		return err
 	}
-	tx.setData(data)
-	return nil
+	return tx.setData(data)
 }
 
 type TxCommit struct {
@@ -174,6 +173,11 @@ func (txc *TxCommit) SetError(val string) *TxCommit {
 	return txc
 }
 
+func (txc *TxCommit) setData(data *core_pb.TxCommit) error {
+	txc.data = data
+	return nil
+}
+
 func (txc *TxCommit) Marshal() ([]byte, error) {
 	return proto.Marshal(txc.data)
 }
@@ -183,8 +187,7 @@ func (txc *TxCommit) Unmarshal(b []byte) error {
 	if err := proto.Unmarshal(b, data); err != nil {
 		return err
 	}
-	txc.data = data
-	return nil
+	return txc.setData(data)
 }
 
 func (txc *TxCommit) MarshalJSON() ([]byte, error) {
@@ -196,8 +199,7 @@ func (txc *TxCommit) UnmarshalJSON(b []byte) error {
 	if err := protojson.Unmarshal(b, data); err != nil {
 		return err
 	}
-	txc.data = data
-	return nil
+	return txc.setData(data)
 }
 
 type TxList []*Transaction
@@ -214,7 +216,11 @@ func (txs *TxList) Unmarshal(b []byte) error {
 	}
 	*txs = make([]*Transaction, len(data.List))
 	for i, txData := range data.List {
-		(*txs)[i] = NewTransaction().setData(txData)
+		tx := NewTransaction()
+		if err := tx.setData(txData); err != nil {
+			return err
+		}
+		(*txs)[i] = tx
 	}
 	return nil
 }

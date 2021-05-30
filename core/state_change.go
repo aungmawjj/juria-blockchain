@@ -24,9 +24,9 @@ func (sc *StateChange) PrevValue() []byte     { return sc.data.PrevValue }
 func (sc *StateChange) TreeIndex() []byte     { return sc.data.TreeIndex }
 func (sc *StateChange) PrevTreeIndex() []byte { return sc.data.PrevTreeIndex }
 
-func (sc *StateChange) setData(val *core_pb.StateChange) *StateChange {
+func (sc *StateChange) setData(val *core_pb.StateChange) error {
 	sc.data = val
-	return sc
+	return nil
 }
 
 func (sc *StateChange) SetKey(val []byte) *StateChange {
@@ -63,6 +63,5 @@ func (sc *StateChange) Unmarshal(b []byte) error {
 	if err := proto.Unmarshal(b, data); err != nil {
 		return err
 	}
-	sc.setData(data)
-	return nil
+	return sc.setData(data)
 }

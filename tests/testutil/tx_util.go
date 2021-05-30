@@ -12,7 +12,7 @@ import (
 	"time"
 
 	"github.com/aungmawjj/juria-blockchain/core"
-	"github.com/aungmawjj/juria-blockchain/node"
+	"github.com/aungmawjj/juria-blockchain/execution"
 	"github.com/aungmawjj/juria-blockchain/tests/cluster"
 	"github.com/aungmawjj/juria-blockchain/txpool"
 )
@@ -75,7 +75,7 @@ func getTxStatus(node cluster.Node, hash []byte) (txpool.TxStatus, error) {
 	return status, nil
 }
 
-func queryState(cls *cluster.Cluster, query *node.StateQuery) ([]byte, error) {
+func queryState(cls *cluster.Cluster, query *execution.QueryData) ([]byte, error) {
 	b, err := json.Marshal(query)
 	if err != nil {
 		return nil, err

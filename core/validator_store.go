@@ -19,6 +19,8 @@ type ValidatorStore interface {
 type simpleValidatorStore struct {
 	validators []*PublicKey
 	vMap       map[string]int
+
+	majority int
 }
 
 var _ ValidatorStore = (*simpleValidatorStore)(nil)
@@ -31,6 +33,7 @@ func NewValidatorStore(validators []*PublicKey) ValidatorStore {
 	for i, v := range store.validators {
 		store.vMap[v.String()] = i
 	}
+	store.majority = MajorityCount(len(validators))
 	return store
 }
 
@@ -39,10 +42,13 @@ func (store *simpleValidatorStore) ValidatorCount() int {
 }
 
 func (store *simpleValidatorStore) MajorityCount() int {
-	return MajorityCount(len(store.validators))
+	return store.majority
 }
 
 func (store *simpleValidatorStore) IsValidator(pubKey *PublicKey) bool {
+	if pubKey == nil {
+		return false
+	}
 	_, ok := store.vMap[pubKey.String()]
 	return ok
 }
@@ -55,6 +61,9 @@ func (store *simpleValidatorStore) GetValidator(idx int) *PublicKey {
 }
 
 func (store *simpleValidatorStore) GetValidatorIndex(pubKey *PublicKey) int {
+	if pubKey == nil {
+		return 0
+	}
 	return store.vMap[pubKey.String()]
 }
 

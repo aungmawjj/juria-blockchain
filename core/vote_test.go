@@ -30,14 +30,15 @@ func TestVote(t *testing.T) {
 
 	// test validate
 	tests := []struct {
-		name    string
-		b       []byte
-		wantErr bool
+		name         string
+		b            []byte
+		unmarshalErr bool
+		validateErr  bool
 	}{
-		{"valid", vOk, false},
-		{"nil vote", nil, true},
-		{"nil signature", vNilSig, true},
-		{"invalid", vInvalid, true},
+		{"valid", vOk, false, false},
+		{"nil vote", nil, true, true},
+		{"nil signature", vNilSig, true, true},
+		{"invalid", vInvalid, false, true},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -45,14 +46,17 @@ func TestVote(t *testing.T) {
 
 			vote := NewVote()
 			err := vote.Unmarshal(tt.b)
+			if tt.unmarshalErr {
+				assert.Error(err)
+				return
+			}
 			assert.NoError(err)
 
 			vs := new(MockValidatorStore)
 			vs.On("IsValidator", mock.Anything).Return(true)
 
 			err = vote.Validate(vs)
-
-			if tt.wantErr {
+			if tt.validateErr {
 				assert.Error(err)
 			} else {
 				assert.NoError(err)

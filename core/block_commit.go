@@ -67,14 +67,16 @@ func (bcm *BlockCommit) ElapsedMerkle() float64 { return bcm.data.ElapsedMerkle 
 func (bcm *BlockCommit) StateChanges() []*StateChange {
 	scList := make([]*StateChange, len(bcm.data.StateChanges))
 	for i, scData := range bcm.data.StateChanges {
-		scList[i] = NewStateChange().setData(scData)
+		sc := NewStateChange()
+		sc.setData(scData)
+		scList[i] = sc
 	}
 	return scList
 }
 
-func (bcm *BlockCommit) setData(data *core_pb.BlockCommit) *BlockCommit {
+func (bcm *BlockCommit) setData(data *core_pb.BlockCommit) error {
 	bcm.data = data
-	return bcm
+	return nil
 }
 
 func (bcm *BlockCommit) Marshal() ([]byte, error) {
@@ -87,6 +89,5 @@ func (bcm *BlockCommit) Unmarshal(b []byte) error {
 	if err != nil {
 		return err
 	}
-	bcm.setData(data)
-	return nil
+	return bcm.setData(data)
 }

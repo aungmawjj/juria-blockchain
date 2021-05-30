@@ -81,17 +81,17 @@ func TestExecution(t *testing.T) {
 	assert.Equal(&cinfo, resci)
 
 	ccInput, _ := json.Marshal(juriacoin.Input{Method: "minter"})
-	minter, err := execution.Query(tx1.Hash(), ccInput)
+	minter, err := execution.Query(&QueryData{tx1.Hash(), ccInput})
 
 	assert.NoError(err)
 	assert.Equal(priv.PublicKey().Bytes(), minter)
 
-	minter, err = execution.Query(tx2.Hash(), ccInput)
+	minter, err = execution.Query(&QueryData{tx2.Hash(), ccInput})
 
 	assert.Error(err)
 	assert.Nil(minter)
 
-	minter, err = execution.Query(tx3.Hash(), ccInput)
+	minter, err = execution.Query(&QueryData{tx3.Hash(), ccInput})
 
 	assert.NoError(err)
 	assert.Equal(priv.PublicKey().Bytes(), minter)

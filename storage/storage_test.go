@@ -77,8 +77,10 @@ func TestStorage_Commit(t *testing.T) {
 	assert.Equal([]byte{10}, strg.GetState([]byte{1}))
 	assert.Equal([]byte{20}, strg.GetState([]byte{2}))
 
+	qc := core.NewQuorumCert().Build([]*core.Vote{b0.ProposerVote()})
 	b1 := core.NewBlock().
 		SetHeight(1).
+		SetQuorumCert(qc).
 		SetParentHash(b0.Hash()).
 		SetMerkleRoot(strg.GetMerkleRoot()).
 		Sign(priv)

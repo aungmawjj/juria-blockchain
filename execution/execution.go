@@ -49,15 +49,20 @@ func (exec *Execution) Execute(blk *core.Block, txs []*core.Transaction) (
 	return bexe.execute()
 }
 
-func (exec *Execution) Query(codeAddr, input []byte) ([]byte, error) {
+type QueryData struct {
+	CodeAddr []byte
+	Input    []byte
+}
+
+func (exec *Execution) Query(query *QueryData) ([]byte, error) {
 	cc, err := exec.codeRegistry.getInstance(
-		codeAddr, newStateTracker(exec.state, codeRegistryAddr))
+		query.CodeAddr, newStateTracker(exec.state, codeRegistryAddr))
 	if err != nil {
 		return nil, err
 	}
 	return cc.Query(&callContext{
-		input: input,
-		State: newStateTracker(exec.state, codeAddr),
+		input: query.Input,
+		State: newStateTracker(exec.state, query.CodeAddr),
 	})
 }
 

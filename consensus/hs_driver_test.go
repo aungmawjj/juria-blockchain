@@ -139,8 +139,10 @@ func TestHsDriver_Commit(t *testing.T) {
 	txs := []*core.Transaction{tx}
 	txPool := new(MockTxPool)
 	txPool.On("GetTxsToExecute", bexec.Transactions()).Return(txs, nil)
-	txPool.On("RemoveTxs", bexec.Transactions()).Once()     // should remove txs from pool after commit
-	txPool.On("PutTxsToQueue", bfolk.Transactions()).Once() // should put txs of folked block back to queue from pending
+	// should remove txs from pool after commit
+	txPool.On("RemoveTxs", bexec.Transactions()).Once()
+	// should put txs of folked block back to queue from pending
+	txPool.On("PutTxsToQueue", bfolk.Transactions()).Once()
 	hsd.resources.TxPool = txPool
 
 	bcm := core.NewBlockCommit().SetHash(bexec.Hash())
@@ -166,8 +168,10 @@ func TestHsDriver_Commit(t *testing.T) {
 	storage.AssertExpectations(t)
 
 	assert := assert.New(t)
-	assert.NotNil(hsd.state.getBlock(bexec.Hash()), "should not delete bexec from state")
-	assert.Nil(hsd.state.getBlock(bfolk.Hash()), "should delete folked block from state")
+	assert.NotNil(hsd.state.getBlockFromState(bexec.Hash()),
+		"should not delete bexec from state")
+	assert.Nil(hsd.state.getBlockFromState(bfolk.Hash()),
+		"should delete folked block from state")
 }
 
 func TestHsDriver_CreateQC(t *testing.T) {

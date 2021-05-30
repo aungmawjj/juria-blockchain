@@ -103,7 +103,8 @@ func (hs *Hotstuff) onCommit(b Block) {
 		hs.driver.Commit(b)
 
 	} else if !hs.GetBExec().Equal(b) {
-		log.Fatalf("hotstuff safety breached bexec-new: %+v\n bexec: %+v", b, hs.GetBExec())
+		log.Fatalf("hotstuff safety breached b-recurrsive: %+v\n bexec: %d",
+			b, hs.GetBExec().Height())
 	}
 }
 

@@ -10,6 +10,7 @@ import (
 	"net/http"
 
 	"github.com/aungmawjj/juria-blockchain/core"
+	"github.com/aungmawjj/juria-blockchain/execution"
 	"github.com/aungmawjj/juria-blockchain/logger"
 	"github.com/gin-gonic/gin"
 )
@@ -68,18 +69,13 @@ func (api *nodeAPI) submitTX(c *gin.Context) {
 	c.String(http.StatusOK, "transaction accepted")
 }
 
-type StateQuery struct {
-	CodeAddr []byte
-	Input    []byte
-}
-
 func (api *nodeAPI) queryState(c *gin.Context) {
-	query := new(StateQuery)
+	query := new(execution.QueryData)
 	if err := c.ShouldBind(query); err != nil {
 		c.String(http.StatusBadRequest, "cannot parse request")
 		return
 	}
-	result, err := api.node.execution.Query(query.CodeAddr, query.Input)
+	result, err := api.node.execution.Query(query)
 	if err != nil {
 		c.String(http.StatusInternalServerError, err.Error())
 		return

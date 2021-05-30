@@ -86,28 +86,40 @@ func (blk *Block) Validate(vs ValidatorStore) error {
 
 // Vote creates a vote for block
 func (blk *Block) Vote(signer Signer) *Vote {
-	return NewVote().setData(&core_pb.Vote{
+	vote := NewVote()
+	vote.setData(&core_pb.Vote{
 		BlockHash: blk.data.Hash,
 		Signature: signer.Sign(blk.data.Hash).data,
 	})
+	return vote
 }
 
 func (blk *Block) ProposerVote() *Vote {
-	return NewVote().setData(&core_pb.Vote{
+	vote := NewVote()
+	vote.setData(&core_pb.Vote{
 		BlockHash: blk.data.Hash,
 		Signature: &core_pb.Signature{
 			PubKey: blk.data.Proposer,
 			Value:  blk.data.Signature,
 		},
 	})
+	return vote
 }
 
-func (blk *Block) setData(data *core_pb.Block) *Block {
+func (blk *Block) setData(data *core_pb.Block) error {
 	blk.data = data
-	blk.quorumCert = NewQuorumCert()
-	blk.quorumCert.setData(data.QuorumCert)
-	blk.proposer, _ = NewPublicKey(blk.data.Proposer)
-	return blk
+	if !blk.IsGenesis() { // every block contains qc except for genesis
+		blk.quorumCert = NewQuorumCert()
+		if err := blk.quorumCert.setData(data.QuorumCert); err != nil {
+			return err
+		}
+	}
+	proposer, err := NewPublicKey(blk.data.Proposer)
+	if err != nil {
+		return err
+	}
+	blk.proposer = proposer
+	return nil
 }
 
 func (blk *Block) SetHeight(val uint64) *Block {
@@ -176,8 +188,7 @@ func (blk *Block) Unmarshal(b []byte) error {
 	if err := proto.Unmarshal(b, data); err != nil {
 		return err
 	}
-	blk.setData(data)
-	return nil
+	return blk.setData(data)
 }
 
 func (blk *Block) MarshalJSON() ([]byte, error) {
@@ -189,6 +200,5 @@ func (blk *Block) UnmarshalJSON(b []byte) error {
 	if err := protojson.Unmarshal(b, data); err != nil {
 		return err
 	}
-	blk.setData(data)
-	return nil
+	return blk.setData(data)
 }

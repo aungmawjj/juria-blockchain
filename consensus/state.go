@@ -55,6 +55,19 @@ func (state *state) setBlock(blk *core.Block) {
 }
 
 func (state *state) getBlock(hash []byte) *core.Block {
+	blk := state.getBlockFromState(hash)
+	if blk != nil {
+		return blk
+	}
+	blk, _ = state.resources.Storage.GetBlock(hash)
+	if blk == nil {
+		return nil
+	}
+	state.setBlock(blk)
+	return blk
+}
+
+func (state *state) getBlockFromState(hash []byte) *core.Block {
 	state.mtxBlocks.RLock()
 	defer state.mtxBlocks.RUnlock()
 	return state.blocks[string(hash)]
@@ -131,14 +144,6 @@ func (state *state) getUncommitedOlderBlocks(bexec *core.Block) []*core.Block {
 		}
 	}
 	return ret
-}
-
-func (state *state) getBlockOnLocalNode(hash []byte) *core.Block {
-	blk := state.getBlock(hash)
-	if blk == nil {
-		blk, _ = state.resources.Storage.GetBlock(hash)
-	}
-	return blk
 }
 
 func (state *state) isThisNodeLeader() bool {
