@@ -5,12 +5,12 @@ package execution
 
 import (
 	"bytes"
-	"fmt"
 	"sort"
 	"sync"
 	"time"
 
 	"github.com/aungmawjj/juria-blockchain/core"
+	"github.com/aungmawjj/juria-blockchain/logger"
 )
 
 type StateRO interface {
@@ -85,20 +85,23 @@ func (trk *stateTracker) getStateChanges() []*core.StateChange {
 	trk.mtx.RLock()
 	defer trk.mtx.RUnlock()
 
-	start := time.Now()
 	keys := make([]string, 0, len(trk.changes))
 	for key := range trk.changes {
 		keys = append(keys, key)
 	}
-	// scList is sorted by keys to keep it consistant across different nodes
+	start := time.Now()
+	// state changes are sorted by keys to keep it consistant across different nodes
+	// performance improvement should be done
+	// 1. sort only new merkle leaf-nodes in storage
 	sort.Strings(keys)
+	elapsed := time.Since(start)
+	if elapsed > 1*time.Millisecond {
+		logger.I().Warnw("sorted state changes", "count", len(keys), "elapsed", elapsed)
+	}
 	scList := make([]*core.StateChange, len(keys))
 	for i, key := range keys {
 		value := trk.changes[key]
 		scList[i] = core.NewStateChange().SetKey([]byte(key)).SetValue(value)
-	}
-	if len(scList) > 0 {
-		fmt.Println("get sorted sc list", time.Since(start))
 	}
 	return scList
 }
