@@ -240,7 +240,7 @@ func (vld *validator) updateHotstuff(blk *core.Block, voting bool) error {
 		vld.hotstuff.Update(newHsBlock(blk, vld.state))
 		return nil
 	}
-	if err := vld.canVoteProposal(blk); err != nil {
+	if err := vld.verifyProposalToVote(blk); err != nil {
 		vld.hotstuff.Update(newHsBlock(blk, vld.state))
 		return err
 	}
@@ -248,13 +248,16 @@ func (vld *validator) updateHotstuff(blk *core.Block, voting bool) error {
 	return nil
 }
 
-func (vld *validator) canVoteProposal(proposal *core.Block) error {
+func (vld *validator) verifyProposalToVote(proposal *core.Block) error {
 	if !vld.state.isLeader(proposal.Proposer()) {
 		pidx := vld.resources.VldStore.GetValidatorIndex(proposal.Proposer())
 		return fmt.Errorf("proposer %d is not leader", pidx)
 	}
 	bh := vld.resources.Storage.GetBlockHeight()
 	if bh != proposal.ExecHeight() {
+		if vld.state.getCommitedHeight() == 0 {
+			return nil // on node restart, not commited any blocks yet
+		}
 		return fmt.Errorf("invalid exec height")
 	}
 	mr := vld.resources.Storage.GetMerkleRoot()

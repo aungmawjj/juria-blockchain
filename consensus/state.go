@@ -26,6 +26,10 @@ type state struct {
 
 	leaderIndex int64
 
+	// commited block height. on node restart, it's zero until a block is commited
+	commitedHeight uint64
+
+	// commited tx count, since last node start
 	commitedTxCount uint64
 }
 
@@ -86,10 +90,11 @@ func (state *state) deleteQC(blkHash []byte) {
 	delete(state.qcs, string(blkHash))
 }
 
-func (state *state) setCommited(blk *core.Block) {
+func (state *state) setCommitedBlock(blk *core.Block) {
 	state.mtxCommited.Lock()
 	defer state.mtxCommited.Unlock()
 	state.commited[string(blk.Hash())] = struct{}{}
+	atomic.StoreUint64(&state.commitedHeight, blk.Height())
 }
 
 func (state *state) deleteCommited(blkhash []byte) {
@@ -110,7 +115,7 @@ func (state *state) getOlderBlocks(height uint64) []*core.Block {
 	return ret
 }
 
-func (state *state) getUncommitedOlderBlocks(blk *core.Block) []*core.Block {
+func (state *state) getUncommitedOlderBlocks(bexec *core.Block) []*core.Block {
 	state.mtxBlocks.RLock()
 	defer state.mtxBlocks.RUnlock()
 
@@ -119,8 +124,8 @@ func (state *state) getUncommitedOlderBlocks(blk *core.Block) []*core.Block {
 
 	ret := make([]*core.Block, 0)
 	for _, b := range state.blocks {
-		if b.Height() < blk.Height() {
-			if _, commited := state.commited[string(blk.Hash())]; !commited {
+		if b.Height() < bexec.Height() {
+			if _, commited := state.commited[string(b.Hash())]; !commited {
 				ret = append(ret, b)
 			}
 		}
@@ -165,4 +170,8 @@ func (state *state) addCommitedTxCount(count int) {
 
 func (state *state) getCommitedTxCount() int {
 	return int(atomic.LoadUint64(&state.commitedTxCount))
+}
+
+func (state *state) getCommitedHeight() uint64 {
+	return atomic.LoadUint64(&state.commitedHeight)
 }

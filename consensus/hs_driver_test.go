@@ -132,6 +132,7 @@ func TestHsDriver_Commit(t *testing.T) {
 	bexec := core.NewBlock().SetTransactions([][]byte{tx.Hash()}).
 		SetParentHash(parent.Hash()).SetHeight(11).Sign(hsd.resources.Signer)
 	hsd.state.setBlock(parent)
+	hsd.state.setCommitedBlock(parent)
 	hsd.state.setBlock(bfolk)
 	hsd.state.setBlock(bexec)
 
@@ -166,7 +167,6 @@ func TestHsDriver_Commit(t *testing.T) {
 
 	assert := assert.New(t)
 	assert.NotNil(hsd.state.getBlock(bexec.Hash()), "should not delete bexec from state")
-	assert.Nil(hsd.state.getBlock(parent.Hash()), "should delete parent of bexec from state")
 	assert.Nil(hsd.state.getBlock(bfolk.Hash()), "should delete folked block from state")
 }
 

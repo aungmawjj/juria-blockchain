@@ -11,7 +11,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestValidator_canVoteProposal(t *testing.T) {
+func TestValidator_verifyProposalToVote(t *testing.T) {
 	priv0 := core.GenerateKey(nil)
 	priv1 := core.GenerateKey(nil)
 	resources := &Resources{
@@ -31,10 +31,10 @@ func TestValidator_canVoteProposal(t *testing.T) {
 		proposal *core.Block
 	}{
 		{"proposer is not leader", true, given{2, []byte{1}, 1, nil},
-			core.NewBlock().Sign(priv0)},
+			core.NewBlock().SetExecHeight(2).Sign(priv0)},
 
 		{"different exec height", true, given{2, []byte{1}, 1, nil},
-			core.NewBlock().SetExecHeight(3).Sign(priv1)},
+			core.NewBlock().SetExecHeight(1).Sign(priv1)},
 
 		{"different merkle root", true, given{2, []byte{1}, 1, nil},
 			core.NewBlock().SetExecHeight(2).SetMerkleRoot([]byte{2}).Sign(priv1)},
@@ -64,9 +64,9 @@ func TestValidator_canVoteProposal(t *testing.T) {
 
 			assert := assert.New(t)
 			if tt.wantErr {
-				assert.Error(vld.canVoteProposal(tt.proposal))
+				assert.Error(vld.verifyProposalToVote(tt.proposal))
 			} else {
-				assert.NoError(vld.canVoteProposal(tt.proposal))
+				assert.NoError(vld.verifyProposalToVote(tt.proposal))
 			}
 		})
 	}

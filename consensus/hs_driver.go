@@ -114,7 +114,7 @@ func (hsd *hsDriver) cleanStateOnCommited(bexec *core.Block) {
 	// qc for bexe is no longer needed here after commited to storage
 	hsd.state.deleteQC(bexec.Hash())
 	hsd.resources.TxPool.RemoveTxs(bexec.Transactions())
-	hsd.state.setCommited(bexec)
+	hsd.state.setCommitedBlock(bexec)
 
 	folks := hsd.state.getUncommitedOlderBlocks(bexec)
 	for _, blk := range folks {
