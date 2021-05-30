@@ -253,18 +253,25 @@ func (vld *validator) verifyProposalToVote(proposal *core.Block) error {
 		pidx := vld.resources.VldStore.GetValidatorIndex(proposal.Proposer())
 		return fmt.Errorf("proposer %d is not leader", pidx)
 	}
+	// on node restart, not commited any blocks yet, don't check merkle root
+	if vld.state.getCommitedHeight() != 0 {
+		if err := vld.verifyMerkleRoot(proposal); err != nil {
+			return err
+		}
+	}
+	return vld.resources.TxPool.VerifyProposalTxs(proposal.Transactions())
+}
+
+func (vld *validator) verifyMerkleRoot(proposal *core.Block) error {
 	bh := vld.resources.Storage.GetBlockHeight()
 	if bh != proposal.ExecHeight() {
-		if vld.state.getCommitedHeight() == 0 {
-			return nil // on node restart, not commited any blocks yet
-		}
 		return fmt.Errorf("invalid exec height")
 	}
 	mr := vld.resources.Storage.GetMerkleRoot()
 	if !bytes.Equal(mr, proposal.MerkleRoot()) {
 		return fmt.Errorf("invalid merkle root")
 	}
-	return vld.resources.TxPool.VerifyProposalTxs(proposal.Transactions())
+	return nil
 }
 
 func (vld *validator) onReceiveVote(vote *core.Vote) error {

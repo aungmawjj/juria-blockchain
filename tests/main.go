@@ -22,6 +22,8 @@ const (
 	NodeCount     = 7
 	ClusterDebug  = true
 	LoadReqPerSec = 10
+
+	RemoteLinuxCluster = false
 )
 
 func setupExperiments() []Experiment {
@@ -33,6 +35,11 @@ func setupExperiments() []Experiment {
 
 func main() {
 	cmd := exec.Command("go", "build", "../cmd/juria")
+	if RemoteLinuxCluster {
+		cmd.Env = os.Environ()
+		cmd.Env = append(cmd.Env, "GOOS=linux")
+		fmt.Printf("\n$ export %s", "GOOS=linux")
+	}
 	fmt.Printf("\n$ %s\n\n", strings.Join(cmd.Args, " "))
 	check(cmd.Run())
 
