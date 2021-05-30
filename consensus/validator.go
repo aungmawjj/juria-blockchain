@@ -229,8 +229,7 @@ func (vld *validator) verifyWithParentAndUpdateHotstuff(
 		return err
 	}
 	vld.state.setBlock(blk)
-	vld.updateHotstuff(blk, voting)
-	return nil
+	return vld.updateHotstuff(blk, voting)
 }
 
 func (vld *validator) updateHotstuff(blk *core.Block, voting bool) error {

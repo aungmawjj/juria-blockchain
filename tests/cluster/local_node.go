@@ -9,6 +9,7 @@ import (
 	"os/exec"
 	"path"
 	"strconv"
+	"syscall"
 )
 
 type localNode struct {
@@ -55,7 +56,7 @@ func (node *localNode) Stop() {
 		return
 	}
 	node.running = false
-	node.cmd.Process.Kill()
+	syscall.Kill(node.cmd.Process.Pid, syscall.SIGTERM)
 	node.logFile.Close()
 }
 

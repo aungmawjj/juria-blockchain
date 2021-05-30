@@ -7,7 +7,10 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"os"
+	"os/signal"
 	"path"
+	"syscall"
 
 	"github.com/aungmawjj/juria-blockchain/consensus"
 	"github.com/aungmawjj/juria-blockchain/core"
@@ -47,7 +50,12 @@ func Run(config Config) {
 	status := node.consensus.GetStatus()
 	logger.I().Infow("started consensus",
 		"leader", status.LeaderIndex, "bLeaf", status.BLeaf, "qc", status.QCHigh)
-	select {}
+
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
+	<-c
+	logger.I().Info("node killed")
+	node.consensus.Stop()
 }
 
 func (node *Node) setupLogger() {

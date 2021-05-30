@@ -20,12 +20,12 @@ func (expm *RestartCluster) Name() string {
 func (expm *RestartCluster) Run(cls *cluster.Cluster) error {
 	cls.Stop()
 	fmt.Println("Stopped cluster")
-	testutil.Sleep(3 * time.Second)
+	testutil.Sleep(5 * time.Second)
 
 	if err := cls.Start(); err != nil {
 		return err
 	}
 	fmt.Println("Restarted cluster")
-	testutil.Sleep(time.Duration(cls.NodeCount()) * testutil.LeaderTimeout())
+	testutil.Sleep(20 * time.Second)
 	return nil
 }
