@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/aungmawjj/juria-blockchain/core"
+	"github.com/aungmawjj/juria-blockchain/logger"
 )
 
 type Config struct {
@@ -91,11 +92,16 @@ func (bexe *blkExecutor) execute() (*core.BlockCommit, []*core.TxCommit) {
 	for i := range bexe.txs {
 		bexe.executeTx(i)
 	}
+	elapsed := time.Since(start)
 	bcm := core.NewBlockCommit().
 		SetHash(bexe.blk.Hash()).
 		SetStateChanges(bexe.rootTrk.getStateChanges()).
-		SetElapsedExec(time.Since(start).Seconds())
+		SetElapsedExec(elapsed.Seconds())
 
+	if len(bexe.txs) > 0 {
+		logger.I().Debugw("batch execution",
+			"txs", len(bexe.txs), "elapsed", elapsed)
+	}
 	return bcm, bexe.txCommits
 }
 

@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/aungmawjj/juria-blockchain/core"
+	"github.com/aungmawjj/juria-blockchain/logger"
 	"github.com/aungmawjj/juria-blockchain/merkle"
 	"github.com/dgraph-io/badger/v3"
 	_ "golang.org/x/crypto/sha3"
@@ -121,30 +122,38 @@ func (strg *Storage) GetMerkleRoot() []byte {
 }
 
 func (strg *Storage) commit(data *CommitData) error {
-	start := time.Now()
-	strg.computeMerkleUpdate(data)
-	data.BlockCommit.SetElapsedMerkle(time.Since(start).Seconds())
+	if len(data.BlockCommit.StateChanges()) > 0 {
+		start := time.Now()
+		strg.computeMerkleUpdate(data)
+		elapsed := time.Since(start)
+		data.BlockCommit.SetElapsedMerkle(elapsed.Seconds())
+		logger.I().Debugw("compute merkle update",
+			"leaf nodes", len(data.merkleUpdate.Leaves), "elapsed", elapsed)
+	}
 
-	return strg.storeCommitData(data)
+	start := time.Now()
+	if err := strg.writeCommitData(data); err != nil {
+		return err
+	}
+	elapsed := time.Since(start)
+	logger.I().Debugw("write commit data", "elapsed", elapsed)
+	return nil
 }
 
-func (strg *Storage) storeCommitData(data *CommitData) error {
-	if err := strg.storeChainData(data); err != nil {
+func (strg *Storage) writeCommitData(data *CommitData) error {
+	if err := strg.writeChainData(data); err != nil {
 		return err
 	}
-	if err := strg.storeBlockCommit(data); err != nil {
+	if err := strg.writeBlockCommit(data); err != nil {
 		return err
 	}
-	if err := strg.commitStateMerkleTree(data); err != nil {
+	if err := strg.writeStateMerkleTree(data); err != nil {
 		return err
 	}
 	return strg.setCommitedBlockHeight(data.Block.Height())
 }
 
 func (strg *Storage) computeMerkleUpdate(data *CommitData) {
-	if len(data.BlockCommit.StateChanges()) == 0 {
-		return
-	}
 	strg.stateStore.loadPrevValues(data.BlockCommit.StateChanges())
 	strg.stateStore.loadPrevTreeIndexes(data.BlockCommit.StateChanges())
 	prevLeafCount := strg.merkleStore.getLeafCount()
@@ -157,7 +166,7 @@ func (strg *Storage) computeMerkleUpdate(data *CommitData) {
 		SetMerkleRoot(data.merkleUpdate.Root.Data)
 }
 
-func (strg *Storage) storeChainData(data *CommitData) error {
+func (strg *Storage) writeChainData(data *CommitData) error {
 	updFns := make([]updateFunc, 0)
 	updFns = append(updFns, strg.chainStore.setBlock(data.Block)...)
 	updFns = append(updFns, strg.chainStore.setLastQC(data.QC))
@@ -166,13 +175,13 @@ func (strg *Storage) storeChainData(data *CommitData) error {
 	return updateBadgerDB(strg.db, updFns)
 }
 
-func (strg *Storage) storeBlockCommit(data *CommitData) error {
+func (strg *Storage) writeBlockCommit(data *CommitData) error {
 	updFn := strg.chainStore.setBlockCommit(data.BlockCommit)
 	return updateBadgerDB(strg.db, []updateFunc{updFn})
 }
 
 // commit state values and merkle tree in one transaction
-func (strg *Storage) commitStateMerkleTree(data *CommitData) error {
+func (strg *Storage) writeStateMerkleTree(data *CommitData) error {
 	if len(data.BlockCommit.StateChanges()) == 0 {
 		return nil
 	}
