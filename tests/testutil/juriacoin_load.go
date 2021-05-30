@@ -16,7 +16,7 @@ import (
 	"github.com/aungmawjj/juria-blockchain/tests/cluster"
 )
 
-type JuriaCoinClient struct {
+type JuriaCoinLoad struct {
 	minter   *core.PrivateKey
 	accounts []*core.PrivateKey
 
@@ -24,10 +24,12 @@ type JuriaCoinClient struct {
 	codeAddr []byte
 }
 
+var _ LoadClient = (*JuriaCoinLoad)(nil)
+
 // create and setup a LoadService
 // submit chaincode deploy tx and wait for commit
-func NewJuriaCoinClient(mint int) *JuriaCoinClient {
-	svc := &JuriaCoinClient{
+func NewJuriaCoinLoad(mint int) *JuriaCoinLoad {
+	svc := &JuriaCoinLoad{
 		minter:   core.GenerateKey(nil),
 		accounts: make([]*core.PrivateKey, mint),
 	}
@@ -37,19 +39,19 @@ func NewJuriaCoinClient(mint int) *JuriaCoinClient {
 	return svc
 }
 
-func (svc *JuriaCoinClient) SetupOnCluster(cls *cluster.Cluster) error {
+func (svc *JuriaCoinLoad) SetupOnCluster(cls *cluster.Cluster) error {
 	return svc.setupOnCluster(cls)
 }
 
-func (svc *JuriaCoinClient) Transfer() error {
+func (svc *JuriaCoinLoad) SubmitTxAndWait() error {
 	return svc.transfer()
 }
 
-func (svc *JuriaCoinClient) TransferAsync() (*core.Transaction, error) {
+func (svc *JuriaCoinLoad) SubmitTx() (*core.Transaction, error) {
 	return svc.transferAsync()
 }
 
-func (svc *JuriaCoinClient) setupOnCluster(cls *cluster.Cluster) error {
+func (svc *JuriaCoinLoad) setupOnCluster(cls *cluster.Cluster) error {
 	svc.cluster = cls
 	depTx := svc.makeDeploymentTx()
 	if err := submitTxAndWait(svc.cluster, depTx); err != nil {
@@ -60,7 +62,7 @@ func (svc *JuriaCoinClient) setupOnCluster(cls *cluster.Cluster) error {
 	return nil
 }
 
-func (svc *JuriaCoinClient) mintAccounts() error {
+func (svc *JuriaCoinLoad) mintAccounts() error {
 	errCh := make(chan error, 10)
 	for _, acc := range svc.accounts {
 		go func(acc *core.PublicKey) {
@@ -76,7 +78,7 @@ func (svc *JuriaCoinClient) mintAccounts() error {
 	return nil
 }
 
-func (svc *JuriaCoinClient) mintSingleAccount(dest *core.PublicKey) error {
+func (svc *JuriaCoinLoad) mintSingleAccount(dest *core.PublicKey) error {
 	var mintAmount int64 = 10000000000
 	mintTx := svc.makeMintTx(dest, mintAmount)
 	if err := submitTxAndWait(svc.cluster, mintTx); err != nil {
@@ -92,7 +94,7 @@ func (svc *JuriaCoinClient) mintSingleAccount(dest *core.PublicKey) error {
 	return nil
 }
 
-func (svc *JuriaCoinClient) makeDeploymentTx() *core.Transaction {
+func (svc *JuriaCoinLoad) makeDeploymentTx() *core.Transaction {
 	input := &execution.DeploymentInput{
 		CodeInfo: execution.CodeInfo{
 			DriverType: execution.DriverTypeNative,
@@ -106,22 +108,22 @@ func (svc *JuriaCoinClient) makeDeploymentTx() *core.Transaction {
 		Sign(svc.minter)
 }
 
-func (svc *JuriaCoinClient) transfer() error {
+func (svc *JuriaCoinLoad) transfer() error {
 	return submitTxAndWait(svc.cluster, svc.makeRandomTransfer())
 }
 
-func (svc *JuriaCoinClient) transferAsync() (*core.Transaction, error) {
+func (svc *JuriaCoinLoad) transferAsync() (*core.Transaction, error) {
 	tx := svc.makeRandomTransfer()
 	_, err := submitTx(svc.cluster, tx)
 	return tx, err
 }
 
-func (svc *JuriaCoinClient) makeRandomTransfer() *core.Transaction {
+func (svc *JuriaCoinLoad) makeRandomTransfer() *core.Transaction {
 	return svc.makeTransferTx(svc.accounts[rand.Intn(len(svc.accounts))],
 		core.GenerateKey(nil).PublicKey(), 1)
 }
 
-func (svc *JuriaCoinClient) makeMintTx(dest *core.PublicKey, value int64) *core.Transaction {
+func (svc *JuriaCoinLoad) makeMintTx(dest *core.PublicKey, value int64) *core.Transaction {
 	input := &juriacoin.Input{
 		Method: "mint",
 		Dest:   dest.Bytes(),
@@ -135,7 +137,7 @@ func (svc *JuriaCoinClient) makeMintTx(dest *core.PublicKey, value int64) *core.
 		Sign(svc.minter)
 }
 
-func (svc *JuriaCoinClient) makeTransferTx(
+func (svc *JuriaCoinLoad) makeTransferTx(
 	sender *core.PrivateKey, dest *core.PublicKey, value int64,
 ) *core.Transaction {
 	input := &juriacoin.Input{
@@ -151,7 +153,7 @@ func (svc *JuriaCoinClient) makeTransferTx(
 		Sign(sender)
 }
 
-func (svc *JuriaCoinClient) queryBalance(dest *core.PublicKey) (int64, error) {
+func (svc *JuriaCoinLoad) queryBalance(dest *core.PublicKey) (int64, error) {
 	input := &juriacoin.Input{
 		Method: "balance",
 		Dest:   dest.Bytes(),

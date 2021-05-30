@@ -26,7 +26,7 @@ type ExperimentRunner struct {
 	cfactory    cluster.ClusterFactory
 
 	loadReqPerSec int
-	jClient       *testutil.JuriaCoinClient
+	loadClient    testutil.LoadClient
 }
 
 func (r *ExperimentRunner) run() (pass, fail int) {
@@ -81,7 +81,7 @@ func (r *ExperimentRunner) runSingleExperiment(expm Experiment) error {
 		testutil.Sleep(10 * time.Second)
 
 		fmt.Println("Setting up load generator")
-		err = r.jClient.SetupOnCluster(cls)
+		err = r.loadClient.SetupOnCluster(cls)
 		if err != nil {
 			return
 		}
@@ -130,7 +130,7 @@ func (r *ExperimentRunner) runLoadGenerator(ctx context.Context) {
 		case <-ctx.Done():
 			return
 		case <-ticker.C:
-			r.jClient.TransferAsync()
+			r.loadClient.SubmitTx()
 		}
 	}
 }
