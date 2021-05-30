@@ -51,6 +51,7 @@ func TestValidator_verifyProposalToVote(t *testing.T) {
 				resources: resources,
 				state:     newState(resources),
 			}
+			vld.state.commitedHeight = uint64(tt.given.execHeight)
 			vld.state.setLeaderIndex(tt.given.leaderIdx)
 
 			storage := new(MockStorage)

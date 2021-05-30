@@ -62,9 +62,11 @@ func (qc *QuorumCert) setData(data *core_pb.QuorumCert) *QuorumCert {
 }
 
 func (qc *QuorumCert) Build(votes []*Vote) *QuorumCert {
-	qc.data.BlockHash = votes[0].data.BlockHash
 	qc.data.Signatures = make([]*core_pb.Signature, len(votes))
 	for i, vote := range votes {
+		if qc.data.BlockHash == nil {
+			qc.data.BlockHash = vote.data.BlockHash
+		}
 		qc.data.Signatures[i] = vote.data.Signature
 	}
 	return qc

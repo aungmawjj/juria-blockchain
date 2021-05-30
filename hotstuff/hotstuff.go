@@ -42,9 +42,9 @@ func (hs *Hotstuff) OnReceiveVote(v Vote) {
 		return
 	}
 	if hs.GetVoteCount() >= hs.driver.MajorityCount() {
-		qc := hs.driver.CreateQC(hs.GetVotes())
-		hs.UpdateQCHigh(qc)
+		votes := hs.GetVotes()
 		hs.endProposal()
+		hs.UpdateQCHigh(hs.driver.CreateQC(votes))
 	}
 }
 
