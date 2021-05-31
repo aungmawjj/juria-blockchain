@@ -51,6 +51,9 @@ func submitTx(cls *cluster.Cluster, tx *core.Transaction) (int, error) {
 	var retErr error
 	retryOrder := PickUniqueRandoms(cls.NodeCount(), cls.NodeCount())
 	for _, i := range retryOrder {
+		if !cls.GetNode(i).IsRunning() {
+			continue
+		}
 		resp, err := http.Post(cls.GetNode(i).GetEndpoint()+"/transactions",
 			"application/json", bytes.NewReader(b))
 		retErr = checkResponse(resp, err)
@@ -63,16 +66,14 @@ func submitTx(cls *cluster.Cluster, tx *core.Transaction) (int, error) {
 
 func getTxStatus(node cluster.Node, hash []byte) (txpool.TxStatus, error) {
 	hashstr := hex.EncodeToString(hash)
-	resp, err := http.Get(node.GetEndpoint() +
+	resp, err := getRequestWithRetry(node.GetEndpoint() +
 		fmt.Sprintf("/transactions/%s/status", hashstr))
-	if err := checkResponse(resp, err); err != nil {
+	if err != nil {
 		return 0, err
 	}
+
 	var status txpool.TxStatus
-	if err := json.NewDecoder(resp.Body).Decode(&status); err != nil {
-		return 0, err
-	}
-	return status, nil
+	return status, json.NewDecoder(resp.Body).Decode(&status)
 }
 
 func queryState(cls *cluster.Cluster, query *execution.QueryData) ([]byte, error) {
@@ -83,6 +84,9 @@ func queryState(cls *cluster.Cluster, query *execution.QueryData) ([]byte, error
 	var retErr error
 	retryOrder := PickUniqueRandoms(cls.NodeCount(), cls.NodeCount())
 	for _, i := range retryOrder {
+		if !cls.GetNode(i).IsRunning() {
+			continue
+		}
 		resp, err := http.Post(cls.GetNode(i).GetEndpoint()+"/querystate",
 			"application/json", bytes.NewReader(b))
 		retErr = checkResponse(resp, err)

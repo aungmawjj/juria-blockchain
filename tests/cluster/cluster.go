@@ -6,6 +6,7 @@ package cluster
 type Node interface {
 	Start() error
 	Stop()
+	IsRunning() bool
 	GetEndpoint() string
 }
 

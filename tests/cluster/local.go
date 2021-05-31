@@ -9,6 +9,7 @@ import (
 	"os/exec"
 	"path"
 	"strconv"
+	"sync"
 	"syscall"
 
 	"github.com/aungmawjj/juria-blockchain/core"
@@ -120,6 +121,8 @@ type localNode struct {
 	debug   bool
 
 	running bool
+	mtxRun  sync.RWMutex
+
 	cmd     *exec.Cmd
 	logFile *os.File
 }
@@ -127,7 +130,7 @@ type localNode struct {
 var _ Node = (*localNode)(nil)
 
 func (node *localNode) Start() error {
-	if node.running {
+	if node.IsRunning() {
 		return nil
 	}
 	f, err := os.OpenFile(path.Join(node.datadir, "log.txt"),
@@ -146,17 +149,29 @@ func (node *localNode) Start() error {
 	}
 	node.cmd.Stderr = node.logFile
 	node.cmd.Stdout = node.logFile
-	node.running = true
+	node.setRunning(true)
 	return node.cmd.Start()
 }
 
 func (node *localNode) Stop() {
-	if !node.running {
+	if !node.IsRunning() {
 		return
 	}
-	node.running = false
+	node.setRunning(false)
 	syscall.Kill(node.cmd.Process.Pid, syscall.SIGTERM)
 	node.logFile.Close()
+}
+
+func (node *localNode) IsRunning() bool {
+	node.mtxRun.RLock()
+	defer node.mtxRun.RUnlock()
+	return node.running
+}
+
+func (node *localNode) setRunning(val bool) {
+	node.mtxRun.Lock()
+	defer node.mtxRun.Unlock()
+	node.running = val
 }
 
 func (node *localNode) GetEndpoint() string {

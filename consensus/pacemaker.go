@@ -45,22 +45,33 @@ func (pm *pacemaker) stop() {
 
 func (pm *pacemaker) run() {
 	for {
+		blkDelay := time.After(pm.config.BlockDelay)
+
 		pm.onBeat()
-		d := pm.config.BeatDelay
+
+		beatWait := pm.config.BeatDelay
 		if pm.resources.TxPool.GetStatus().Total == 0 {
-			d += pm.config.TxWaitTime
+			beatWait += pm.config.TxWaitTime
 		}
-		delayT := time.NewTimer(d)
+		beatT := time.NewTimer(beatWait)
 		subQC := pm.hotstuff.SubscribeNewQCHigh()
 
 		select {
 		case <-pm.stopCh:
 			return
-		case <-delayT.C:
+
+		// either beatdelay timeout or I'm able to create qc
+		case <-beatT.C:
 		case <-subQC.Events():
 		}
-		delayT.Stop()
+		beatT.Stop()
 		subQC.Unsubscribe()
+
+		select {
+		case <-pm.stopCh:
+			return
+		case <-blkDelay:
+		}
 	}
 }
 

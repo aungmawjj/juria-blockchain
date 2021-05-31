@@ -4,7 +4,6 @@
 package testutil
 
 import (
-	"bytes"
 	"fmt"
 	"sync"
 	"time"
@@ -97,7 +96,11 @@ func (hc *healthChecker) makeInterrupt() {
 }
 
 func (hc *healthChecker) checkSafety() error {
-	height, err := hc.getMinimumBexec()
+	status, err := hc.shouldGetStatus()
+	if err != nil {
+		return err
+	}
+	height, err := hc.getMinimumBexec(status)
 	if err != nil {
 		return err
 	}
@@ -106,43 +109,44 @@ func (hc *healthChecker) checkSafety() error {
 		return nil
 	default:
 	}
-	return hc.shouldEqualMerkleRoot(height)
-}
-
-func (hc *healthChecker) shouldEqualMerkleRoot(height uint64) error {
-	bResp, err := hc.shouldGetBlockByHeight(height)
+	blocks, err := hc.shouldGetBlockByHeight(height)
 	if err != nil {
 		return err
 	}
-	var mRoot []byte
-	equalCount := 1
-	for _, blk := range bResp {
-		if blk.MerkleRoot() == nil {
-			equalCount++
-		} else if mRoot == nil {
-			mRoot = blk.MerkleRoot()
-		} else if bytes.Equal(mRoot, blk.MerkleRoot()) {
-			equalCount++
-		}
-	}
-	if equalCount < hc.minimumHealthyNode() {
-		return fmt.Errorf("different merkle root at block %d", height)
-	}
-	return nil
+	return hc.shouldEqualMerkleRoot(blocks)
 }
 
-func (hc *healthChecker) getMinimumBexec() (uint64, error) {
-	sResp, err := hc.shouldGetStatus()
-	if err != nil {
-		return 0, err
-	}
-	var ret uint64 = 0
-	for _, status := range sResp {
-		if ret == 0 || status.BExec < ret {
+func (hc *healthChecker) getMinimumBexec(sMap map[int]*consensus.Status) (uint64, error) {
+	var ret uint64
+	for _, status := range sMap {
+		if ret == 0 {
+			ret = status.BExec
+		} else if status.BExec < ret {
 			ret = status.BExec
 		}
 	}
 	return ret, nil
+}
+
+func (hc *healthChecker) shouldEqualMerkleRoot(blocks map[int]*core.Block) error {
+	var height uint64
+	equalCount := make(map[string]int)
+	for i, blk := range blocks {
+		if blk.MerkleRoot() == nil {
+			return fmt.Errorf("nil merkle root at node %d, block %d", i, blk.Height())
+		}
+		equalCount[string(blk.MerkleRoot())]++
+		if height == 0 {
+			height = blk.Height()
+		}
+	}
+	for _, count := range equalCount {
+		if count >= hc.minimumHealthyNode() {
+			fmt.Printf(" + Same merkle root at block %d\n", height)
+			return nil
+		}
+	}
+	return fmt.Errorf("different merkle root at block %d", height)
 }
 
 func (hc *healthChecker) checkLiveness() error {
@@ -170,13 +174,9 @@ func (hc *healthChecker) checkLiveness() error {
 
 func (hc *healthChecker) getMaximumBexec(status map[int]*consensus.Status) uint64 {
 	var bexec uint64 = 0
-	var txCount int = 0
 	for _, s := range status {
 		if s.BExec > bexec {
 			bexec = s.BExec
-		}
-		if s.CommitedTxCount > txCount {
-			txCount = s.CommitedTxCount
 		}
 	}
 	return bexec
@@ -191,11 +191,15 @@ func (hc *healthChecker) getLivenessWaitTime() time.Duration {
 }
 
 func (hc *healthChecker) shouldCommitNewBlocks(
-	prevStatus map[int]*consensus.Status, lastHeight uint64,
+	sMap map[int]*consensus.Status, lastHeight uint64,
 ) error {
 	validCount := 0
-	for _, status := range prevStatus {
+	blkCount := 0
+	for _, status := range sMap {
 		if status.BExec > lastHeight {
+			if blkCount == 0 {
+				blkCount = int(status.BExec - lastHeight)
+			}
 			validCount++
 		}
 	}
@@ -203,6 +207,7 @@ func (hc *healthChecker) shouldCommitNewBlocks(
 		return fmt.Errorf("%d nodes are not commiting new blocks",
 			hc.cluster.NodeCount()-validCount)
 	}
+	fmt.Printf(" + Commited blocks in %s = %d\n", hc.getLivenessWaitTime(), blkCount)
 	return nil
 }
 
@@ -210,10 +215,14 @@ func (hc *healthChecker) shouldCommitTxs(
 	prevStatus, status map[int]*consensus.Status,
 ) error {
 	validCount := 0
+	txCount := 0
 	for i, s := range status {
 		if prevStatus == nil && s.CommitedTxCount > 0 {
 			validCount++
 		} else if s.CommitedTxCount > prevStatus[i].CommitedTxCount {
+			if txCount == 0 {
+				txCount = s.CommitedTxCount - prevStatus[i].CommitedTxCount
+			}
 			validCount++
 		}
 	}
@@ -221,6 +230,7 @@ func (hc *healthChecker) shouldCommitTxs(
 		return fmt.Errorf("%d nodes are not commiting new txs",
 			hc.cluster.NodeCount()-validCount)
 	}
+	fmt.Printf(" + Commited txs in %s = %d\n", hc.getLivenessWaitTime(), txCount)
 	return nil
 }
 
@@ -292,19 +302,17 @@ func (hc *healthChecker) hasViewChanged(status, last *consensus.Status) bool {
 }
 
 func (hc *healthChecker) shouldEqualLeader(changedView map[int]*consensus.Status) error {
-	leaderIdx := -1
-	equalCount := 1
+	equalCount := make(map[int]int)
 	for _, status := range changedView {
-		if leaderIdx == -1 {
-			leaderIdx = status.LeaderIndex
-		} else if leaderIdx == status.LeaderIndex {
-			equalCount++
+		equalCount[status.LeaderIndex]++
+	}
+	for i, count := range equalCount {
+		if count >= hc.minimumHealthyNode() {
+			fmt.Printf(" + Leader changed to %d\n", i)
+			return nil
 		}
 	}
-	if equalCount < hc.minimumHealthyNode() {
-		return fmt.Errorf("inconsistant view change")
-	}
-	return nil
+	return fmt.Errorf("inconsistant view change")
 }
 
 func (hc *healthChecker) shouldGetStatus() (map[int]*consensus.Status, error) {

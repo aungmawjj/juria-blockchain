@@ -96,7 +96,7 @@ func (trk *stateTracker) getStateChanges() []*core.StateChange {
 	sort.Strings(keys)
 	elapsed := time.Since(start)
 	if elapsed > 1*time.Millisecond {
-		logger.I().Warnw("sorted state changes", "count", len(keys), "elapsed", elapsed)
+		logger.I().Debugw("sorted state changes", "count", len(keys), "elapsed", elapsed)
 	}
 	scList := make([]*core.StateChange, len(keys))
 	for i, key := range keys {

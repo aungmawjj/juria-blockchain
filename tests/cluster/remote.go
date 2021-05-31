@@ -236,6 +236,10 @@ func (node *remoteNode) Stop() {
 	node.logFile.Close()
 }
 
+func (node *remoteNode) IsRunning() bool {
+	return node.running
+}
+
 func (node *remoteNode) GetEndpoint() string {
 	return fmt.Sprintf("http://127.0.0.1:%d", node.apiPort)
 }

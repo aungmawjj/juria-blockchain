@@ -21,7 +21,7 @@ const (
 	WorkDir       = "./workdir"
 	NodeCount     = 7
 	ClusterDebug  = true
-	LoadReqPerSec = 10
+	LoadReqPerSec = 50
 
 	RemoteLinuxCluster = false
 )
@@ -44,6 +44,7 @@ func main() {
 	check(cmd.Run())
 
 	fmt.Println("NodeCount =", NodeCount)
+	fmt.Println("LoadReqPerSec =", LoadReqPerSec)
 	clustersDir := path.Join(WorkDir, "clusters")
 	os.Mkdir(WorkDir, 0755)
 	os.Mkdir(clustersDir, 0755)

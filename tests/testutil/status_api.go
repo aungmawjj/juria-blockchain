@@ -29,8 +29,8 @@ func checkResponse(resp *http.Response, err error) error {
 
 func getRequestWithRetry(url string) (*http.Response, error) {
 	retry := 0
-	resp, err := http.Get(url)
 	for {
+		resp, err := http.Get(url)
 		err = checkResponse(resp, err)
 		if err == nil {
 			return resp, err
@@ -39,12 +39,14 @@ func getRequestWithRetry(url string) (*http.Response, error) {
 		if retry > 5 {
 			return nil, err
 		}
-		time.Sleep(200 * time.Millisecond)
-		resp, err = http.Get(url)
+		time.Sleep(1 * time.Second)
 	}
 }
 
 func GetStatus(node cluster.Node) (*consensus.Status, error) {
+	if !node.IsRunning() {
+		return nil, fmt.Errorf("node is not running")
+	}
 	resp, err := getRequestWithRetry(node.GetEndpoint() + "/consensus")
 	if err != nil {
 		return nil, err
@@ -77,6 +79,9 @@ func GetStatusAll(cls *cluster.Cluster) map[int]*consensus.Status {
 }
 
 func GetBlockByHeight(node cluster.Node, height uint64) (*core.Block, error) {
+	if !node.IsRunning() {
+		return nil, fmt.Errorf("node is not running")
+	}
 	resp, err := getRequestWithRetry(fmt.Sprintf("%s/blocksbyh/%d", node.GetEndpoint(), height))
 	if err != nil {
 		return nil, err

@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strconv"
 
 	"github.com/aungmawjj/juria-blockchain/core"
 	"github.com/aungmawjj/juria-blockchain/execution"
@@ -96,7 +97,7 @@ func (api *nodeAPI) getTxStatus(c *gin.Context) {
 func (api *nodeAPI) getTxCommit(c *gin.Context) {
 	hash, err := api.getHash(c)
 	if err != nil {
-		c.String(http.StatusBadRequest, "cannot parse request")
+		c.String(http.StatusBadRequest, "cannot parse hash")
 		return
 	}
 	txc, err := api.node.storage.GetTxCommit(hash)
@@ -110,7 +111,7 @@ func (api *nodeAPI) getTxCommit(c *gin.Context) {
 func (api *nodeAPI) getBlock(c *gin.Context) {
 	hash, err := api.getHash(c)
 	if err != nil {
-		c.String(http.StatusBadRequest, "cannot parse request")
+		c.String(http.StatusBadRequest, "cannot parse hash")
 		return
 	}
 	blk, err := api.node.GetBlock(hash)
@@ -127,7 +128,12 @@ func (api *nodeAPI) getHash(c *gin.Context) ([]byte, error) {
 }
 
 func (api *nodeAPI) getBlockByHeight(c *gin.Context) {
-	height := c.GetUint64("height")
+	hstr := c.Param("height")
+	height, err := strconv.ParseUint(hstr, 10, 64)
+	if err != nil {
+		c.String(http.StatusBadRequest, "cannot parse height")
+		return
+	}
 	blk, err := api.node.storage.GetBlockByHeight(height)
 	if err != nil {
 		c.String(http.StatusInternalServerError, err.Error())
