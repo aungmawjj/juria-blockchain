@@ -28,7 +28,7 @@ type RemoteFactoryParams struct {
 	HostsPath string // file path to host ip addresses
 
 	RemoteWorkDir string
-	SendJuria     bool
+	SetupRequired bool
 }
 
 type RemoteFactory struct {
@@ -43,14 +43,16 @@ func NewRemoteFactory(params RemoteFactoryParams) (*RemoteFactory, error) {
 	ftry := &RemoteFactory{
 		params: params,
 	}
-	if err := ftry.setup(); err != nil {
-		return nil, err
+	ftry.templateDir = path.Join(ftry.params.WorkDir, "cluster_template")
+	if ftry.params.SetupRequired {
+		if err := ftry.setup(); err != nil {
+			return nil, err
+		}
 	}
 	return ftry, nil
 }
 
 func (ftry *RemoteFactory) setup() error {
-	ftry.templateDir = path.Join(ftry.params.WorkDir, "cluster_template")
 	hosts, err := ftry.getHosts()
 	if err != nil {
 		return err
@@ -59,10 +61,8 @@ func (ftry *RemoteFactory) setup() error {
 	if err := ftry.setupRemoteDir(); err != nil {
 		return err
 	}
-	if ftry.params.SendJuria {
-		if err := ftry.sendJuria(); err != nil {
-			return err
-		}
+	if err := ftry.sendJuria(); err != nil {
+		return err
 	}
 
 	addrs, err := ftry.makeAddrs()

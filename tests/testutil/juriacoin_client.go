@@ -18,24 +18,29 @@ import (
 type JuriaCoinClient struct {
 	minter   *core.PrivateKey
 	accounts []*core.PrivateKey
+	dests    []*core.PrivateKey
 
 	cluster  *cluster.Cluster
 	codeAddr []byte
 
-	transferIdx int64
+	transferCount int64
 }
 
 var _ LoadClient = (*JuriaCoinClient)(nil)
 
 // create and setup a LoadService
 // submit chaincode deploy tx and wait for commit
-func NewJuriaCoinLoadClient(mint int) *JuriaCoinClient {
+func NewJuriaCoinLoadClient(mintCount, destCount int) *JuriaCoinClient {
 	client := &JuriaCoinClient{
 		minter:   core.GenerateKey(nil),
-		accounts: make([]*core.PrivateKey, mint),
+		accounts: make([]*core.PrivateKey, mintCount),
+		dests:    make([]*core.PrivateKey, destCount),
 	}
-	for i := 0; i < mint; i++ {
+	for i := range client.accounts {
 		client.accounts[i] = core.GenerateKey(nil)
+	}
+	for i := range client.dests {
+		client.dests[i] = core.GenerateKey(nil)
 	}
 	return client
 }
@@ -98,13 +103,11 @@ func (client *JuriaCoinClient) mintSingleAccount(dest *core.PublicKey) error {
 }
 
 func (client *JuriaCoinClient) makeRandomTransfer() *core.Transaction {
-	i := int(atomic.AddInt64(&client.transferIdx, 1))
-	if i >= len(client.accounts) {
-		atomic.StoreInt64(&client.transferIdx, 0)
-		i = 0
-	}
-	return client.MakeTransferTx(client.accounts[i],
-		core.GenerateKey(nil).PublicKey(), 1)
+	tCount := int(atomic.AddInt64(&client.transferCount, 1))
+	accIdx := tCount % len(client.accounts)
+	destIdx := tCount % len(client.dests)
+	return client.MakeTransferTx(client.accounts[accIdx],
+		client.dests[destIdx].PublicKey(), 1)
 }
 
 func (client *JuriaCoinClient) QueryBalance(dest *core.PublicKey) (int64, error) {

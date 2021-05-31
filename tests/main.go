@@ -23,7 +23,7 @@ const (
 	LoadReqPerSec = 100
 
 	RemoteLinuxCluster = false
-	RemoteSendJuria    = false
+	RemoteSetup        = true
 	RemoteLoginName    = "ubuntu"
 	RemoteKeySSH       = "serverkey"
 	RemoteHostsPath    = "hosts"
@@ -71,7 +71,7 @@ func main() {
 	r := &ExperimentRunner{
 		experiments:   setupExperiments(),
 		cfactory:      cfactory,
-		loadClient:    testutil.NewJuriaCoinLoadClient(LoadReqPerSec * 2),
+		loadClient:    testutil.NewJuriaCoinLoadClient(1000, 10000),
 		loadReqPerSec: LoadReqPerSec,
 	}
 	pass, fail := r.run()
@@ -105,6 +105,7 @@ func makeRemoteClusterFactory() cluster.ClusterFactory {
 		KeySSH:        RemoteKeySSH,
 		HostsPath:     RemoteHostsPath,
 		RemoteWorkDir: RemoteWorkDir,
+		SetupRequired: RemoteSetup,
 	})
 	check(err)
 	return ftry

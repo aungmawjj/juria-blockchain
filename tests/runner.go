@@ -131,7 +131,7 @@ func (r *ExperimentRunner) runLoadGenerator(ctx context.Context) {
 		case <-ctx.Done():
 			return
 		case <-ticker.C:
-			r.loadClient.SubmitTx()
+			go r.loadClient.SubmitTx()
 		}
 	}
 }
