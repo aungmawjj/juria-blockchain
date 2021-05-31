@@ -113,7 +113,8 @@ func (ftry *remoteFactory) readHosts() ([]string, error) {
 	}
 	hosts := strings.Split(string(raw), "\n")
 	if len(hosts) < ftry.params.NodeCount {
-		return nil, fmt.Errorf("not enough hosts, %d | %d", len(hosts))
+		return nil, fmt.Errorf("not enough hosts, %d | %d",
+			len(hosts), ftry.params.NodeCount)
 	}
 	return hosts, nil
 }

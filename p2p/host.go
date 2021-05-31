@@ -6,7 +6,6 @@ package p2p
 import (
 	"context"
 	"errors"
-	"time"
 
 	"github.com/aungmawjj/juria-blockchain/core"
 	"github.com/libp2p/go-libp2p"
@@ -26,8 +25,6 @@ type Host struct {
 
 	peerStore *PeerStore
 	libHost   host.Host
-
-	reconnectInterval time.Duration
 }
 
 func NewHost(privKey *core.PrivateKey, localAddr multiaddr.Multiaddr) (*Host, error) {
@@ -42,8 +39,6 @@ func NewHost(privKey *core.PrivateKey, localAddr multiaddr.Multiaddr) (*Host, er
 	}
 	host.libHost = libHost
 	host.libHost.SetStreamHandler(protocolID, host.handleStream)
-	host.reconnectInterval = 1 * time.Second
-	go host.reconnectLoop()
 	return host, nil
 }
 
@@ -65,34 +60,25 @@ func (host *Host) handleStream(s network.Stream) {
 		return
 	}
 	if peer := host.peerStore.Load(pubKey); peer != nil {
-		if err := peer.SetConnecting(); err == nil {
-			peer.OnConnected(s)
+		if err := peer.setConnecting(); err == nil {
+			peer.onConnected(s)
 			return
 		}
 	}
 	s.Close() // cannot find peer in the store (peer not allowed to connect)
 }
 
-func (host *Host) reconnectLoop() {
-	for range time.Tick(host.reconnectInterval) {
-		peers := host.peerStore.List()
-		for _, peer := range peers {
-			go host.connectPeer(peer)
-		}
-	}
-}
-
 func (host *Host) connectPeer(peer *Peer) {
 	// prevent simultaneous connections from both hosts
-	if err := peer.SetConnecting(); err != nil {
+	if err := peer.setConnecting(); err != nil {
 		return
 	}
 	s, err := host.newStream(peer)
 	if err != nil {
-		peer.Disconnect()
+		peer.disconnect()
 		return
 	}
-	peer.OnConnected(s)
+	peer.onConnected(s)
 }
 
 func (host *Host) newStream(peer *Peer) (network.Stream, error) {
@@ -105,6 +91,7 @@ func (host *Host) newStream(peer *Peer) (network.Stream, error) {
 }
 
 func (host *Host) AddPeer(peer *Peer) {
+	peer.host = host
 	peer, _ = host.peerStore.LoadOrStore(peer)
 	go host.connectPeer(peer)
 }

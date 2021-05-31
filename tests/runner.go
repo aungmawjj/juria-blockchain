@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"syscall"
 	"time"
 
 	"github.com/aungmawjj/juria-blockchain/tests/cluster"
@@ -107,7 +108,7 @@ func (r *ExperimentRunner) runSingleExperiment(expm Experiment) error {
 	}()
 
 	killed := make(chan os.Signal, 1)
-	signal.Notify(killed, os.Interrupt)
+	signal.Notify(killed, os.Interrupt, syscall.SIGTERM)
 
 	select {
 	case s := <-killed:

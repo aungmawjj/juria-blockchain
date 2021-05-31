@@ -7,7 +7,9 @@ import (
 	"encoding/binary"
 	"fmt"
 	"io"
+	"math/rand"
 	"sync"
+	"time"
 
 	"github.com/aungmawjj/juria-blockchain/core"
 	"github.com/aungmawjj/juria-blockchain/emitter"
@@ -44,16 +46,23 @@ type Peer struct {
 	mtxRWC    sync.RWMutex
 	mtxStatus sync.RWMutex
 	mtxWrite  sync.Mutex
+
+	reconnectInterval time.Duration
+	mtxRecon          sync.RWMutex
+
+	host *Host
 }
 
 // NewPeer godoc
 func NewPeer(pubKey *core.PublicKey, addr multiaddr.Multiaddr) *Peer {
-	return &Peer{
+	p := &Peer{
 		pubKey:  pubKey,
 		addr:    addr,
 		status:  PeerStatusDisconnected,
 		emitter: emitter.New(),
 	}
+	p.resetReconnectInterval()
+	return p
 }
 
 // PublicKey returns public key of peer
@@ -74,8 +83,7 @@ func (p *Peer) Status() PeerStatus {
 	return p.status
 }
 
-// Disconnect gogoc
-func (p *Peer) Disconnect() error {
+func (p *Peer) disconnect() {
 	p.mtxStatus.Lock()
 	defer p.mtxStatus.Unlock()
 
@@ -85,13 +93,21 @@ func (p *Peer) Disconnect() error {
 	p.status = PeerStatusDisconnected
 	rwc := p.getRWC()
 	if rwc != nil {
-		return rwc.Close()
+		rwc.Close()
 	}
-	return nil
+	p.reconnectAfterInterval()
 }
 
-// SetConnecting gogoc
-func (p *Peer) SetConnecting() error {
+func (p *Peer) reconnectAfterInterval() {
+	reconnInterval := p.increaseReconnectInterval() +
+		(time.Duration(rand.Intn(500)) * time.Millisecond)
+
+	time.AfterFunc(reconnInterval, func() {
+		p.host.connectPeer(p)
+	})
+}
+
+func (p *Peer) setConnecting() error {
 	p.mtxStatus.Lock()
 	defer p.mtxStatus.Unlock()
 
@@ -99,22 +115,23 @@ func (p *Peer) SetConnecting() error {
 		return fmt.Errorf("Status must be disconnected")
 	}
 	p.status = PeerStatusConnecting
+	logger.I().Infow("connecting", "addr", p.addr)
 	return nil
 }
 
-// OnConnected gogoc
-func (p *Peer) OnConnected(rwc io.ReadWriteCloser) {
+func (p *Peer) onConnected(rwc io.ReadWriteCloser) {
 	p.mtxStatus.Lock()
 	defer p.mtxStatus.Unlock()
 
 	logger.I().Infow("peer connected", "addr", p.addr)
 	p.status = PeerStatusConnected
 	p.setRWC(rwc)
+	p.resetReconnectInterval()
 	go p.listen()
 }
 
 func (p *Peer) listen() {
-	defer p.Disconnect()
+	defer p.disconnect()
 	for {
 		msg, err := p.read()
 		if err != nil {
@@ -177,4 +194,22 @@ func (p *Peer) getRWC() io.ReadWriteCloser {
 	p.mtxRWC.RLock()
 	defer p.mtxRWC.RUnlock()
 	return p.rwc
+}
+
+func (p *Peer) resetReconnectInterval() {
+	p.mtxRecon.Lock()
+	defer p.mtxRecon.Unlock()
+	p.reconnectInterval = 300 * time.Millisecond
+}
+
+func (p *Peer) increaseReconnectInterval() time.Duration {
+	p.mtxRecon.Lock()
+	defer p.mtxRecon.Unlock()
+
+	p.reconnectInterval *= 2
+	maxInterval := 10 * time.Second
+	if p.reconnectInterval > maxInterval {
+		p.reconnectInterval = maxInterval
+	}
+	return p.reconnectInterval
 }

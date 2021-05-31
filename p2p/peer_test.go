@@ -109,7 +109,7 @@ func TestPeer_ReadWrite(t *testing.T) {
 	p := NewPeer(nil, nil)
 
 	rwc := newRWCLoopBack()
-	p.OnConnected(rwc)
+	p.onConnected(rwc)
 	sub := p.SubscribeMsg()
 
 	msg := []byte("hello")
@@ -137,7 +137,7 @@ func TestPeer_ConnStatus(t *testing.T) {
 	assert.Equal(PeerStatusDisconnected, p.Status())
 
 	rwc := newRWCLoopBack()
-	p.OnConnected(rwc)
+	p.onConnected(rwc)
 
 	assert.Equal(PeerStatusConnected, p.Status())
 
@@ -147,16 +147,16 @@ func TestPeer_ConnStatus(t *testing.T) {
 	assert.Equal(PeerStatusDisconnected, p.Status())
 
 	p = NewPeer(nil, nil)
-	err := p.SetConnecting()
+	err := p.setConnecting()
 
 	assert.NoError(err)
 	assert.Equal(PeerStatusConnecting, p.Status())
 
-	p.Disconnect()
+	p.disconnect()
 	assert.Equal(PeerStatusDisconnected, p.Status())
 
-	p.OnConnected(newRWCLoopBack())
-	err = p.SetConnecting()
+	p.onConnected(newRWCLoopBack())
+	err = p.setConnecting()
 
 	assert.Error(err)
 	assert.Equal(PeerStatusConnected, p.Status())

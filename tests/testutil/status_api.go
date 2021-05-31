@@ -22,6 +22,7 @@ func checkResponse(resp *http.Response, err error) error {
 	}
 	if resp.StatusCode != 200 {
 		msg, _ := ioutil.ReadAll(resp.Body)
+		resp.Body.Close()
 		return fmt.Errorf("status code not 200 %s", string(msg))
 	}
 	return nil
@@ -35,6 +36,7 @@ func getRequestWithRetry(url string) (*http.Response, error) {
 		if err == nil {
 			return resp, err
 		}
+		fmt.Println("get request error", err)
 		retry++
 		if retry > 5 {
 			return nil, err
@@ -51,6 +53,7 @@ func GetStatus(node cluster.Node) (*consensus.Status, error) {
 	if err != nil {
 		return nil, err
 	}
+	defer resp.Body.Close()
 	ret := new(consensus.Status)
 	if err := json.NewDecoder(resp.Body).Decode(ret); err != nil {
 		return nil, err
@@ -86,6 +89,7 @@ func GetBlockByHeight(node cluster.Node, height uint64) (*core.Block, error) {
 	if err != nil {
 		return nil, err
 	}
+	defer resp.Body.Close()
 	ret := core.NewBlock()
 	if err := json.NewDecoder(resp.Body).Decode(ret); err != nil {
 		return nil, err

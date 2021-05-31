@@ -21,7 +21,7 @@ const (
 	WorkDir       = "./workdir"
 	NodeCount     = 7
 	ClusterDebug  = true
-	LoadReqPerSec = 50
+	LoadReqPerSec = 100
 
 	RemoteLinuxCluster = false
 )

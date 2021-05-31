@@ -58,6 +58,7 @@ func submitTx(cls *cluster.Cluster, tx *core.Transaction) (int, error) {
 			"application/json", bytes.NewReader(b))
 		retErr = checkResponse(resp, err)
 		if retErr == nil {
+			resp.Body.Close()
 			return i, nil
 		}
 	}
@@ -71,6 +72,7 @@ func getTxStatus(node cluster.Node, hash []byte) (txpool.TxStatus, error) {
 	if err != nil {
 		return 0, err
 	}
+	defer resp.Body.Close()
 
 	var status txpool.TxStatus
 	return status, json.NewDecoder(resp.Body).Decode(&status)
@@ -91,6 +93,7 @@ func queryState(cls *cluster.Cluster, query *execution.QueryData) ([]byte, error
 			"application/json", bytes.NewReader(b))
 		retErr = checkResponse(resp, err)
 		if retErr == nil {
+			defer resp.Body.Close()
 			var b []byte
 			return b, json.NewDecoder(resp.Body).Decode(&b)
 		}
