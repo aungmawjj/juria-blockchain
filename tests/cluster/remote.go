@@ -44,6 +44,11 @@ func NewRemoteFactory(params RemoteFactoryParams) (*RemoteFactory, error) {
 		params: params,
 	}
 	ftry.templateDir = path.Join(ftry.params.WorkDir, "cluster_template")
+	hosts, err := ftry.getHosts()
+	if err != nil {
+		return nil, err
+	}
+	ftry.hosts = hosts
 	if ftry.params.SetupRequired {
 		if err := ftry.setup(); err != nil {
 			return nil, err
@@ -53,18 +58,12 @@ func NewRemoteFactory(params RemoteFactoryParams) (*RemoteFactory, error) {
 }
 
 func (ftry *RemoteFactory) setup() error {
-	hosts, err := ftry.getHosts()
-	if err != nil {
-		return err
-	}
-	ftry.hosts = hosts
 	if err := ftry.setupRemoteDir(); err != nil {
 		return err
 	}
 	if err := ftry.sendJuria(); err != nil {
 		return err
 	}
-
 	addrs, err := ftry.makeAddrs()
 	if err != nil {
 		return err
