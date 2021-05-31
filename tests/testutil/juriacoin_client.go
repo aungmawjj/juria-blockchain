@@ -6,7 +6,7 @@ package testutil
 import (
 	"encoding/json"
 	"fmt"
-	"math/rand"
+	"sync/atomic"
 	"time"
 
 	"github.com/aungmawjj/juria-blockchain/core"
@@ -21,6 +21,8 @@ type JuriaCoinClient struct {
 
 	cluster  *cluster.Cluster
 	codeAddr []byte
+
+	transferIdx int64
 }
 
 var _ LoadClient = (*JuriaCoinClient)(nil)
@@ -43,19 +45,19 @@ func (client *JuriaCoinClient) SetupOnCluster(cls *cluster.Cluster) error {
 }
 
 func (client *JuriaCoinClient) SubmitTxAndWait() error {
-	return submitTxAndWait(client.cluster, client.makeRandomTransfer())
+	return SubmitTxAndWait(client.cluster, client.makeRandomTransfer())
 }
 
 func (client *JuriaCoinClient) SubmitTx() (int, *core.Transaction, error) {
 	tx := client.makeRandomTransfer()
-	nodeIdx, err := submitTx(client.cluster, tx)
+	nodeIdx, err := SubmitTx(client.cluster, tx)
 	return nodeIdx, tx, err
 }
 
 func (client *JuriaCoinClient) setupOnCluster(cls *cluster.Cluster) error {
 	client.cluster = cls
 	depTx := client.MakeDeploymentTx(client.minter)
-	if err := submitTxAndWait(client.cluster, depTx); err != nil {
+	if err := SubmitTxAndWait(client.cluster, depTx); err != nil {
 		return fmt.Errorf("cannot deploy juriacoin %w", err)
 	}
 	client.codeAddr = depTx.Hash()
@@ -82,7 +84,7 @@ func (client *JuriaCoinClient) mintAccounts() error {
 func (client *JuriaCoinClient) mintSingleAccount(dest *core.PublicKey) error {
 	var mintAmount int64 = 10000000000
 	mintTx := client.MakeMintTx(dest, mintAmount)
-	if err := submitTxAndWait(client.cluster, mintTx); err != nil {
+	if err := SubmitTxAndWait(client.cluster, mintTx); err != nil {
 		return fmt.Errorf("cannot mint juriacoin %w", err)
 	}
 	balance, err := client.QueryBalance(client.minter.PublicKey())
@@ -96,12 +98,17 @@ func (client *JuriaCoinClient) mintSingleAccount(dest *core.PublicKey) error {
 }
 
 func (client *JuriaCoinClient) makeRandomTransfer() *core.Transaction {
-	return client.MakeTransferTx(client.accounts[rand.Intn(len(client.accounts))],
+	i := int(atomic.AddInt64(&client.transferIdx, 1))
+	if i >= len(client.accounts) {
+		atomic.StoreInt64(&client.transferIdx, 0)
+		i = 0
+	}
+	return client.MakeTransferTx(client.accounts[i],
 		core.GenerateKey(nil).PublicKey(), 1)
 }
 
 func (client *JuriaCoinClient) QueryBalance(dest *core.PublicKey) (int64, error) {
-	result, err := queryState(client.cluster, client.MakeBalanceQuery(dest))
+	result, err := QueryState(client.cluster, client.MakeBalanceQuery(dest))
 	if err != nil {
 		return 0, err
 	}

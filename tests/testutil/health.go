@@ -185,7 +185,7 @@ func (hc *healthChecker) getMaximumBexec(status map[int]*consensus.Status) uint6
 func (hc *healthChecker) getLivenessWaitTime() time.Duration {
 	d := 20 * time.Second
 	if hc.majority {
-		d += time.Duration(hc.getFaultyCount()) * LeaderTimeout()
+		d += time.Duration(hc.getFaultyCount()) * hc.LeaderTimeout()
 	}
 	return d
 }
@@ -234,10 +234,6 @@ func (hc *healthChecker) shouldCommitTxs(
 	return nil
 }
 
-func (hc *healthChecker) getFaultyCount() int {
-	return hc.cluster.NodeCount() - core.MajorityCount(hc.cluster.NodeCount())
-}
-
 func (hc *healthChecker) checkRotation() error {
 	timeout := time.NewTimer(hc.getRotationTimeout())
 	defer timeout.Stop()
@@ -264,9 +260,10 @@ func (hc *healthChecker) checkRotation() error {
 }
 
 func (hc *healthChecker) getRotationTimeout() time.Duration {
-	d := consensus.DefaultConfig.ViewWidth + 5*time.Second
+	config := hc.cluster.NodeConfig()
+	d := config.ConsensusConfig.ViewWidth + 5*time.Second
 	if hc.majority {
-		d += time.Duration(hc.getFaultyCount()) * LeaderTimeout()
+		d += time.Duration(hc.getFaultyCount()) * hc.LeaderTimeout()
 	}
 	return d
 }
@@ -340,4 +337,13 @@ func (hc *healthChecker) minimumHealthyNode() int {
 		min = core.MajorityCount(hc.cluster.NodeCount())
 	}
 	return min
+}
+
+func (hc *healthChecker) LeaderTimeout() time.Duration {
+	config := hc.cluster.NodeConfig()
+	return (config.ConsensusConfig.BeatTimeout + config.ConsensusConfig.TxWaitTime) * 5
+}
+
+func (hc *healthChecker) getFaultyCount() int {
+	return hc.cluster.NodeCount() - core.MajorityCount(hc.cluster.NodeCount())
 }

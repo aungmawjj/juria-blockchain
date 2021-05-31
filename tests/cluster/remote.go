@@ -6,44 +6,41 @@ package cluster
 import (
 	"fmt"
 	"io/ioutil"
-	"os"
 	"os/exec"
 	"path"
 	"strconv"
 	"strings"
-	"syscall"
+	"sync"
 
-	"github.com/aungmawjj/juria-blockchain/core"
 	"github.com/aungmawjj/juria-blockchain/node"
 	"github.com/multiformats/go-multiaddr"
 )
 
 type RemoteFactoryParams struct {
 	JuriaPath string
+	WorkDir   string
 	NodeCount int
-	Port      int
-	ApiPort   int
-	Debug     bool
+
+	NodeConfig node.Config
 
 	LoginName string // e.g ubuntu
 	KeySSH    string
 	HostsPath string // file path to host ip addresses
 
-	WorkDir       string
 	RemoteWorkDir string
+	SendJuria     bool
 }
 
-type remoteFactory struct {
+type RemoteFactory struct {
 	params      RemoteFactoryParams
 	templateDir string
 	hosts       []string
-	dirs        []string
 }
 
-var _ ClusterFactory = (*remoteFactory)(nil)
+var _ ClusterFactory = (*RemoteFactory)(nil)
 
-func NewRemoteFactory(params RemoteFactoryParams) (ClusterFactory, error) {
-	ftry := &remoteFactory{
+func NewRemoteFactory(params RemoteFactoryParams) (*RemoteFactory, error) {
+	ftry := &RemoteFactory{
 		params: params,
 	}
 	if err := ftry.setup(); err != nil {
@@ -52,61 +49,49 @@ func NewRemoteFactory(params RemoteFactoryParams) (ClusterFactory, error) {
 	return ftry, nil
 }
 
-func (ftry *remoteFactory) setup() error {
+func (ftry *RemoteFactory) setup() error {
 	ftry.templateDir = path.Join(ftry.params.WorkDir, "cluster_template")
-	err := os.RemoveAll(ftry.templateDir) // no error if path not exist
+	hosts, err := ftry.getHosts()
 	if err != nil {
 		return err
 	}
-	if err := os.Mkdir(ftry.templateDir, 0755); err != nil {
+	ftry.hosts = hosts
+	if err := ftry.setupRemoteDir(); err != nil {
 		return err
 	}
-	ftry.hosts, err = ftry.readHosts()
+	if ftry.params.SendJuria {
+		if err := ftry.sendJuria(); err != nil {
+			return err
+		}
+	}
+
+	addrs, err := ftry.makeAddrs()
 	if err != nil {
 		return err
 	}
-	if err := ftry.createRemoteDir(); err != nil {
+	keys := makeRandomKeys(ftry.params.NodeCount)
+	vlds := makeValidators(keys, addrs)
+	if err := setupTemplateDir(ftry.templateDir, keys, vlds); err != nil {
 		return err
 	}
-	if err := ftry.sendJuria(); err != nil {
-		return err
-	}
-	ftry.dirs = make([]string, ftry.params.NodeCount)
-	keys := make([]*core.PrivateKey, ftry.params.NodeCount)
-	addrs := make([]multiaddr.Multiaddr, ftry.params.NodeCount)
-	vlds := make([]node.Validator, ftry.params.NodeCount)
-
-	// create validator infos (pubkey + addr)
-	for i := 0; i < ftry.params.NodeCount; i++ {
-		ftry.dirs[i] = path.Join(ftry.templateDir, strconv.Itoa(i))
-
-		keys[i] = core.GenerateKey(nil)
-		addr, err := multiaddr.NewMultiaddr(
-			fmt.Sprintf("/ip4/%s/tcp/%d", ftry.hosts[i], ftry.params.Port))
-		if err != nil {
-			return err
-		}
-		addrs[i] = addr
-		vlds[i] = node.Validator{
-			PubKey: keys[i].PublicKey().Bytes(),
-			Addr:   addrs[i].String(),
-		}
-	}
-
-	// setup workdir for each node
-	for i := 0; i < ftry.params.NodeCount; i++ {
-		os.Mkdir(ftry.dirs[i], 0755)
-		if err := writeNodeKey(ftry.dirs[i], keys[i]); err != nil {
-			return err
-		}
-		if err := writeValidatorsFile(ftry.dirs[i], vlds); err != nil {
-			return err
-		}
-	}
-	return nil
+	return ftry.sendTemplate()
 }
 
-func (ftry *remoteFactory) readHosts() ([]string, error) {
+func (ftry *RemoteFactory) makeAddrs() ([]multiaddr.Multiaddr, error) {
+	addrs := make([]multiaddr.Multiaddr, ftry.params.NodeCount)
+	// create validator infos (pubkey + addr)
+	for i := range addrs {
+		addr, err := multiaddr.NewMultiaddr(fmt.Sprintf("/ip4/%s/tcp/%d",
+			ftry.hosts[i], ftry.params.NodeConfig.Port))
+		if err != nil {
+			return nil, err
+		}
+		addrs[i] = addr
+	}
+	return addrs, nil
+}
+
+func (ftry *RemoteFactory) getHosts() ([]string, error) {
 	raw, err := ioutil.ReadFile(ftry.params.HostsPath)
 	if err != nil {
 		return nil, err
@@ -119,128 +104,159 @@ func (ftry *remoteFactory) readHosts() ([]string, error) {
 	return hosts, nil
 }
 
-func (ftry *remoteFactory) createRemoteDir() error {
+func (ftry *RemoteFactory) setupRemoteDir() error {
 	for i := 0; i < ftry.params.NodeCount; i++ {
-		cmd := exec.Command("ssh",
-			"-i", ftry.params.KeySSH,
-			"-u", ftry.params.LoginName,
-			ftry.hosts[i],
-			fmt.Sprintf("'mkdir %s'", ftry.params.RemoteWorkDir),
-		)
-		if err := cmd.Run(); err != nil {
+		ftry.setupRemoteDirOne(i)
+	}
+	return nil
+}
+
+func (ftry *RemoteFactory) setupRemoteDirOne(i int) error {
+	cmd := exec.Command("ssh",
+		"-i", ftry.params.KeySSH,
+		fmt.Sprintf("%s@%s", ftry.params.LoginName, ftry.hosts[i]),
+		"mkdir", ftry.params.RemoteWorkDir, ";",
+		"cd", ftry.params.RemoteWorkDir, ";",
+		"rm", "-r", "template",
+	)
+	return runCommand(cmd)
+}
+
+func (ftry *RemoteFactory) sendJuria() error {
+	for i := 0; i < ftry.params.NodeCount; i++ {
+		err := ftry.sendJuriaOne(i)
+		if err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func (ftry *remoteFactory) sendJuria() error {
+func (ftry *RemoteFactory) sendJuriaOne(i int) error {
+	cmd := exec.Command("scp",
+		"-i", ftry.params.KeySSH,
+		ftry.params.JuriaPath,
+		fmt.Sprintf("%s@%s:%s", ftry.params.LoginName, ftry.hosts[i],
+			ftry.params.RemoteWorkDir),
+	)
+	return runCommand(cmd)
+}
+
+func (ftry *RemoteFactory) sendTemplate() error {
 	for i := 0; i < ftry.params.NodeCount; i++ {
-		cmd := exec.Command("scp",
-			"-i", ftry.params.KeySSH,
-			"-u", ftry.params.LoginName,
-			ftry.params.JuriaPath,
-			ftry.hosts[i]+":"+ftry.params.RemoteWorkDir,
-		)
-		if err := cmd.Run(); err != nil {
+		err := ftry.sendTemplateOne(i)
+		if err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func (ftry *remoteFactory) sendTemplate() error {
-	for i := 0; i < ftry.params.NodeCount; i++ {
-		cmd := exec.Command("scp",
-			"-i", ftry.params.KeySSH,
-			"-u", ftry.params.LoginName,
-			"-r", ftry.dirs[i],
-			ftry.hosts[i]+":"+ftry.params.RemoteWorkDir+"/template",
-		)
-		if err := cmd.Run(); err != nil {
-			return err
-		}
-	}
-	return nil
+func (ftry *RemoteFactory) sendTemplateOne(i int) error {
+	cmd := exec.Command("scp",
+		"-i", ftry.params.KeySSH,
+		"-r", path.Join(ftry.templateDir, strconv.Itoa(i)),
+		fmt.Sprintf("%s@%s:%s", ftry.params.LoginName, ftry.hosts[i],
+			path.Join(ftry.params.RemoteWorkDir, "/template")),
+	)
+	return runCommand(cmd)
 }
 
-func (ftry *remoteFactory) SetupCluster(name string) (*Cluster, error) {
-	clusterDir := path.Join(ftry.params.WorkDir, name)
-	err := os.RemoveAll(clusterDir) // no error if path not exist
-	if err != nil {
-		return nil, err
+func (ftry *RemoteFactory) SetupCluster(name string) (*Cluster, error) {
+	ftry.setupClusterDir(name)
+	cls := &Cluster{
+		nodes:      make([]Node, ftry.params.NodeCount),
+		nodeConfig: ftry.params.NodeConfig,
 	}
-	err = exec.Command("cp", "-r", ftry.templateDir, clusterDir).Run()
-	if err != nil {
-		return nil, err
-	}
-
-	nodes := make([]Node, ftry.params.NodeCount)
-	// create remoteNodes
+	cls.nodeConfig.Datadir = path.Join(ftry.params.RemoteWorkDir, name)
+	juriaPath := path.Join(ftry.params.RemoteWorkDir, "juria")
 	for i := 0; i < ftry.params.NodeCount; i++ {
-		nodes[i] = &remoteNode{
-			juriaPath: ftry.params.JuriaPath,
-			datadir:   path.Join(clusterDir, strconv.Itoa(i)),
-			port:      ftry.params.Port,
-			apiPort:   ftry.params.ApiPort,
-			debug:     ftry.params.Debug,
+		node := &RemoteNode{
+			juriaPath: juriaPath,
+			config:    cls.nodeConfig,
+			loginName: ftry.params.LoginName,
+			keySSH:    ftry.params.KeySSH,
+			host:      ftry.hosts[i],
 		}
+		cls.nodes[i] = node
 	}
-	return &Cluster{nodes}, nil
+	return cls, nil
 }
 
-type remoteNode struct {
+func (ftry *RemoteFactory) setupClusterDir(name string) {
+	for i := 0; i < ftry.params.NodeCount; i++ {
+		ftry.setupClusterDirOne(i, name)
+	}
+}
+
+func (ftry *RemoteFactory) setupClusterDirOne(i int, name string) error {
+	cmd := exec.Command("ssh",
+		"-i", ftry.params.KeySSH,
+		fmt.Sprintf("%s@%s", ftry.params.LoginName, ftry.hosts[i]),
+		"cd", ftry.params.RemoteWorkDir, ";",
+		"rm", "-r", name, ";",
+		"cp", "-r", "template", name,
+	)
+	return cmd.Run()
+}
+
+type RemoteNode struct {
 	juriaPath string
+	config    node.Config
 
-	datadir string
-	port    int
-	apiPort int
-	debug   bool
+	loginName string
+	keySSH    string
+	host      string
 
 	running bool
-	cmd     *exec.Cmd
-	logFile *os.File
+	mtxRun  sync.RWMutex
 }
 
-var _ Node = (*remoteNode)(nil)
+var _ Node = (*RemoteNode)(nil)
 
-func (node *remoteNode) Start() error {
-	if node.running {
+func (node *RemoteNode) Start() error {
+	if node.IsRunning() {
 		return nil
 	}
-	f, err := os.OpenFile(path.Join(node.datadir, "log.txt"),
-		os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0600)
-	if err != nil {
-		return err
-	}
-	node.logFile = f
-	node.cmd = exec.Command(node.juriaPath,
-		"-d", node.datadir,
-		"-p", strconv.Itoa(node.port),
-		"-P", strconv.Itoa(node.apiPort),
+	cmd := exec.Command("ssh",
+		"-i", node.keySSH,
+		fmt.Sprintf("%s@%s", node.loginName, node.host),
+		"nohup", node.juriaPath,
+		"-d", node.config.Datadir,
+		"-p", strconv.Itoa(node.config.Port),
+		"-P", strconv.Itoa(node.config.APIPort),
+		"--debug", strconv.FormatBool(node.config.Debug),
+		">>", path.Join(node.config.Datadir, "log.txt"), "2>&1", "&",
 	)
-	if node.debug {
-		node.cmd.Args = append(node.cmd.Args, "--debug")
-	}
-	node.cmd.Stderr = node.logFile
-	node.cmd.Stdout = node.logFile
-	node.running = true
-	return node.cmd.Start()
+	node.setRunning(true)
+	return cmd.Run()
 }
 
-func (node *remoteNode) Stop() {
-	if !node.running {
+func (node *RemoteNode) Stop() {
+	if !node.IsRunning() {
 		return
 	}
-	node.running = false
-	syscall.Kill(node.cmd.Process.Pid, syscall.SIGTERM)
-	node.logFile.Close()
+	cmd := exec.Command("ssh",
+		"-i", node.keySSH,
+		fmt.Sprintf("%s@%s", node.loginName, node.host),
+		"sudo", "killall", "juria",
+	)
+	node.setRunning(false)
+	cmd.Run()
 }
 
-func (node *remoteNode) IsRunning() bool {
+func (node *RemoteNode) IsRunning() bool {
+	node.mtxRun.RLock()
+	defer node.mtxRun.RUnlock()
 	return node.running
 }
 
-func (node *remoteNode) GetEndpoint() string {
-	return fmt.Sprintf("http://127.0.0.1:%d", node.apiPort)
+func (node *RemoteNode) setRunning(val bool) {
+	node.mtxRun.Lock()
+	defer node.mtxRun.Unlock()
+	node.running = val
+}
+
+func (node *RemoteNode) GetEndpoint() string {
+	return fmt.Sprintf("http://%s:%d", node.host, node.config.APIPort)
 }

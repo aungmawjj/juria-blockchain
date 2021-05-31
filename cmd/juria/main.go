@@ -27,7 +27,8 @@ const (
 	FlagChainID      = "chainid"
 	FlagBlockTxLimit = "consensus-blockTxLimit"
 	FlagTxWaitTime   = "consensus-txWaitTime"
-	FlagBeatDelay    = "consensus-beatDelay"
+	FlagBeatTimeout  = "consensus-beatTimeout"
+	FlagBlockDelay   = "consensus-blockDelay"
 	FlagViewWidth    = "consensus-viewWidth"
 )
 
@@ -82,9 +83,13 @@ func init() {
 		FlagTxWaitTime, nodeConfig.ConsensusConfig.TxWaitTime,
 		"block creation delay if no transactions in the pool")
 
-	rootCmd.Flags().DurationVar(&nodeConfig.ConsensusConfig.BeatDelay,
-		FlagBeatDelay, nodeConfig.ConsensusConfig.BeatDelay,
-		"delay to propose next block if leader cannot create qc")
+	rootCmd.Flags().DurationVar(&nodeConfig.ConsensusConfig.BeatTimeout,
+		FlagBeatTimeout, nodeConfig.ConsensusConfig.BeatTimeout,
+		"duration to wait to propose next block if leader cannot create qc")
+
+	rootCmd.Flags().DurationVar(&nodeConfig.ConsensusConfig.BlockDelay,
+		FlagBlockDelay, nodeConfig.ConsensusConfig.BlockDelay,
+		"minimum delay between blocks")
 
 	rootCmd.Flags().DurationVar(&nodeConfig.ConsensusConfig.ViewWidth,
 		FlagViewWidth, nodeConfig.ConsensusConfig.ViewWidth,

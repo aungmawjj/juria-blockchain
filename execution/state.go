@@ -85,13 +85,13 @@ func (trk *stateTracker) getStateChanges() []*core.StateChange {
 	trk.mtx.RLock()
 	defer trk.mtx.RUnlock()
 
+	start := time.Now()
 	keys := make([]string, 0, len(trk.changes))
 	for key := range trk.changes {
 		keys = append(keys, key)
 	}
-	start := time.Now()
 	// state changes are sorted by keys to keep it consistant across different nodes
-	// performance improvement should be done
+	// if required, performance improvement should be done
 	// 1. sort only new merkle leaf-nodes in storage
 	sort.Strings(keys)
 	elapsed := time.Since(start)

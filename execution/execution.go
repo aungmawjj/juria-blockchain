@@ -90,6 +90,12 @@ type blkExecutor struct {
 	txCommits []*core.TxCommit
 }
 
+/*
+execute transactions of a block in sequential
+to improve the performance, execute transactions in parallel
+if state conflict occur, (i.e, a transaction call getState of the another transaction's setState)
+re-execute the conflict transactions
+*/
 func (bexe *blkExecutor) execute() (*core.BlockCommit, []*core.TxCommit) {
 	start := time.Now()
 	bexe.rootTrk = newStateTracker(bexe.state, nil)

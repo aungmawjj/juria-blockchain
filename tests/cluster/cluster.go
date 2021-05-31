@@ -3,6 +3,10 @@
 
 package cluster
 
+import (
+	"github.com/aungmawjj/juria-blockchain/node"
+)
+
 type Node interface {
 	Start() error
 	Stop()
@@ -15,11 +19,16 @@ type ClusterFactory interface {
 }
 
 type Cluster struct {
-	nodes []Node
+	nodeConfig node.Config
+	nodes      []Node
 }
 
-func (lcc *Cluster) Start() error {
-	for _, node := range lcc.nodes {
+func (cls *Cluster) NodeConfig() node.Config {
+	return cls.nodeConfig
+}
+
+func (cls *Cluster) Start() error {
+	for _, node := range cls.nodes {
 		if err := node.Start(); err != nil {
 			return err
 		}
@@ -27,19 +36,19 @@ func (lcc *Cluster) Start() error {
 	return nil
 }
 
-func (lcc *Cluster) Stop() {
-	for _, node := range lcc.nodes {
+func (cls *Cluster) Stop() {
+	for _, node := range cls.nodes {
 		node.Stop()
 	}
 }
 
-func (lcc *Cluster) NodeCount() int {
-	return len(lcc.nodes)
+func (cls *Cluster) NodeCount() int {
+	return len(cls.nodes)
 }
 
-func (lcc *Cluster) GetNode(idx int) Node {
-	if idx >= len(lcc.nodes) || idx < 0 {
+func (cls *Cluster) GetNode(idx int) Node {
+	if idx >= len(cls.nodes) || idx < 0 {
 		return nil
 	}
-	return lcc.nodes[idx]
+	return cls.nodes[idx]
 }

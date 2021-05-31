@@ -41,7 +41,7 @@ func (rot *rotator) start() {
 	}
 	rot.stopCh = make(chan struct{})
 	rot.setViewStart()
-	rot.leaderTimeout = (rot.config.TxWaitTime + rot.config.BeatDelay) * 5
+	rot.leaderTimeout = (rot.config.TxWaitTime + rot.config.BeatTimeout) * 5
 	go rot.run()
 	logger.I().Info("started rotator")
 }

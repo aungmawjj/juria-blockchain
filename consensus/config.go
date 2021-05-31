@@ -15,9 +15,9 @@ type Config struct {
 	TxWaitTime time.Duration
 
 	// for leader, delay to propose next block if she cannot create qc")
-	BeatDelay time.Duration
+	BeatTimeout time.Duration
 
-	// minimum delay between each block (i.e, it can define macimum block rate)
+	// minimum delay between each block (i.e, it can define maximum block rate)
 	BlockDelay time.Duration
 
 	// view duration for a leader
@@ -27,7 +27,7 @@ type Config struct {
 var DefaultConfig = Config{
 	BlockTxLimit: 500,
 	TxWaitTime:   1 * time.Second,
-	BeatDelay:    500 * time.Millisecond,
+	BeatTimeout:  500 * time.Millisecond,
 	BlockDelay:   50 * time.Millisecond, // maximum block rate = 20 blk per sec
 	ViewWidth:    30 * time.Second,
 }

@@ -7,8 +7,6 @@ import (
 	"fmt"
 	"math/rand"
 	"time"
-
-	"github.com/aungmawjj/juria-blockchain/consensus"
 )
 
 // Sleep print duration and call time.Sleep
@@ -42,8 +40,4 @@ func GetUnselectedIndexes(total int, selected []int) []int {
 		}
 	}
 	return ret
-}
-
-func LeaderTimeout() time.Duration {
-	return (consensus.DefaultConfig.BeatDelay + consensus.DefaultConfig.TxWaitTime) * 5
 }

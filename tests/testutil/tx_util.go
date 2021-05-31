@@ -17,20 +17,15 @@ import (
 	"github.com/aungmawjj/juria-blockchain/txpool"
 )
 
-func submitTxAndWait(cls *cluster.Cluster, tx *core.Transaction) error {
-	idx, err := submitTx(cls, tx)
+func SubmitTxAndWait(cls *cluster.Cluster, tx *core.Transaction) error {
+	idx, err := SubmitTx(cls, tx)
 	if err != nil {
 		return err
 	}
-	errCount := 0
 	for {
-		status, err := getTxStatus(cls.GetNode(idx), tx.Hash())
+		status, err := GetTxStatus(cls.GetNode(idx), tx.Hash())
 		if err != nil {
-			errCount++
-			if errCount > 5 {
-				return err
-			}
-			continue
+			return fmt.Errorf("get tx status error %w", err)
 		} else {
 			if status == txpool.TxStatusNotFound {
 				return fmt.Errorf("submited tx status not found")
@@ -43,7 +38,7 @@ func submitTxAndWait(cls *cluster.Cluster, tx *core.Transaction) error {
 	}
 }
 
-func submitTx(cls *cluster.Cluster, tx *core.Transaction) (int, error) {
+func SubmitTx(cls *cluster.Cluster, tx *core.Transaction) (int, error) {
 	b, err := json.Marshal(tx)
 	if err != nil {
 		return 0, err
@@ -65,7 +60,7 @@ func submitTx(cls *cluster.Cluster, tx *core.Transaction) (int, error) {
 	return 0, fmt.Errorf("cannot submit tx %w", retErr)
 }
 
-func getTxStatus(node cluster.Node, hash []byte) (txpool.TxStatus, error) {
+func GetTxStatus(node cluster.Node, hash []byte) (txpool.TxStatus, error) {
 	hashstr := hex.EncodeToString(hash)
 	resp, err := getRequestWithRetry(node.GetEndpoint() +
 		fmt.Sprintf("/transactions/%s/status", hashstr))
@@ -78,7 +73,7 @@ func getTxStatus(node cluster.Node, hash []byte) (txpool.TxStatus, error) {
 	return status, json.NewDecoder(resp.Body).Decode(&status)
 }
 
-func queryState(cls *cluster.Cluster, query *execution.QueryData) ([]byte, error) {
+func QueryState(cls *cluster.Cluster, query *execution.QueryData) ([]byte, error) {
 	b, err := json.Marshal(query)
 	if err != nil {
 		return nil, err

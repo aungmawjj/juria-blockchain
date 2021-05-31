@@ -39,6 +39,7 @@ func (expm *MajorityKeepRunning) Run(cls *cluster.Cluster) error {
 		}
 	}
 	fmt.Printf("Started nodes: %v\n", faulty)
+	// stopped nodes should sync with the majority after some duration
 	testutil.Sleep(10 * time.Second)
 	return nil
 }

@@ -49,7 +49,7 @@ func (pm *pacemaker) run() {
 
 		pm.onBeat()
 
-		beatWait := pm.config.BeatDelay
+		beatWait := pm.config.BeatTimeout
 		if pm.resources.TxPool.GetStatus().Total == 0 {
 			beatWait += pm.config.TxWaitTime
 		}

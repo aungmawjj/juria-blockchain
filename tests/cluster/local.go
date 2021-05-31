@@ -12,7 +12,6 @@ import (
 	"sync"
 	"syscall"
 
-	"github.com/aungmawjj/juria-blockchain/core"
 	"github.com/aungmawjj/juria-blockchain/node"
 	"github.com/multiformats/go-multiaddr"
 )
@@ -21,20 +20,19 @@ type LocalFactoryParams struct {
 	JuriaPath string
 	WorkDir   string
 	NodeCount int
-	PortN0    int // node zero port
-	ApiPortN0 int // node zero api port
-	Debug     bool
+
+	NodeConfig node.Config
 }
 
-type localFactory struct {
+type LocalFactory struct {
 	params      LocalFactoryParams
 	templateDir string
 }
 
-var _ ClusterFactory = (*localFactory)(nil)
+var _ ClusterFactory = (*LocalFactory)(nil)
 
-func NewLocalFactory(params LocalFactoryParams) (ClusterFactory, error) {
-	ftry := &localFactory{
+func NewLocalFactory(params LocalFactoryParams) (*LocalFactory, error) {
+	ftry := &LocalFactory{
 		params: params,
 	}
 	if err := ftry.setup(); err != nil {
@@ -43,51 +41,32 @@ func NewLocalFactory(params LocalFactoryParams) (ClusterFactory, error) {
 	return ftry, nil
 }
 
-func (ftry *localFactory) setup() error {
+func (ftry *LocalFactory) setup() error {
 	ftry.templateDir = path.Join(ftry.params.WorkDir, "cluster_template")
-	err := os.RemoveAll(ftry.templateDir) // no error if path not exist
+	addrs, err := ftry.makeAddrs()
 	if err != nil {
 		return err
 	}
-	if err := os.Mkdir(ftry.templateDir, 0755); err != nil {
-		return err
-	}
-
-	keys := make([]*core.PrivateKey, ftry.params.NodeCount)
-	addrs := make([]multiaddr.Multiaddr, ftry.params.NodeCount)
-	vlds := make([]node.Validator, ftry.params.NodeCount)
-	dirs := make([]string, ftry.params.NodeCount)
-
-	// create validator infos (pubkey + addr)
-	for i := 0; i < ftry.params.NodeCount; i++ {
-		keys[i] = core.GenerateKey(nil)
-		addr, err := multiaddr.NewMultiaddr(
-			fmt.Sprintf("/ip4/127.0.0.1/tcp/%d", ftry.params.PortN0+i))
-		if err != nil {
-			return err
-		}
-		addrs[i] = addr
-		vlds[i] = node.Validator{
-			PubKey: keys[i].PublicKey().Bytes(),
-			Addr:   addrs[i].String(),
-		}
-		dirs[i] = path.Join(ftry.templateDir, strconv.Itoa(i))
-	}
-
-	// setup workdir for each node
-	for i := 0; i < ftry.params.NodeCount; i++ {
-		os.Mkdir(dirs[i], 0755)
-		if err := writeNodeKey(dirs[i], keys[i]); err != nil {
-			return err
-		}
-		if err := writeValidatorsFile(dirs[i], vlds); err != nil {
-			return err
-		}
-	}
-	return nil
+	keys := makeRandomKeys(ftry.params.NodeCount)
+	vlds := makeValidators(keys, addrs)
+	return setupTemplateDir(ftry.templateDir, keys, vlds)
 }
 
-func (ftry *localFactory) SetupCluster(name string) (*Cluster, error) {
+func (ftry *LocalFactory) makeAddrs() ([]multiaddr.Multiaddr, error) {
+	addrs := make([]multiaddr.Multiaddr, ftry.params.NodeCount)
+	for i := range addrs {
+		addr, err := multiaddr.NewMultiaddr(
+			fmt.Sprintf("/ip4/127.0.0.1/tcp/%d",
+				ftry.params.NodeConfig.Port+i))
+		if err != nil {
+			return nil, err
+		}
+		addrs[i] = addr
+	}
+	return addrs, nil
+}
+
+func (ftry *LocalFactory) SetupCluster(name string) (*Cluster, error) {
 	clusterDir := path.Join(ftry.params.WorkDir, name)
 	err := os.RemoveAll(clusterDir) // no error if path not exist
 	if err != nil {
@@ -101,24 +80,24 @@ func (ftry *localFactory) SetupCluster(name string) (*Cluster, error) {
 	nodes := make([]Node, ftry.params.NodeCount)
 	// create localNodes
 	for i := 0; i < ftry.params.NodeCount; i++ {
-		nodes[i] = &localNode{
+		node := &LocalNode{
 			juriaPath: ftry.params.JuriaPath,
-			datadir:   path.Join(clusterDir, strconv.Itoa(i)),
-			port:      ftry.params.PortN0 + i,
-			apiPort:   ftry.params.ApiPortN0 + i,
-			debug:     ftry.params.Debug,
+			config:    ftry.params.NodeConfig,
 		}
+		node.config.Datadir = path.Join(clusterDir, strconv.Itoa(i))
+		node.config.Port = node.config.Port + i
+		node.config.APIPort = node.config.APIPort + i
+		nodes[i] = node
 	}
-	return &Cluster{nodes}, nil
+	return &Cluster{
+		nodes:      nodes,
+		nodeConfig: ftry.params.NodeConfig,
+	}, nil
 }
 
-type localNode struct {
+type LocalNode struct {
 	juriaPath string
-
-	datadir string
-	port    int
-	apiPort int
-	debug   bool
+	config    node.Config
 
 	running bool
 	mtxRun  sync.RWMutex
@@ -127,33 +106,31 @@ type localNode struct {
 	logFile *os.File
 }
 
-var _ Node = (*localNode)(nil)
+var _ Node = (*LocalNode)(nil)
 
-func (node *localNode) Start() error {
+func (node *LocalNode) Start() error {
 	if node.IsRunning() {
 		return nil
 	}
-	f, err := os.OpenFile(path.Join(node.datadir, "log.txt"),
+	f, err := os.OpenFile(path.Join(node.config.Datadir, "log.txt"),
 		os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0600)
 	if err != nil {
 		return err
 	}
 	node.logFile = f
 	node.cmd = exec.Command(node.juriaPath,
-		"-d", node.datadir,
-		"-p", strconv.Itoa(node.port),
-		"-P", strconv.Itoa(node.apiPort),
+		"-d", node.config.Datadir,
+		"-p", strconv.Itoa(node.config.Port),
+		"-P", strconv.Itoa(node.config.APIPort),
+		"--debug", strconv.FormatBool(node.config.Debug),
 	)
-	if node.debug {
-		node.cmd.Args = append(node.cmd.Args, "--debug")
-	}
 	node.cmd.Stderr = node.logFile
 	node.cmd.Stdout = node.logFile
 	node.setRunning(true)
 	return node.cmd.Start()
 }
 
-func (node *localNode) Stop() {
+func (node *LocalNode) Stop() {
 	if !node.IsRunning() {
 		return
 	}
@@ -162,18 +139,18 @@ func (node *localNode) Stop() {
 	node.logFile.Close()
 }
 
-func (node *localNode) IsRunning() bool {
+func (node *LocalNode) IsRunning() bool {
 	node.mtxRun.RLock()
 	defer node.mtxRun.RUnlock()
 	return node.running
 }
 
-func (node *localNode) setRunning(val bool) {
+func (node *LocalNode) setRunning(val bool) {
 	node.mtxRun.Lock()
 	defer node.mtxRun.Unlock()
 	node.running = val
 }
 
-func (node *localNode) GetEndpoint() string {
-	return fmt.Sprintf("http://127.0.0.1:%d", node.apiPort)
+func (node *LocalNode) GetEndpoint() string {
+	return fmt.Sprintf("http://127.0.0.1:%d", node.config.APIPort)
 }

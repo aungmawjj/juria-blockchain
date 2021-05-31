@@ -36,12 +36,11 @@ func getRequestWithRetry(url string) (*http.Response, error) {
 		if err == nil {
 			return resp, err
 		}
-		fmt.Println("get request error", err)
 		retry++
 		if retry > 5 {
 			return nil, err
 		}
-		time.Sleep(1 * time.Second)
+		time.Sleep(200 * time.Second)
 	}
 }
 
