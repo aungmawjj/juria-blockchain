@@ -341,7 +341,7 @@ func (hc *healthChecker) minimumHealthyNode() int {
 
 func (hc *healthChecker) LeaderTimeout() time.Duration {
 	config := hc.cluster.NodeConfig()
-	return (config.ConsensusConfig.BeatTimeout + config.ConsensusConfig.TxWaitTime) * 5
+	return config.ConsensusConfig.LeaderTimeout
 }
 
 func (hc *healthChecker) getFaultyCount() int {

@@ -18,9 +18,8 @@ type rotator struct {
 	state    *state
 	hotstuff *hotstuff.Hotstuff
 
-	leaderTimeout time.Duration
-	leaderTimer   *time.Timer
-	viewTimer     *time.Timer
+	leaderTimer *time.Timer
+	viewTimer   *time.Timer
 
 	// start timestamp in second of current view
 	viewStart int64
@@ -41,7 +40,6 @@ func (rot *rotator) start() {
 	}
 	rot.stopCh = make(chan struct{})
 	rot.setViewStart()
-	rot.leaderTimeout = (rot.config.TxWaitTime + rot.config.BeatTimeout) * 5
 	go rot.run()
 	logger.I().Info("started rotator")
 }
@@ -67,7 +65,7 @@ func (rot *rotator) run() {
 	rot.viewTimer = time.NewTimer(rot.config.ViewWidth)
 	defer rot.viewTimer.Stop()
 
-	rot.leaderTimer = time.NewTimer(rot.leaderTimeout)
+	rot.leaderTimer = time.NewTimer(rot.config.LeaderTimeout)
 	defer rot.leaderTimer.Stop()
 
 	for {
@@ -112,13 +110,13 @@ func (rot *rotator) onLeaderTimeout() {
 		rot.leaderTimer.Stop()
 		rot.setPendingViewChange(false)
 	} else {
-		rot.leaderTimer.Reset(rot.leaderTimeout)
+		rot.leaderTimer.Reset(rot.config.LeaderTimeout)
 	}
 }
 
 func (rot *rotator) onViewTimeout() {
 	rot.changeView()
-	rot.drainResetTimer(rot.leaderTimer, rot.leaderTimeout)
+	rot.drainResetTimer(rot.leaderTimer, rot.config.LeaderTimeout)
 }
 
 func (rot *rotator) changeView() {
@@ -154,7 +152,7 @@ func (rot *rotator) onNewQCHigh(qc hotstuff.QC) {
 		rot.approveViewLeader(proposer)
 	}
 	if ltreset {
-		rot.drainResetTimer(rot.leaderTimer, rot.leaderTimeout)
+		rot.drainResetTimer(rot.leaderTimer, rot.config.LeaderTimeout)
 	}
 	if vtreset {
 		rot.drainResetTimer(rot.viewTimer, rot.config.ViewWidth)

@@ -74,6 +74,7 @@ func (r *ExperimentRunner) runSingleExperiment(expm Experiment) error {
 	loadCtx, stopLoad := context.WithCancel(context.Background())
 	go func() {
 		defer close(done)
+		cls.Stop() // to make sure no existing process keeps running
 		err = cls.Start()
 		if err != nil {
 			return

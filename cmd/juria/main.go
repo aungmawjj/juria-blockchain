@@ -24,12 +24,13 @@ const (
 	FlagTxExecTimeout = "execution-txExecTimeout"
 
 	// consensus
-	FlagChainID      = "chainid"
-	FlagBlockTxLimit = "consensus-blockTxLimit"
-	FlagTxWaitTime   = "consensus-txWaitTime"
-	FlagBeatTimeout  = "consensus-beatTimeout"
-	FlagBlockDelay   = "consensus-blockDelay"
-	FlagViewWidth    = "consensus-viewWidth"
+	FlagChainID       = "chainid"
+	FlagBlockTxLimit  = "consensus-blockTxLimit"
+	FlagTxWaitTime    = "consensus-txWaitTime"
+	FlagBeatTimeout   = "consensus-beatTimeout"
+	FlagBlockDelay    = "consensus-blockDelay"
+	FlagViewWidth     = "consensus-viewWidth"
+	FlagLeaderTimeout = "consensus-leaderTimeout"
 )
 
 var nodeConfig = node.DefaultConfig
@@ -94,4 +95,8 @@ func init() {
 	rootCmd.Flags().DurationVar(&nodeConfig.ConsensusConfig.ViewWidth,
 		FlagViewWidth, nodeConfig.ConsensusConfig.ViewWidth,
 		"view duration for a leader")
+
+	rootCmd.Flags().DurationVar(&nodeConfig.ConsensusConfig.LeaderTimeout,
+		FlagLeaderTimeout, nodeConfig.ConsensusConfig.LeaderTimeout,
+		"leader must create next qc in this duration")
 }

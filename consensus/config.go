@@ -22,12 +22,16 @@ type Config struct {
 
 	// view duration for a leader
 	ViewWidth time.Duration
+
+	// leader must create next qc within this duration
+	LeaderTimeout time.Duration
 }
 
 var DefaultConfig = Config{
-	BlockTxLimit: 500,
-	TxWaitTime:   1 * time.Second,
-	BeatTimeout:  500 * time.Millisecond,
-	BlockDelay:   50 * time.Millisecond, // maximum block rate = 20 blk per sec
-	ViewWidth:    30 * time.Second,
+	BlockTxLimit:  500,
+	TxWaitTime:    1 * time.Second,
+	BeatTimeout:   500 * time.Millisecond,
+	BlockDelay:    50 * time.Millisecond, // maximum block rate = 20 blk per sec
+	ViewWidth:     30 * time.Second,
+	LeaderTimeout: 10 * time.Second,
 }
