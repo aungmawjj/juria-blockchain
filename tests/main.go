@@ -20,19 +20,18 @@ import (
 const (
 	WorkDir       = "./workdir"
 	NodeCount     = 4
-	LoadReqPerSec = 1000
+	LoadReqPerSec = 20
+
+	// Deploy juriacoin chaincode as bincc type (not embeded in juria node)
+	JuriaCoinBinCC = false
 
 	// Run tests in remote linux cluster
-	RemoteLinuxCluster = true
+	RemoteLinuxCluster = false
 	RemoteSetup        = true
 	RemoteLoginName    = "ubuntu"
 	RemoteKeySSH       = "serverkey"
 	RemoteHostsPath    = "hosts"
 	RemoteWorkDir      = "/home/ubuntu/juria-tests"
-
-	// Deploy juriacoin chaincode as bincc type (not embeded in juria node)
-	// only test it with remote linux cluster because it forks child processes for each execution
-	JuriaCoinBinCC = true
 )
 
 func getNodeConfig() node.Config {
@@ -74,11 +73,13 @@ func main() {
 	}
 
 	var binccPath string
-	if JuriaCoinBinCC && RemoteLinuxCluster {
+	if JuriaCoinBinCC {
 		cmd := exec.Command("go", "build", "../execution/bincc/juriacoin")
-		cmd.Env = os.Environ()
-		cmd.Env = append(cmd.Env, "GOOS=linux")
-		fmt.Printf(" $ export %s\n", "GOOS=linux")
+		if RemoteLinuxCluster {
+			cmd.Env = os.Environ()
+			cmd.Env = append(cmd.Env, "GOOS=linux")
+			fmt.Printf(" $ export %s\n", "GOOS=linux")
+		}
 		fmt.Printf(" $ %s\n\n", strings.Join(cmd.Args, " "))
 		check(cmd.Run())
 		binccPath = "./juriacoin"

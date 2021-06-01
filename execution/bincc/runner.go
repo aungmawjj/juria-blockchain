@@ -6,11 +6,11 @@ package bincc
 import (
 	"fmt"
 	"os/exec"
-	"strings"
 	"time"
 
 	"github.com/aungmawjj/juria-blockchain/execution/bincc/bincc_pb"
 	"github.com/aungmawjj/juria-blockchain/execution/chaincode"
+	"github.com/aungmawjj/juria-blockchain/logger"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -53,15 +53,16 @@ func (r *Runner) runCode(callType bincc_pb.CallType) ([]byte, error) {
 	if err := r.startCode(bincc_pb.CallType_Init); err != nil {
 		return nil, err
 	}
-
 	defer r.cmd.Process.Kill()
-	defer r.rw.reader.Close()
-	defer r.rw.writer.Close()
 
 	if err := r.sendCallData(callType); err != nil {
 		return nil, err
 	}
-	return r.serveStateAndGetResult()
+	res, err := r.serveStateAndGetResult()
+	if err != nil {
+		return nil, err
+	}
+	return res, r.cmd.Wait()
 }
 
 func (r *Runner) startCode(callType bincc_pb.CallType) error {
@@ -72,16 +73,14 @@ func (r *Runner) startCode(callType bincc_pb.CallType) error {
 	if err == nil {
 		return nil
 	}
-	if strings.Contains(err.Error(), "resource temporarily unavailable") {
-		select {
-		case <-r.timer.C:
-			return fmt.Errorf("chaincode start timeout")
-		default:
-		}
-		time.Sleep(1 * time.Millisecond)
-		return r.startCode(callType)
+	logger.I().Warnf("start code error %f", err)
+	select {
+	case <-r.timer.C:
+		return fmt.Errorf("chaincode start timeout")
+	default:
 	}
-	return err
+	time.Sleep(5 * time.Millisecond)
+	return r.startCode(callType)
 }
 
 func (r *Runner) setupCmd() error {
