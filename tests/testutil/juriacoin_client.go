@@ -4,6 +4,7 @@
 package testutil
 
 import (
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"sync/atomic"
@@ -16,11 +17,17 @@ import (
 )
 
 type JuriaCoinClient struct {
+	binccPath string
+
 	minter   *core.PrivateKey
 	accounts []*core.PrivateKey
 	dests    []*core.PrivateKey
 
-	cluster  *cluster.Cluster
+	cluster *cluster.Cluster
+
+	binccCodeID     []byte
+	binccUploadNode int
+
 	codeAddr []byte
 
 	transferCount int64
@@ -30,11 +37,12 @@ var _ LoadClient = (*JuriaCoinClient)(nil)
 
 // create and setup a LoadService
 // submit chaincode deploy tx and wait for commit
-func NewJuriaCoinLoadClient(mintCount, destCount int) *JuriaCoinClient {
+func NewJuriaCoinClient(mintCount, destCount int, binccPath string) *JuriaCoinClient {
 	client := &JuriaCoinClient{
-		minter:   core.GenerateKey(nil),
-		accounts: make([]*core.PrivateKey, mintCount),
-		dests:    make([]*core.PrivateKey, destCount),
+		binccPath: binccPath,
+		minter:    core.GenerateKey(nil),
+		accounts:  make([]*core.PrivateKey, mintCount),
+		dests:     make([]*core.PrivateKey, destCount),
 	}
 	for i := range client.accounts {
 		client.accounts[i] = core.GenerateKey(nil)
@@ -49,7 +57,7 @@ func (client *JuriaCoinClient) SetupOnCluster(cls *cluster.Cluster) error {
 	return client.setupOnCluster(cls)
 }
 
-func (client *JuriaCoinClient) SubmitTxAndWait() error {
+func (client *JuriaCoinClient) SubmitTxAndWait() (int, error) {
 	return SubmitTxAndWait(client.cluster, client.makeRandomTransfer())
 }
 
@@ -61,43 +69,68 @@ func (client *JuriaCoinClient) SubmitTx() (int, *core.Transaction, error) {
 
 func (client *JuriaCoinClient) setupOnCluster(cls *cluster.Cluster) error {
 	client.cluster = cls
+	if err := client.deploy(); err != nil {
+		return err
+	}
+	time.Sleep(1 * time.Second)
+	return client.mintAccounts()
+}
+
+func (client *JuriaCoinClient) deploy() error {
+	if client.binccPath != "" {
+		i, codeID, err := uploadBinChainCode(client.cluster, client.binccPath)
+		if err != nil {
+			return err
+		}
+		client.binccCodeID = codeID
+		client.binccUploadNode = i
+	}
 	depTx := client.MakeDeploymentTx(client.minter)
-	if err := SubmitTxAndWait(client.cluster, depTx); err != nil {
+	_, err := SubmitTxAndWait(client.cluster, depTx)
+	if err != nil {
 		return fmt.Errorf("cannot deploy juriacoin %w", err)
 	}
 	client.codeAddr = depTx.Hash()
-	client.mintAccounts()
 	return nil
 }
 
 func (client *JuriaCoinClient) mintAccounts() error {
-	errCh := make(chan error, 10)
+	errCh := make(chan error, len(client.accounts))
 	for _, acc := range client.accounts {
 		go func(acc *core.PublicKey) {
-			errCh <- client.mintSingleAccount(acc)
+			errCh <- client.Mint(client.minter, acc, 1000000000)
 		}(acc.PublicKey())
 	}
+	errCount := 0
 	for range client.accounts {
 		err := <-errCh
 		if err != nil {
-			return err
+			errCount++
 		}
+	}
+	if errCount > 20 {
+		return fmt.Errorf("mint err count %d", errCount)
+	} else if errCount > 0 {
+		fmt.Println("mint error count", errCount,
+			"problem to solve! some missing txs in current leader")
 	}
 	return nil
 }
 
-func (client *JuriaCoinClient) mintSingleAccount(dest *core.PublicKey) error {
-	var mintAmount int64 = 10000000000
-	mintTx := client.MakeMintTx(dest, mintAmount)
-	if err := SubmitTxAndWait(client.cluster, mintTx); err != nil {
+func (client *JuriaCoinClient) Mint(
+	minter *core.PrivateKey, dest *core.PublicKey, value int64,
+) error {
+	mintTx := client.MakeMintTx(minter, dest, value)
+	i, err := SubmitTxAndWait(client.cluster, mintTx)
+	if err != nil {
 		return fmt.Errorf("cannot mint juriacoin %w", err)
 	}
-	balance, err := client.QueryBalance(client.minter.PublicKey())
+	balance, err := client.QueryBalance(client.cluster.GetNode(i), dest)
 	if err != nil {
 		return fmt.Errorf("cannot query juriacoin balance %w", err)
 	}
-	if mintAmount != balance {
-		return fmt.Errorf("incorrect balance %d %d", mintAmount, balance)
+	if value != balance {
+		return fmt.Errorf("incorrect balance %d %d", value, balance)
 	}
 	return nil
 }
@@ -110,8 +143,8 @@ func (client *JuriaCoinClient) makeRandomTransfer() *core.Transaction {
 		client.dests[destIdx].PublicKey(), 1)
 }
 
-func (client *JuriaCoinClient) QueryBalance(dest *core.PublicKey) (int64, error) {
-	result, err := QueryState(client.cluster, client.MakeBalanceQuery(dest))
+func (client *JuriaCoinClient) QueryBalance(node cluster.Node, dest *core.PublicKey) (int64, error) {
+	result, err := QueryState(node, client.MakeBalanceQuery(dest))
 	if err != nil {
 		return 0, err
 	}
@@ -120,11 +153,9 @@ func (client *JuriaCoinClient) QueryBalance(dest *core.PublicKey) (int64, error)
 }
 
 func (client *JuriaCoinClient) MakeDeploymentTx(minter *core.PrivateKey) *core.Transaction {
-	input := &execution.DeploymentInput{
-		CodeInfo: execution.CodeInfo{
-			DriverType: execution.DriverTypeNative,
-			CodeID:     execution.NativeCodeIDJuriaCoin,
-		},
+	input := client.nativeDeploymentInput()
+	if client.binccCodeID != nil {
+		input = client.binccDeploymentInput()
 	}
 	b, _ := json.Marshal(input)
 	return core.NewTransaction().
@@ -133,7 +164,31 @@ func (client *JuriaCoinClient) MakeDeploymentTx(minter *core.PrivateKey) *core.T
 		Sign(minter)
 }
 
-func (client *JuriaCoinClient) MakeMintTx(dest *core.PublicKey, value int64) *core.Transaction {
+func (client *JuriaCoinClient) nativeDeploymentInput() *execution.DeploymentInput {
+	return &execution.DeploymentInput{
+		CodeInfo: execution.CodeInfo{
+			DriverType: execution.DriverTypeNative,
+			CodeID:     execution.NativeCodeIDJuriaCoin,
+		},
+	}
+}
+
+func (client *JuriaCoinClient) binccDeploymentInput() *execution.DeploymentInput {
+	return &execution.DeploymentInput{
+		CodeInfo: execution.CodeInfo{
+			DriverType: execution.DriverTypeBincc,
+			CodeID:     client.binccCodeID,
+		},
+		InstallData: []byte(fmt.Sprintf("%s/bincc/%s",
+			client.cluster.GetNode(client.binccUploadNode).GetEndpoint(),
+			hex.EncodeToString(client.binccCodeID),
+		)),
+	}
+}
+
+func (client *JuriaCoinClient) MakeMintTx(
+	minter *core.PrivateKey, dest *core.PublicKey, value int64,
+) *core.Transaction {
 	input := &juriacoin.Input{
 		Method: "mint",
 		Dest:   dest.Bytes(),
@@ -144,7 +199,7 @@ func (client *JuriaCoinClient) MakeMintTx(dest *core.PublicKey, value int64) *co
 		SetCodeAddr(client.codeAddr).
 		SetNonce(time.Now().UnixNano()).
 		SetInput(b).
-		Sign(client.minter)
+		Sign(minter)
 }
 
 func (client *JuriaCoinClient) MakeTransferTx(

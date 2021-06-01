@@ -17,22 +17,19 @@ type stateStore struct {
 	hashFunc crypto.Hash
 }
 
-func (ss *stateStore) loadPrevValues(scList []*core.StateChange) error {
+func (ss *stateStore) loadPrevValues(scList []*core.StateChange) {
 	for _, sc := range scList {
 		sc.SetPrevValue(ss.getState(sc.Key()))
 	}
-	return nil
 }
 
-func (ss *stateStore) loadPrevTreeIndexes(scList []*core.StateChange) error {
+func (ss *stateStore) loadPrevTreeIndexes(scList []*core.StateChange) {
 	for _, sc := range scList {
 		val, err := ss.getMerkleIndex(sc.Key())
-		if err != nil {
-			return err
+		if err == nil {
+			sc.SetPrevTreeIndex(val)
 		}
-		sc.SetPrevTreeIndex(val)
 	}
-	return nil
 }
 
 func (ss *stateStore) setNewTreeIndexes(scList []*core.StateChange, leafCount *big.Int) *big.Int {

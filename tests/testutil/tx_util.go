@@ -8,7 +8,10 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"io"
+	"mime/multipart"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/aungmawjj/juria-blockchain/core"
@@ -17,22 +20,26 @@ import (
 	"github.com/aungmawjj/juria-blockchain/txpool"
 )
 
-func SubmitTxAndWait(cls *cluster.Cluster, tx *core.Transaction) error {
+func SubmitTxAndWait(cls *cluster.Cluster, tx *core.Transaction) (int, error) {
 	idx, err := SubmitTx(cls, tx)
 	if err != nil {
-		return err
+		return 0, err
 	}
+	start := time.Now()
 	for {
 		status, err := GetTxStatus(cls.GetNode(idx), tx.Hash())
 		if err != nil {
-			return fmt.Errorf("get tx status error %w", err)
+			return 0, fmt.Errorf("get tx status error %w", err)
 		} else {
 			if status == txpool.TxStatusNotFound {
-				return fmt.Errorf("submited tx status not found")
+				return 0, fmt.Errorf("submited tx status not found")
 			}
 			if status == txpool.TxStatusCommited {
-				return nil
+				return idx, nil
 			}
+		}
+		if time.Since(start) > 20*time.Second {
+			return idx, fmt.Errorf("tx not commited within 20s")
 		}
 		time.Sleep(50 * time.Millisecond)
 	}
@@ -73,10 +80,26 @@ func GetTxStatus(node cluster.Node, hash []byte) (txpool.TxStatus, error) {
 	return status, json.NewDecoder(resp.Body).Decode(&status)
 }
 
-func QueryState(cls *cluster.Cluster, query *execution.QueryData) ([]byte, error) {
+func QueryState(node cluster.Node, query *execution.QueryData) ([]byte, error) {
 	b, err := json.Marshal(query)
 	if err != nil {
 		return nil, err
+	}
+	resp, err := http.Post(node.GetEndpoint()+"/querystate",
+		"application/json", bytes.NewReader(b))
+	err = checkResponse(resp, err)
+	if err != nil {
+		return nil, fmt.Errorf("cannot query state %w", err)
+	}
+	defer resp.Body.Close()
+	var ret []byte
+	return ret, json.NewDecoder(resp.Body).Decode(&ret)
+}
+
+func uploadBinChainCode(cls *cluster.Cluster, binccPath string) (int, []byte, error) {
+	buf, contentType, err := createBinccRequestBody(binccPath)
+	if err != nil {
+		return 0, nil, err
 	}
 	var retErr error
 	retryOrder := PickUniqueRandoms(cls.NodeCount(), cls.NodeCount())
@@ -84,14 +107,35 @@ func QueryState(cls *cluster.Cluster, query *execution.QueryData) ([]byte, error
 		if !cls.GetNode(i).IsRunning() {
 			continue
 		}
-		resp, err := http.Post(cls.GetNode(i).GetEndpoint()+"/querystate",
-			"application/json", bytes.NewReader(b))
+		resp, err := http.Post(cls.GetNode(i).GetEndpoint()+"/bincc",
+			contentType, buf)
 		retErr = checkResponse(resp, err)
 		if retErr == nil {
 			defer resp.Body.Close()
-			var b []byte
-			return b, json.NewDecoder(resp.Body).Decode(&b)
+			var codeID []byte
+			return i, codeID, json.NewDecoder(resp.Body).Decode(&codeID)
 		}
 	}
-	return nil, fmt.Errorf("cannot query state %w", retErr)
+	return 0, nil, fmt.Errorf("cannot upload bincc %w", retErr)
+}
+
+func createBinccRequestBody(binccPath string) (*bytes.Buffer, string, error) {
+	f, err := os.Open(binccPath)
+	if err != nil {
+		return nil, "", err
+	}
+	defer f.Close()
+
+	buf := bytes.NewBuffer(nil)
+	mw := multipart.NewWriter(buf)
+	defer mw.Close()
+
+	fw, err := mw.CreateFormFile("file", "binChaincode")
+	if err != nil {
+		return nil, "", err
+	}
+	if _, err := io.Copy(fw, f); err != nil {
+		return nil, "", err
+	}
+	return buf, mw.FormDataContentType(), nil
 }

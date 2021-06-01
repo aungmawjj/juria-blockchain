@@ -25,6 +25,7 @@ type DriverType uint8
 
 const (
 	DriverTypeNative DriverType = iota + 1
+	DriverTypeBincc
 )
 
 type CodeInfo struct {

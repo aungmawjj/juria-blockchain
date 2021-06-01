@@ -1,0 +1,39 @@
+
+// Copyright (C) 2021 Aung Maw
+// Licensed under the GNU General Public License v3.0
+
+syntax = "proto3";
+
+package bincc.pb;
+enum CallType {
+	Init = 0;
+	Invoke = 1;
+	Query = 2;
+}
+
+message CallData {
+	bytes input = 1; 
+	bytes sender = 2;
+	bytes blockHash = 3;   
+	uint64 blockHeight = 4;
+	CallType callType = 5;
+}
+
+message UpStream {
+	bytes key = 1;
+	bytes value = 2;
+	string error = 3;
+	Type type = 4;
+
+	enum Type {
+ 		GetState = 0;
+		VerifyState = 1;
+		SetState = 2;
+		Result = 3;
+	}
+}
+
+message DownStream {
+	bytes value = 1;
+	string error = 2;
+}

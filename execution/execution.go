@@ -8,11 +8,13 @@ import (
 	"time"
 
 	"github.com/aungmawjj/juria-blockchain/core"
+	"github.com/aungmawjj/juria-blockchain/execution/bincc"
 	"github.com/aungmawjj/juria-blockchain/logger"
 )
 
 type Config struct {
 	TxExecTimeout time.Duration
+	BinccDir      string
 }
 
 var DefaultConfig = Config{
@@ -33,6 +35,8 @@ func New(state StateRO, config Config) *Execution {
 	}
 	exec.codeRegistry = newCodeRegistry()
 	exec.codeRegistry.registerDriver(DriverTypeNative, newNativeCodeDriver())
+	exec.codeRegistry.registerDriver(DriverTypeBincc,
+		bincc.NewCodeDriver(exec.config.BinccDir, exec.config.TxExecTimeout))
 	return exec
 }
 

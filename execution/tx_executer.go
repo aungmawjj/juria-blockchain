@@ -11,6 +11,7 @@ import (
 
 	"github.com/aungmawjj/juria-blockchain/core"
 	"github.com/aungmawjj/juria-blockchain/execution/chaincode"
+	"github.com/aungmawjj/juria-blockchain/logger"
 )
 
 type DeploymentInput struct {
@@ -38,6 +39,7 @@ func (txe *txExecutor) execute() *core.TxCommit {
 
 	err := txe.executeWithTimeout()
 	if err != nil {
+		logger.I().Warnf("execute tx error %+v", err)
 		txc.SetError(err.Error())
 	}
 	txc.SetElapsed(time.Since(start).Seconds())

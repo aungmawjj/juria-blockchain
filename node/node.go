@@ -42,6 +42,7 @@ type Node struct {
 func Run(config Config) {
 	node := new(Node)
 	node.config = config
+	node.setupBinccDir()
 	node.setupLogger()
 	node.readFiles()
 	node.setupComponents()
@@ -70,6 +71,11 @@ func (node *Node) setupLogger() {
 		log.Fatalf("can't initialize zap logger: %v", err)
 	}
 	logger.Set(inst.Sugar())
+}
+
+func (node *Node) setupBinccDir() {
+	node.config.ExecutionConfig.BinccDir = path.Join(node.config.Datadir, "bincc")
+	os.Mkdir(node.config.ExecutionConfig.BinccDir, 0755)
 }
 
 func (node *Node) readFiles() {

@@ -7,6 +7,7 @@ import (
 	"crypto"
 	"errors"
 	"math/big"
+	"sync"
 	"time"
 
 	"github.com/aungmawjj/juria-blockchain/core"
@@ -39,6 +40,9 @@ type Storage struct {
 	stateStore  *stateStore
 	merkleStore *merkleStore
 	merkleTree  *merkle.Tree
+
+	// for writeStateTree and VerifyState
+	mtxWriteState sync.RWMutex
 }
 
 func New(db *badger.DB, config Config) *Storage {
@@ -98,6 +102,9 @@ func (strg *Storage) GetState(key []byte) []byte {
 }
 
 func (strg *Storage) VerifyState(key []byte) ([]byte, error) {
+	strg.mtxWriteState.RLock()
+	defer strg.mtxWriteState.RUnlock()
+
 	value := strg.stateStore.getState(key)
 	merkleIdx, err := strg.stateStore.getMerkleIndex(key)
 	if err != nil {
@@ -185,6 +192,9 @@ func (strg *Storage) writeStateMerkleTree(data *CommitData) error {
 	if len(data.BlockCommit.StateChanges()) == 0 {
 		return nil
 	}
+	strg.mtxWriteState.Lock()
+	defer strg.mtxWriteState.Unlock()
+
 	updFns := strg.stateStore.commitStateChanges(data.BlockCommit.StateChanges())
 	updFns = append(updFns, strg.merkleStore.commitUpdate(data.merkleUpdate)...)
 	return updateBadgerDB(strg.db, updFns)

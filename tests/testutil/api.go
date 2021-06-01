@@ -14,6 +14,7 @@ import (
 	"github.com/aungmawjj/juria-blockchain/consensus"
 	"github.com/aungmawjj/juria-blockchain/core"
 	"github.com/aungmawjj/juria-blockchain/tests/cluster"
+	"github.com/aungmawjj/juria-blockchain/txpool"
 )
 
 func checkResponse(resp *http.Response, err error) error {
@@ -54,6 +55,22 @@ func GetStatus(node cluster.Node) (*consensus.Status, error) {
 	}
 	defer resp.Body.Close()
 	ret := new(consensus.Status)
+	if err := json.NewDecoder(resp.Body).Decode(ret); err != nil {
+		return nil, err
+	}
+	return ret, nil
+}
+
+func GetTxPoolStatus(node cluster.Node) (*txpool.Status, error) {
+	if !node.IsRunning() {
+		return nil, fmt.Errorf("node is not running")
+	}
+	resp, err := getRequestWithRetry(node.GetEndpoint() + "/txpool")
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	ret := new(txpool.Status)
 	if err := json.NewDecoder(resp.Body).Decode(ret); err != nil {
 		return nil, err
 	}

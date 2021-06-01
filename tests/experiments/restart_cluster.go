@@ -20,7 +20,7 @@ func (expm *RestartCluster) Name() string {
 func (expm *RestartCluster) Run(cls *cluster.Cluster) error {
 	cls.Stop()
 	fmt.Println("Stopped cluster")
-	testutil.Sleep(5 * time.Second)
+	testutil.Sleep(10 * time.Second)
 
 	if err := cls.Start(); err != nil {
 		return err

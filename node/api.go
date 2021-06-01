@@ -12,6 +12,7 @@ import (
 
 	"github.com/aungmawjj/juria-blockchain/core"
 	"github.com/aungmawjj/juria-blockchain/execution"
+	"github.com/aungmawjj/juria-blockchain/execution/bincc"
 	"github.com/aungmawjj/juria-blockchain/logger"
 	"github.com/gin-gonic/gin"
 )
@@ -39,6 +40,9 @@ func serveNodeAPI(node *Node) {
 	r.GET("/blocksbyh/:height", api.getBlockByHeight)
 
 	r.POST("/querystate", api.queryState)
+
+	r.POST("/bincc", api.uploadBinChainCode)
+	r.Static("/bincc", node.config.ExecutionConfig.BinccDir)
 
 	go func() {
 		err := r.Run(fmt.Sprintf(":%d", node.config.APIPort))
@@ -140,4 +144,24 @@ func (api *nodeAPI) getBlockByHeight(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, blk)
+}
+
+func (api *nodeAPI) uploadBinChainCode(c *gin.Context) {
+	fh, err := c.FormFile("file")
+	if err != nil {
+		c.String(http.StatusBadRequest, "cannot get uploaded file")
+		return
+	}
+	f, err := fh.Open()
+	if err != nil {
+		c.String(http.StatusBadRequest, "cannot open multipart file")
+		return
+	}
+	defer f.Close()
+	codeID, err := bincc.StoreCode(api.node.config.ExecutionConfig.BinccDir, f)
+	if err != nil {
+		c.String(http.StatusInternalServerError, err.Error())
+		return
+	}
+	c.JSON(http.StatusOK, codeID)
 }
