@@ -30,9 +30,12 @@ type stateTracker struct {
 	keyPrefix []byte
 	baseState StateRO
 
-	changes map[string][]byte
+	trackDep     bool
+	dependencies map[string]struct{} // getState/verifyState calls
+	changes      map[string][]byte   // setState calls
 
-	mtx sync.RWMutex
+	mtxChg sync.RWMutex
+	mtxDep sync.RWMutex
 }
 
 var _ State = (*stateTracker)(nil)
@@ -42,48 +45,69 @@ func newStateTracker(state StateRO, keyPrefix []byte) *stateTracker {
 		keyPrefix: keyPrefix,
 		baseState: state,
 
-		changes: make(map[string][]byte),
+		dependencies: make(map[string]struct{}),
+		changes:      make(map[string][]byte),
 	}
 }
 
 func (trk *stateTracker) VerifyState(key []byte) ([]byte, error) {
-	trk.mtx.RLock()
-	defer trk.mtx.RUnlock()
+	trk.mtxChg.RLock()
+	defer trk.mtxChg.RUnlock()
 	return trk.verifyState(key)
 }
 
 func (trk *stateTracker) GetState(key []byte) []byte {
-	trk.mtx.RLock()
-	defer trk.mtx.RUnlock()
+	trk.mtxChg.RLock()
+	defer trk.mtxChg.RUnlock()
 	return trk.getState(key)
 }
 
 func (trk *stateTracker) SetState(key, value []byte) {
-	trk.mtx.Lock()
-	defer trk.mtx.Unlock()
+	trk.mtxChg.Lock()
+	defer trk.mtxChg.Unlock()
 	trk.setState(key, value)
 }
 
 // spawn creates a new tracker with current tracker as base StateGetter
 func (trk *stateTracker) spawn(keyPrefix []byte) *stateTracker {
-	return newStateTracker(trk, keyPrefix)
+	child := newStateTracker(trk, keyPrefix)
+	child.trackDep = true
+	return child
 }
 
-func (trk *stateTracker) merge(trk1 *stateTracker) {
-	trk.mtx.Lock()
-	defer trk.mtx.Unlock()
+func (trk *stateTracker) hasDependencyChanges(child *stateTracker) bool {
+	trk.mtxChg.RLock()
+	defer trk.mtxChg.RUnlock()
 
-	trk1.mtx.RLock()
-	defer trk1.mtx.RUnlock()
+	child.mtxDep.RLock()
+	defer child.mtxDep.RUnlock()
 
-	for key, value := range trk1.changes {
+	prefixStr := string(trk.keyPrefix)
+
+	for key := range child.dependencies {
+		key = prefixStr + key
+		if _, changed := trk.changes[key]; changed {
+			return true
+		}
+	}
+	return false
+}
+
+func (trk *stateTracker) merge(child *stateTracker) {
+	trk.mtxChg.Lock()
+	defer trk.mtxChg.Unlock()
+
+	child.mtxChg.RLock()
+	defer child.mtxChg.RUnlock()
+
+	for key, value := range child.changes {
 		trk.setState([]byte(key), value)
 	}
 }
 
 func (trk *stateTracker) getStateChanges() []*core.StateChange {
-	trk.mtx.RLock()
-	defer trk.mtx.RUnlock()
+	trk.mtxChg.RLock()
+	defer trk.mtxChg.RUnlock()
 
 	start := time.Now()
 	keys := make([]string, 0, len(trk.changes))
@@ -108,6 +132,7 @@ func (trk *stateTracker) getStateChanges() []*core.StateChange {
 
 func (trk *stateTracker) verifyState(key []byte) ([]byte, error) {
 	key = concatBytes(trk.keyPrefix, key)
+	trk.setDependency(key)
 	if value, ok := trk.changes[string(key)]; ok {
 		return value, nil
 	}
@@ -116,10 +141,20 @@ func (trk *stateTracker) verifyState(key []byte) ([]byte, error) {
 
 func (trk *stateTracker) getState(key []byte) []byte {
 	key = concatBytes(trk.keyPrefix, key)
+	trk.setDependency(key)
 	if value, ok := trk.changes[string(key)]; ok {
 		return value
 	}
 	return trk.baseState.GetState(key)
+}
+
+func (trk *stateTracker) setDependency(key []byte) {
+	if !trk.trackDep {
+		return
+	}
+	trk.mtxDep.Lock()
+	defer trk.mtxDep.Unlock()
+	trk.dependencies[string(key)] = struct{}{}
 }
 
 func (trk *stateTracker) setState(key, value []byte) {

@@ -26,6 +26,6 @@ func (expm *RestartCluster) Run(cls *cluster.Cluster) error {
 		return err
 	}
 	fmt.Println("Restarted cluster")
-	testutil.Sleep(10 * time.Second)
+	testutil.Sleep(20 * time.Second)
 	return nil
 }

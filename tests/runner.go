@@ -89,7 +89,7 @@ func (r *ExperimentRunner) runSingleExperiment(expm Experiment) error {
 		}
 		go r.runLoadGenerator(loadCtx)
 
-		testutil.Sleep(10 * time.Second)
+		testutil.Sleep(20 * time.Second)
 
 		if err := testutil.HealthCheckAll(cls); err != nil {
 			fmt.Printf("health check failed before experiment, %+v\n", err)
@@ -118,6 +118,7 @@ func (r *ExperimentRunner) runSingleExperiment(expm Experiment) error {
 	case <-done:
 	}
 	stopLoad()
+	fmt.Println("Stopping cluster")
 	cls.Stop()
 	fmt.Println("Stopped cluster")
 	return err

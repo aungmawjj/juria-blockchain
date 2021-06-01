@@ -9,16 +9,17 @@ import (
 
 	"github.com/aungmawjj/juria-blockchain/core"
 	"github.com/aungmawjj/juria-blockchain/execution/bincc"
-	"github.com/aungmawjj/juria-blockchain/logger"
 )
 
 type Config struct {
-	TxExecTimeout time.Duration
-	BinccDir      string
+	BinccDir        string
+	TxExecTimeout   time.Duration
+	ConcurrentLimit int
 }
 
 var DefaultConfig = Config{
-	TxExecTimeout: 10 * time.Second,
+	TxExecTimeout:   10 * time.Second,
+	ConcurrentLimit: 16,
 }
 
 type Execution struct {
@@ -44,11 +45,12 @@ func (exec *Execution) Execute(blk *core.Block, txs []*core.Transaction) (
 	*core.BlockCommit, []*core.TxCommit,
 ) {
 	bexe := &blkExecutor{
-		codeRegistry: exec.codeRegistry,
-		state:        exec.state,
-		txTimeout:    exec.config.TxExecTimeout,
-		blk:          blk,
-		txs:          txs,
+		txTimeout:       exec.config.TxExecTimeout,
+		concurrentLimit: exec.config.ConcurrentLimit,
+		codeRegistry:    exec.codeRegistry,
+		state:           exec.state,
+		blk:             blk,
+		txs:             txs,
 	}
 	return bexe.execute()
 }
@@ -81,56 +83,4 @@ func (exec *Execution) VerifyTx(tx *core.Transaction) error {
 		return err
 	}
 	return exec.codeRegistry.install(input)
-}
-
-type blkExecutor struct {
-	codeRegistry *codeRegistry
-	txTimeout    time.Duration
-	state        StateRO
-	blk          *core.Block
-	txs          []*core.Transaction
-
-	rootTrk   *stateTracker
-	txCommits []*core.TxCommit
-}
-
-/*
-execute transactions of a block in sequential
-to improve the performance, execute transactions in parallel
-if state conflict occur, (i.e, a transaction call getState of the another transaction's setState)
-re-execute the conflict transactions
-*/
-func (bexe *blkExecutor) execute() (*core.BlockCommit, []*core.TxCommit) {
-	start := time.Now()
-	bexe.rootTrk = newStateTracker(bexe.state, nil)
-	bexe.txCommits = make([]*core.TxCommit, len(bexe.txs))
-	for i := range bexe.txs {
-		bexe.executeTx(i)
-	}
-	elapsed := time.Since(start)
-	bcm := core.NewBlockCommit().
-		SetHash(bexe.blk.Hash()).
-		SetStateChanges(bexe.rootTrk.getStateChanges()).
-		SetElapsedExec(elapsed.Seconds())
-
-	if len(bexe.txs) > 0 {
-		logger.I().Debugw("batch execution",
-			"txs", len(bexe.txs), "elapsed", elapsed)
-	}
-	return bcm, bexe.txCommits
-}
-
-func (bexe *blkExecutor) executeTx(i int) {
-	texe := &txExecutor{
-		codeRegistry: bexe.codeRegistry,
-		timeout:      bexe.txTimeout,
-		rootTrk:      bexe.rootTrk.spawn(nil),
-		blk:          bexe.blk,
-		tx:           bexe.txs[i],
-	}
-	bexe.txCommits[i] = texe.execute()
-	if bexe.txCommits[i].Error() == "" {
-		// if tx is executed without error, merge the state changes
-		bexe.rootTrk.merge(texe.rootTrk)
-	}
 }
