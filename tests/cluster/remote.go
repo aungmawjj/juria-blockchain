@@ -5,12 +5,11 @@ package cluster
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os/exec"
 	"path"
 	"strconv"
-	"strings"
 	"sync"
+	"time"
 
 	"github.com/aungmawjj/juria-blockchain/node"
 	"github.com/multiformats/go-multiaddr"
@@ -44,7 +43,7 @@ func NewRemoteFactory(params RemoteFactoryParams) (*RemoteFactory, error) {
 		params: params,
 	}
 	ftry.templateDir = path.Join(ftry.params.WorkDir, "cluster_template")
-	hosts, err := ftry.getHosts()
+	hosts, err := GetRemoteHosts(ftry.params.HostsPath, ftry.params.NodeCount)
 	if err != nil {
 		return nil, err
 	}
@@ -68,9 +67,9 @@ func (ftry *RemoteFactory) setup() error {
 	if err != nil {
 		return err
 	}
-	keys := makeRandomKeys(ftry.params.NodeCount)
-	vlds := makeValidators(keys, addrs)
-	if err := setupTemplateDir(ftry.templateDir, keys, vlds); err != nil {
+	keys := MakeRandomKeys(ftry.params.NodeCount)
+	vlds := MakeValidators(keys, addrs)
+	if err := SetupTemplateDir(ftry.templateDir, keys, vlds); err != nil {
 		return err
 	}
 	return ftry.sendTemplate()
@@ -90,19 +89,6 @@ func (ftry *RemoteFactory) makeAddrs() ([]multiaddr.Multiaddr, error) {
 	return addrs, nil
 }
 
-func (ftry *RemoteFactory) getHosts() ([]string, error) {
-	raw, err := ioutil.ReadFile(ftry.params.HostsPath)
-	if err != nil {
-		return nil, err
-	}
-	hosts := strings.Split(string(raw), "\n")
-	if len(hosts) < ftry.params.NodeCount {
-		return nil, fmt.Errorf("not enough hosts, %d | %d",
-			len(hosts), ftry.params.NodeCount)
-	}
-	return hosts, nil
-}
-
 func (ftry *RemoteFactory) setupRemoteDir() error {
 	for i := 0; i < ftry.params.NodeCount; i++ {
 		ftry.setupRemoteDirOne(i)
@@ -119,7 +105,7 @@ func (ftry *RemoteFactory) setupRemoteDirOne(i int) error {
 		"rm", "-r", "template", ";",
 		"sudo", "killall", "juria",
 	)
-	return runCommand(cmd)
+	return RunCommand(cmd)
 }
 
 func (ftry *RemoteFactory) sendJuria() error {
@@ -139,7 +125,7 @@ func (ftry *RemoteFactory) sendJuriaOne(i int) error {
 		fmt.Sprintf("%s@%s:%s", ftry.params.LoginName, ftry.hosts[i],
 			ftry.params.RemoteWorkDir),
 	)
-	return runCommand(cmd)
+	return RunCommand(cmd)
 }
 
 func (ftry *RemoteFactory) sendTemplate() error {
@@ -159,7 +145,7 @@ func (ftry *RemoteFactory) sendTemplateOne(i int) error {
 		fmt.Sprintf("%s@%s:%s", ftry.params.LoginName, ftry.hosts[i],
 			path.Join(ftry.params.RemoteWorkDir, "/template")),
 	)
-	return runCommand(cmd)
+	return RunCommand(cmd)
 }
 
 func (ftry *RemoteFactory) SetupCluster(name string) (*Cluster, error) {
@@ -181,6 +167,7 @@ func (ftry *RemoteFactory) SetupCluster(name string) (*Cluster, error) {
 		cls.nodes[i] = node
 	}
 	cls.Stop()
+	time.Sleep(5 * time.Second)
 	return cls, nil
 }
 
@@ -216,27 +203,20 @@ type RemoteNode struct {
 var _ Node = (*RemoteNode)(nil)
 
 func (node *RemoteNode) Start() error {
-	if node.IsRunning() {
-		return nil
-	}
+	node.setRunning(true)
 	cmd := exec.Command("ssh",
 		"-i", node.keySSH,
 		fmt.Sprintf("%s@%s", node.loginName, node.host),
 		"nohup", node.juriaPath,
-		"-d", node.config.Datadir,
-		"-p", strconv.Itoa(node.config.Port),
-		"-P", strconv.Itoa(node.config.APIPort),
-		"--debug", strconv.FormatBool(node.config.Debug),
+	)
+	AddJuriaFlags(cmd, &node.config)
+	cmd.Args = append(cmd.Args,
 		">>", path.Join(node.config.Datadir, "log.txt"), "2>&1", "&",
 	)
-	node.setRunning(true)
 	return cmd.Run()
 }
 
 func (node *RemoteNode) Stop() {
-	if !node.IsRunning() {
-		return
-	}
 	node.setRunning(false)
 	StopRemoteNode(node.host, node.loginName, node.keySSH)
 }
@@ -255,13 +235,4 @@ func (node *RemoteNode) setRunning(val bool) {
 
 func (node *RemoteNode) GetEndpoint() string {
 	return fmt.Sprintf("http://%s:%d", node.host, node.config.APIPort)
-}
-
-func StopRemoteNode(host, login, keySSH string) {
-	cmd := exec.Command("ssh",
-		"-i", keySSH,
-		fmt.Sprintf("%s@%s", login, host),
-		"sudo", "killall", "juria",
-	)
-	cmd.Run()
 }

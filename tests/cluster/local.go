@@ -47,9 +47,9 @@ func (ftry *LocalFactory) setup() error {
 	if err != nil {
 		return err
 	}
-	keys := makeRandomKeys(ftry.params.NodeCount)
-	vlds := makeValidators(keys, addrs)
-	return setupTemplateDir(ftry.templateDir, keys, vlds)
+	keys := MakeRandomKeys(ftry.params.NodeCount)
+	vlds := MakeValidators(keys, addrs)
+	return SetupTemplateDir(ftry.templateDir, keys, vlds)
 }
 
 func (ftry *LocalFactory) makeAddrs() ([]multiaddr.Multiaddr, error) {
@@ -118,12 +118,8 @@ func (node *LocalNode) Start() error {
 		return err
 	}
 	node.logFile = f
-	node.cmd = exec.Command(node.juriaPath,
-		"-d", node.config.Datadir,
-		"-p", strconv.Itoa(node.config.Port),
-		"-P", strconv.Itoa(node.config.APIPort),
-		"--debug", strconv.FormatBool(node.config.Debug),
-	)
+	node.cmd = exec.Command(node.juriaPath)
+	AddJuriaFlags(node.cmd, &node.config)
 	node.cmd.Stderr = node.logFile
 	node.cmd.Stdout = node.logFile
 	node.setRunning(true)

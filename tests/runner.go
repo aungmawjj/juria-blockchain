@@ -28,16 +28,9 @@ type ExperimentRunner struct {
 
 	loadReqPerSec int
 	loadClient    testutil.LoadClient
-
-	loadJobCh chan struct{}
 }
 
 func (r *ExperimentRunner) run() (pass, fail int) {
-
-	r.loadJobCh = make(chan struct{}, 20)
-	for i := 0; i < 30; i++ {
-		go r.loadWorker(r.loadJobCh)
-	}
 
 	bold := color.New(color.Bold)
 	boldGrean := color.New(color.Bold, color.FgGreen)
@@ -73,6 +66,7 @@ func (r *ExperimentRunner) run() (pass, fail int) {
 
 func (r *ExperimentRunner) runSingleExperiment(expm Experiment) error {
 	var err error
+	fmt.Println("Setting up a new cluster")
 	cls, err := r.cfactory.SetupCluster(expm.Name())
 	if err != nil {
 		return err
@@ -133,15 +127,22 @@ func (r *ExperimentRunner) runSingleExperiment(expm Experiment) error {
 }
 
 func (r *ExperimentRunner) runLoadGenerator(ctx context.Context) {
-	ticker := time.NewTicker(time.Second / time.Duration(r.loadReqPerSec))
+	delay := time.Second / time.Duration(r.loadReqPerSec)
+	ticker := time.NewTicker(delay)
 	defer ticker.Stop()
 
+	jobCh := make(chan struct{}, r.loadReqPerSec)
+	defer close(jobCh)
+
+	for i := 0; i < 100; i++ {
+		go r.loadWorker(jobCh)
+	}
 	for {
 		select {
 		case <-ctx.Done():
 			return
 		case <-ticker.C:
-			r.loadJobCh <- struct{}{}
+			jobCh <- struct{}{}
 		}
 	}
 }

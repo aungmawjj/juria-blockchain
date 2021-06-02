@@ -21,7 +21,8 @@ const (
 	FlagMerkleBranchFactor = "storage-merkleBranchFactor"
 
 	// execution
-	FlagTxExecTimeout = "execution-txExecTimeout"
+	FlagTxExecTimeout       = "execution-txExecTimeout"
+	FlagExecConcurrentLimit = "execution-concurrentLimit"
 
 	// consensus
 	FlagChainID       = "chainid"
@@ -71,6 +72,10 @@ func init() {
 	rootCmd.Flags().DurationVar(&nodeConfig.ExecutionConfig.TxExecTimeout,
 		FlagTxExecTimeout, nodeConfig.ExecutionConfig.TxExecTimeout,
 		"tx execution timeout")
+
+	rootCmd.Flags().IntVar(&nodeConfig.ExecutionConfig.ConcurrentLimit,
+		FlagExecConcurrentLimit, nodeConfig.ExecutionConfig.ConcurrentLimit,
+		"concurrent tx execution limit")
 
 	rootCmd.Flags().Int64Var(&nodeConfig.ConsensusConfig.ChainID,
 		FlagChainID, nodeConfig.ConsensusConfig.ChainID,
