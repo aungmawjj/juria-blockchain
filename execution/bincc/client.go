@@ -4,13 +4,12 @@
 package bincc
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"time"
 
-	"github.com/aungmawjj/juria-blockchain/execution/bincc/bincc_pb"
 	"github.com/aungmawjj/juria-blockchain/execution/chaincode"
-	"google.golang.org/protobuf/proto"
 )
 
 const ChaincodeHardTimeout = 10 * time.Second
@@ -18,7 +17,7 @@ const ChaincodeHardTimeout = 10 * time.Second
 type Client struct {
 	rw       *readWriter
 	cc       chaincode.Chaincode
-	callData *bincc_pb.CallData
+	callData *CallData
 }
 
 var _ chaincode.CallContext = (*Client)(nil)
@@ -55,8 +54,8 @@ func (c *Client) loadCallData() error {
 	if err != nil {
 		return err
 	}
-	c.callData = new(bincc_pb.CallData)
-	return proto.Unmarshal(b, c.callData)
+	c.callData = new(CallData)
+	return json.Unmarshal(b, c.callData)
 }
 
 func (c *Client) runChaincode() {
@@ -64,13 +63,13 @@ func (c *Client) runChaincode() {
 	var err error
 
 	switch c.callData.CallType {
-	case bincc_pb.CallType_Init:
+	case CallTypeInit:
 		err = c.cc.Init(c)
 
-	case bincc_pb.CallType_Invoke:
+	case CallTypeInvoke:
 		err = c.cc.Invoke(c)
 
-	case bincc_pb.CallType_Query:
+	case CallTypeQuery:
 		result, err = c.cc.Query(c)
 	}
 	c.sendResult(result, err)
@@ -93,24 +92,24 @@ func (c *Client) Input() []byte {
 }
 
 func (c *Client) VerifyState(key []byte) ([]byte, error) {
-	return c.request(key, nil, bincc_pb.UpStream_VerifyState)
+	return c.request(key, nil, UpStreamVerifyState)
 }
 
 func (c *Client) GetState(key []byte) []byte {
-	val, _ := c.request(key, nil, bincc_pb.UpStream_GetState)
+	val, _ := c.request(key, nil, UpStreamGetState)
 	return val
 }
 
 func (c *Client) SetState(key, value []byte) {
-	c.request(key, value, bincc_pb.UpStream_SetState)
+	c.request(key, value, UpStreamSetState)
 }
 
-func (c *Client) request(key, value []byte, upType bincc_pb.UpStream_Type) ([]byte, error) {
-	up := new(bincc_pb.UpStream)
+func (c *Client) request(key, value []byte, upType UpStreamType) ([]byte, error) {
+	up := new(UpStream)
 	up.Type = upType
 	up.Key = key
 	up.Value = value
-	b, _ := proto.Marshal(up)
+	b, _ := json.Marshal(up)
 	if err := c.rw.write(b); err != nil {
 		return nil, err
 	}
@@ -118,8 +117,8 @@ func (c *Client) request(key, value []byte, upType bincc_pb.UpStream_Type) ([]by
 	if err != nil {
 		return nil, err
 	}
-	down := new(bincc_pb.DownStream)
-	if err := proto.Unmarshal(b, down); err != nil {
+	down := new(DownStream)
+	if err := json.Unmarshal(b, down); err != nil {
 		return nil, err
 	}
 	if len(down.Error) > 0 {
@@ -129,12 +128,12 @@ func (c *Client) request(key, value []byte, upType bincc_pb.UpStream_Type) ([]by
 }
 
 func (c *Client) sendResult(value []byte, err error) {
-	up := new(bincc_pb.UpStream)
-	up.Type = bincc_pb.UpStream_Result
+	up := new(UpStream)
+	up.Type = UpStreamResult
 	up.Value = value
 	if err != nil {
 		up.Error = err.Error()
 	}
-	b, _ := proto.Marshal(up)
+	b, _ := json.Marshal(up)
 	c.rw.write(b)
 }

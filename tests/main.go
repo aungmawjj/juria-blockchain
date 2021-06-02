@@ -75,7 +75,9 @@ func main() {
 
 	var binccPath string
 	if JuriaCoinBinCC {
-		cmd := exec.Command("go", "build", "../execution/bincc/juriacoin")
+		cmd := exec.Command("go", "build")
+		cmd.Args = append(cmd.Args, "-ldflags=-s")
+		cmd.Args = append(cmd.Args, "../execution/bincc/juriacoin")
 		if RemoteLinuxCluster {
 			cmd.Env = os.Environ()
 			cmd.Env = append(cmd.Env, "GOOS=linux")

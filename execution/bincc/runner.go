@@ -4,14 +4,13 @@
 package bincc
 
 import (
+	"encoding/json"
 	"fmt"
 	"os/exec"
 	"time"
 
-	"github.com/aungmawjj/juria-blockchain/execution/bincc/bincc_pb"
 	"github.com/aungmawjj/juria-blockchain/execution/chaincode"
 	"github.com/aungmawjj/juria-blockchain/logger"
-	"google.golang.org/protobuf/proto"
 )
 
 const MessageSizeLimit = 100 * 1000 * 1000
@@ -31,26 +30,26 @@ var _ chaincode.Chaincode = (*Runner)(nil)
 
 func (r *Runner) Init(ctx chaincode.CallContext) error {
 	r.callContext = ctx
-	_, err := r.runCode(bincc_pb.CallType_Init)
+	_, err := r.runCode(CallTypeInit)
 	return err
 }
 
 func (r *Runner) Invoke(ctx chaincode.CallContext) error {
 	r.callContext = ctx
-	_, err := r.runCode(bincc_pb.CallType_Invoke)
+	_, err := r.runCode(CallTypeInvoke)
 	return err
 }
 
 func (r *Runner) Query(ctx chaincode.CallContext) ([]byte, error) {
 	r.callContext = ctx
-	return r.runCode(bincc_pb.CallType_Query)
+	return r.runCode(CallTypeQuery)
 }
 
-func (r *Runner) runCode(callType bincc_pb.CallType) ([]byte, error) {
+func (r *Runner) runCode(callType CallType) ([]byte, error) {
 	r.timer = time.NewTimer(r.timeout)
 	defer r.timer.Stop()
 
-	if err := r.startCode(bincc_pb.CallType_Init); err != nil {
+	if err := r.startCode(CallTypeInit); err != nil {
 		return nil, err
 	}
 	defer r.cmd.Process.Kill()
@@ -65,7 +64,7 @@ func (r *Runner) runCode(callType bincc_pb.CallType) ([]byte, error) {
 	return res, r.cmd.Wait()
 }
 
-func (r *Runner) startCode(callType bincc_pb.CallType) error {
+func (r *Runner) startCode(callType CallType) error {
 	if err := r.setupCmd(); err != nil {
 		return err
 	}
@@ -95,15 +94,15 @@ func (r *Runner) setupCmd() error {
 	return err
 }
 
-func (r *Runner) sendCallData(callType bincc_pb.CallType) error {
-	callData := &bincc_pb.CallData{
+func (r *Runner) sendCallData(callType CallType) error {
+	callData := &CallData{
 		CallType:    callType,
 		Input:       r.callContext.Input(),
 		Sender:      r.callContext.Sender(),
 		BlockHash:   r.callContext.BlockHash(),
 		BlockHeight: r.callContext.BlockHeight(),
 	}
-	b, _ := proto.Marshal(callData)
+	b, _ := json.Marshal(callData)
 	return r.rw.write(b)
 }
 
@@ -118,11 +117,11 @@ func (r *Runner) serveStateAndGetResult() ([]byte, error) {
 		if err != nil {
 			return nil, fmt.Errorf("read upstream error %w", err)
 		}
-		up := new(bincc_pb.UpStream)
-		if err := proto.Unmarshal(b, up); err != nil {
+		up := new(UpStream)
+		if err := json.Unmarshal(b, up); err != nil {
 			return nil, fmt.Errorf("cannot parse upstream data")
 		}
-		if up.Type == bincc_pb.UpStream_Result {
+		if up.Type == UpStreamResult {
 			if len(up.Error) > 0 {
 				return nil, fmt.Errorf(up.Error)
 			}
@@ -134,25 +133,25 @@ func (r *Runner) serveStateAndGetResult() ([]byte, error) {
 	}
 }
 
-func (r *Runner) serveState(up *bincc_pb.UpStream) error {
-	down := new(bincc_pb.DownStream)
+func (r *Runner) serveState(up *UpStream) error {
+	down := new(DownStream)
 	switch up.Type {
 
-	case bincc_pb.UpStream_GetState:
+	case UpStreamGetState:
 		val := r.callContext.GetState(up.Key)
 		down.Value = val
 
-	case bincc_pb.UpStream_VerifyState:
+	case UpStreamVerifyState:
 		val, err := r.callContext.VerifyState(up.Key)
 		down.Value = val
 		if err != nil {
 			down.Error = err.Error()
 		}
 
-	case bincc_pb.UpStream_SetState:
+	case UpStreamSetState:
 		r.callContext.SetState(up.Key, up.Value)
 	}
 
-	b, _ := proto.Marshal(down)
+	b, _ := json.Marshal(down)
 	return r.rw.write(b)
 }

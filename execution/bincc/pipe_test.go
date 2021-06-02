@@ -9,7 +9,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aungmawjj/juria-blockchain/execution/bincc/bincc_pb"
 	"github.com/aungmawjj/juria-blockchain/execution/chaincode"
 	"github.com/stretchr/testify/assert"
 )
@@ -44,11 +43,11 @@ func TestCallData(t *testing.T) {
 	r.callContext = mctx
 
 	go r.serveStateAndGetResult()
-	go r.sendCallData(bincc_pb.CallType_Init)
+	go r.sendCallData(CallTypeInit)
 	c.loadCallData()
 
 	assert := assert.New(t)
-	assert.Equal(bincc_pb.CallType_Init, c.callData.CallType)
+	assert.Equal(CallTypeInit, c.callData.CallType)
 	assert.Equal(mctx.Input(), c.Input())
 	assert.Equal(mctx.Sender(), c.Sender())
 	assert.Equal(mctx.BlockHash(), c.BlockHash())
