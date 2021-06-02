@@ -19,7 +19,7 @@ type Config struct {
 
 var DefaultConfig = Config{
 	TxExecTimeout:   10 * time.Second,
-	ConcurrentLimit: 16,
+	ConcurrentLimit: 20,
 }
 
 type Execution struct {

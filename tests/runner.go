@@ -28,9 +28,17 @@ type ExperimentRunner struct {
 
 	loadReqPerSec int
 	loadClient    testutil.LoadClient
+
+	loadJobCh chan struct{}
 }
 
 func (r *ExperimentRunner) run() (pass, fail int) {
+
+	r.loadJobCh = make(chan struct{}, 20)
+	for i := 0; i < 30; i++ {
+		go r.loadWorker(r.loadJobCh)
+	}
+
 	bold := color.New(color.Bold)
 	boldGrean := color.New(color.Bold, color.FgGreen)
 	boldRed := color.New(color.Bold, color.FgRed)
@@ -133,7 +141,13 @@ func (r *ExperimentRunner) runLoadGenerator(ctx context.Context) {
 		case <-ctx.Done():
 			return
 		case <-ticker.C:
-			go r.loadClient.SubmitTx()
+			r.loadJobCh <- struct{}{}
 		}
+	}
+}
+
+func (r *ExperimentRunner) loadWorker(jobs <-chan struct{}) {
+	for range jobs {
+		r.loadClient.SubmitTx()
 	}
 }

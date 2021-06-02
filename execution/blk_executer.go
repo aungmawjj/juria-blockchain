@@ -4,7 +4,6 @@
 package execution
 
 import (
-	"sync"
 	"sync/atomic"
 	"time"
 
@@ -55,55 +54,67 @@ func (bexe *blkExecutor) execute() (*core.BlockCommit, []*core.TxCommit) {
 }
 
 func (bexe *blkExecutor) executeConcurrent() {
-	var wg sync.WaitGroup
-	for i := range bexe.txs {
-		wg.Add(1)
-		go func(i int) {
-			bexe.executeTxAndMerge(i)
-			wg.Done()
-		}(i)
+	if len(bexe.txs) == 0 {
+		return
 	}
-	wg.Wait()
+	jobCh := make(chan int, bexe.concurrentLimit)
+	defer close(jobCh)
+
+	for i := 0; i < bexe.concurrentLimit; i++ {
+		go bexe.worker(jobCh)
+	}
+
+	sub := bexe.mergeEmitter.Subscribe(len(bexe.txs))
+	defer sub.Unsubscribe()
+
+	for i := range bexe.txs {
+		jobCh <- i
+	}
+	for e := range sub.Events() {
+		mergeIdx := e.(int)
+		if mergeIdx == len(bexe.txs) { // until the last tx will finish merge
+			return
+		}
+	}
+}
+
+func (bexe *blkExecutor) worker(jobCh <-chan int) {
+	for i := range jobCh {
+		bexe.executeTxAndMerge(i)
+	}
 }
 
 func (bexe *blkExecutor) executeTxAndMerge(i int) {
-	sub := bexe.mergeEmitter.Subscribe(100)
+	texe := bexe.executeTx(i)
+	bexe.waitToMerge(i)
+	bexe.mergeTxStateChanges(i, texe)
+}
+
+func (bexe *blkExecutor) waitToMerge(i int) {
+	sub := bexe.mergeEmitter.Subscribe(20)
 	defer sub.Unsubscribe()
 
-	// limit the number of concurrent execution
-	if i > bexe.concurrentLimit {
-		for e := range sub.Events() {
-			mergeIdx := e.(int)
-			if i-mergeIdx <= bexe.concurrentLimit {
-				break
-			}
-		}
-	}
-
-	texe := bexe.executeTx(i)
 	if bexe.getMergeIdx() == i {
-		bexe.mergeTxStateChanges(i, texe)
 		return
 	}
 	for e := range sub.Events() {
 		mergeIdx := e.(int)
 		if mergeIdx == i {
-			bexe.mergeTxStateChanges(i, texe)
 			return
 		}
 	}
 }
 
 func (bexe *blkExecutor) mergeTxStateChanges(i int, texe *txExecutor) {
+	defer bexe.increaseMergeIdx()
 	if bexe.rootTrk.hasDependencyChanges(texe.rootTrk) {
 		// earlier txs changes the dependencies of this tx, execute tx again
 		texe = bexe.executeTx(i)
 	}
 	if bexe.txCommits[i].Error() != "" {
-		return // don't merge
+		return // don't merge state
 	}
 	bexe.rootTrk.merge(texe.rootTrk)
-	bexe.increaseMergeIdx()
 }
 
 func (bexe *blkExecutor) executeTx(i int) *txExecutor {

@@ -89,6 +89,7 @@ func (hsd *hsDriver) Commit(hsBlk hotstuff.Block) {
 	bexe := hsBlk.(*hsBlock).block
 	start := time.Now()
 	txs, old := hsd.resources.TxPool.GetTxsToExecute(bexe.Transactions())
+	logger.I().Debugw("commiting block", "height", bexe.Height(), "txs", len(txs))
 	bcm, txcs := hsd.resources.Execution.Execute(bexe, txs)
 	bcm.SetOldBlockTxs(old)
 	data := &storage.CommitData{

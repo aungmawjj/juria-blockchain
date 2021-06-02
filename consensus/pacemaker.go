@@ -44,17 +44,13 @@ func (pm *pacemaker) stop() {
 }
 
 func (pm *pacemaker) run() {
+	subQC := pm.hotstuff.SubscribeNewQCHigh()
+	defer subQC.Unsubscribe()
+
 	for {
 		blkDelay := time.After(pm.config.BlockDelay)
-
 		pm.onBeat()
-
-		beatWait := pm.config.BeatTimeout
-		if pm.resources.TxPool.GetStatus().Total == 0 {
-			beatWait += pm.config.TxWaitTime
-		}
-		beatT := time.NewTimer(beatWait)
-		subQC := pm.hotstuff.SubscribeNewQCHigh()
+		beatT := pm.nextBeatTimeout()
 
 		select {
 		case <-pm.stopCh:
@@ -65,7 +61,6 @@ func (pm *pacemaker) run() {
 		case <-subQC.Events():
 		}
 		beatT.Stop()
-		subQC.Unsubscribe()
 
 		select {
 		case <-pm.stopCh:
@@ -88,6 +83,14 @@ func (pm *pacemaker) onBeat() {
 		return
 	}
 	pm.propose()
+}
+
+func (pm *pacemaker) nextBeatTimeout() *time.Timer {
+	beatWait := pm.config.BeatTimeout
+	if pm.resources.TxPool.GetStatus().Total == 0 {
+		beatWait += pm.config.TxWaitTime
+	}
+	return time.NewTimer(beatWait)
 }
 
 func (pm *pacemaker) propose() {

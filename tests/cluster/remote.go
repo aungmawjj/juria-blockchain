@@ -116,7 +116,8 @@ func (ftry *RemoteFactory) setupRemoteDirOne(i int) error {
 		fmt.Sprintf("%s@%s", ftry.params.LoginName, ftry.hosts[i]),
 		"mkdir", ftry.params.RemoteWorkDir, ";",
 		"cd", ftry.params.RemoteWorkDir, ";",
-		"rm", "-r", "template",
+		"rm", "-r", "template", ";",
+		"sudo", "killall", "juria",
 	)
 	return runCommand(cmd)
 }
@@ -179,6 +180,7 @@ func (ftry *RemoteFactory) SetupCluster(name string) (*Cluster, error) {
 		}
 		cls.nodes[i] = node
 	}
+	cls.Stop()
 	return cls, nil
 }
 
@@ -235,13 +237,8 @@ func (node *RemoteNode) Stop() {
 	if !node.IsRunning() {
 		return
 	}
-	cmd := exec.Command("ssh",
-		"-i", node.keySSH,
-		fmt.Sprintf("%s@%s", node.loginName, node.host),
-		"sudo", "killall", "juria",
-	)
 	node.setRunning(false)
-	cmd.Run()
+	StopRemoteNode(node.host, node.loginName, node.keySSH)
 }
 
 func (node *RemoteNode) IsRunning() bool {
@@ -258,4 +255,13 @@ func (node *RemoteNode) setRunning(val bool) {
 
 func (node *RemoteNode) GetEndpoint() string {
 	return fmt.Sprintf("http://%s:%d", node.host, node.config.APIPort)
+}
+
+func StopRemoteNode(host, login, keySSH string) {
+	cmd := exec.Command("ssh",
+		"-i", keySSH,
+		fmt.Sprintf("%s@%s", login, host),
+		"sudo", "killall", "juria",
+	)
+	cmd.Run()
 }

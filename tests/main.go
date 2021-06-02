@@ -20,7 +20,7 @@ import (
 const (
 	WorkDir       = "./workdir"
 	NodeCount     = 4
-	LoadReqPerSec = 50
+	LoadReqPerSec = 100
 
 	// Deploy juriacoin chaincode as bincc type (not embeded in juria node)
 	JuriaCoinBinCC = false
@@ -28,7 +28,7 @@ const (
 	// Run tests in remote linux cluster
 	// if false it'll use local cluster (running multiple nodes on single local machine)
 	RemoteLinuxCluster = false
-	RemoteSetup        = false
+	RemoteSetup        = true
 	RemoteLoginName    = "ubuntu"
 	RemoteKeySSH       = "serverkey"
 	RemoteHostsPath    = "hosts"

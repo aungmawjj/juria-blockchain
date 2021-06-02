@@ -28,10 +28,10 @@ type Config struct {
 }
 
 var DefaultConfig = Config{
-	BlockTxLimit:  300,
+	BlockTxLimit:  400,
 	TxWaitTime:    1 * time.Second,
 	BeatTimeout:   500 * time.Millisecond,
-	BlockDelay:    20 * time.Millisecond, // maximum block rate = 50 blk per sec
+	BlockDelay:    40 * time.Millisecond, // maximum block rate = 25 blk per sec
 	ViewWidth:     30 * time.Second,
 	LeaderTimeout: 10 * time.Second,
 }

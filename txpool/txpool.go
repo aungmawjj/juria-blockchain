@@ -112,6 +112,14 @@ func (pool *TxPool) GetStatus() Status {
 	return pool.store.getStatus()
 }
 
+func (pool *TxPool) submitTx(tx *core.Transaction) error {
+	if err := pool.addNewTx(tx); err != nil {
+		return err
+	}
+	pool.broadcaster.queue <- tx
+	return nil
+}
+
 func (pool *TxPool) subscribeTxs() {
 	sub := pool.msgSvc.SubscribeTxList(100)
 	for e := range sub.Events() {
@@ -122,27 +130,16 @@ func (pool *TxPool) subscribeTxs() {
 	}
 }
 
-func (pool *TxPool) submitTx(tx *core.Transaction) error {
-	if err := tx.Validate(); err != nil {
-		return err
-	}
-	if pool.storage.HasTx(tx.Hash()) {
-		return ErrOldTx
-	}
-	if err := pool.execution.VerifyTx(tx); err != nil {
-		return err
-	}
-	pool.store.addNewTx(tx)
-	pool.broadcaster.queue <- tx
-	return nil
-}
-
 func (pool *TxPool) addTxList(txList *core.TxList) error {
+	jobCh := make(chan *core.Transaction)
+	defer close(jobCh)
 	out := make(chan error, len(*txList))
+
+	for i := 0; i < 50; i++ {
+		go pool.workerAddNewTx(jobCh, out)
+	}
 	for _, tx := range *txList {
-		go func(tx *core.Transaction) {
-			out <- pool.addNewTx(tx)
-		}(tx)
+		jobCh <- tx
 	}
 	for i := 0; i < len(*txList); i++ {
 		err := <-out
@@ -151,6 +148,12 @@ func (pool *TxPool) addTxList(txList *core.TxList) error {
 		}
 	}
 	return nil
+}
+
+func (pool *TxPool) workerAddNewTx(jobCh <-chan *core.Transaction, out chan<- error) {
+	for tx := range jobCh {
+		out <- pool.addNewTx(tx)
+	}
 }
 
 func (pool *TxPool) addNewTx(tx *core.Transaction) error {
