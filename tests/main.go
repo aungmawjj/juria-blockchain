@@ -37,6 +37,10 @@ const (
 	RemoteKeySSH        = "serverkey"
 	RemoteHostsPath     = "hosts"
 	RemoteWorkDir       = "/home/ubuntu/juria-tests"
+
+	// run benchmark, otherwise run experiments
+	RunBenchmark      = false
+	BenchmarkDuration = 5 * time.Minute
 )
 
 func getNodeConfig() node.Config {
@@ -65,11 +69,31 @@ func main() {
 	printVars()
 	os.Mkdir(WorkDir, 0755)
 	buildJuria()
-	lg := makeLoadGenerator()
-	runExperiments(lg)
+	loadGen := makeLoadGenerator()
+	if RunBenchmark {
+		runBenchmark(loadGen)
+	} else {
+		runExperiments(loadGen)
+	}
 }
 
-func runExperiments(lg *LoadGenerator) {
+func runBenchmark(loadGen *testutil.LoadGenerator) {
+	if !RemoteLinuxCluster {
+		fmt.Println("mush run benchmark on remote cluster")
+		os.Exit(1)
+		return
+	}
+	bm := &Benchmark{
+		workDir:  path.Join(WorkDir, "benchmarks"),
+		duration: BenchmarkDuration,
+		interval: 5 * time.Second,
+		cfactory: makeRemoteClusterFactory(),
+		loadGen:  loadGen,
+	}
+	check(bm.Run())
+}
+
+func runExperiments(loadGen *testutil.LoadGenerator) {
 	var cfactory cluster.ClusterFactory
 	if RemoteLinuxCluster {
 		cfactory = makeRemoteClusterFactory()
@@ -78,11 +102,11 @@ func runExperiments(lg *LoadGenerator) {
 	}
 
 	r := &ExperimentRunner{
-		experiments:   setupExperiments(),
-		cfactory:      cfactory,
-		loadGenerator: lg,
+		experiments: setupExperiments(),
+		cfactory:    cfactory,
+		loadGen:     loadGen,
 	}
-	pass, fail := r.run()
+	pass, fail := r.Run()
 	fmt.Printf("\nTotal: %d  |  Pass: %d  |  Fail: %d\n", len(r.experiments), pass, fail)
 }
 
@@ -91,6 +115,7 @@ func printVars() {
 	fmt.Println("NodeCount =", NodeCount)
 	fmt.Println("LoadTxPerSec=", LoadTxPerSec)
 	fmt.Println("RemoteCluster =", RemoteLinuxCluster)
+	fmt.Println("RunBenchmark=", RunBenchmark)
 	fmt.Println()
 }
 
@@ -105,18 +130,15 @@ func buildJuria() {
 	check(cmd.Run())
 }
 
-func makeLoadGenerator() *LoadGenerator {
+func makeLoadGenerator() *testutil.LoadGenerator {
 	var binccPath string
 	if JuriaCoinBinCC {
 		buildJuriaCoinBinCC()
 		binccPath = "./juriacoin"
 	}
 	fmt.Println("Preparing load generator")
-	return &LoadGenerator{
-		txPerSec: LoadTxPerSec,
-		client: testutil.NewJuriaCoinClient(
-			LoadMintAccounts, LoadDestAccounts, binccPath),
-	}
+	loadClient := testutil.NewJuriaCoinClient(LoadMintAccounts, LoadDestAccounts, binccPath)
+	return testutil.NewLoadGenerator(LoadTxPerSec, loadClient)
 }
 
 func buildJuriaCoinBinCC() {
@@ -132,13 +154,10 @@ func buildJuriaCoinBinCC() {
 	check(cmd.Run())
 }
 
-func makeLocalClusterFactory() cluster.ClusterFactory {
-	clustersDir := path.Join(WorkDir, "local-clusters")
-	os.Mkdir(clustersDir, 0755)
-
+func makeLocalClusterFactory() *cluster.LocalFactory {
 	ftry, err := cluster.NewLocalFactory(cluster.LocalFactoryParams{
 		JuriaPath:  "./juria",
-		WorkDir:    clustersDir,
+		WorkDir:    path.Join(WorkDir, "local-clusters"),
 		NodeCount:  NodeCount,
 		NodeConfig: getNodeConfig(),
 	})
@@ -146,13 +165,10 @@ func makeLocalClusterFactory() cluster.ClusterFactory {
 	return ftry
 }
 
-func makeRemoteClusterFactory() cluster.ClusterFactory {
-	clustersDir := path.Join(WorkDir, "remote-clusters")
-	os.Mkdir(clustersDir, 0755)
-
+func makeRemoteClusterFactory() *cluster.RemoteFactory {
 	ftry, err := cluster.NewRemoteFactory(cluster.RemoteFactoryParams{
 		JuriaPath:     "./juria",
-		WorkDir:       clustersDir,
+		WorkDir:       path.Join(WorkDir, "remote-clusters"),
 		NodeCount:     NodeCount,
 		NodeConfig:    getNodeConfig(),
 		LoginName:     RemoteLoginName,

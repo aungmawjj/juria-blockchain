@@ -31,15 +31,6 @@ func ReadRemoteHosts(hostsPath string, nodeCount int) ([]string, error) {
 	return hosts, nil
 }
 
-func StopRemoteNode(host, login, keySSH string) {
-	cmd := exec.Command("ssh",
-		"-i", keySSH,
-		fmt.Sprintf("%s@%s", login, host),
-		"sudo", "killall", "juria",
-	)
-	cmd.Run()
-}
-
 func WriteNodeKey(nodedir string, key *core.PrivateKey) error {
 	f, err := os.Create(path.Join(nodedir, node.NodekeyFile))
 	if err != nil {

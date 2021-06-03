@@ -23,12 +23,12 @@ type Experiment interface {
 }
 
 type ExperimentRunner struct {
-	experiments   []Experiment
-	cfactory      cluster.ClusterFactory
-	loadGenerator *LoadGenerator
+	experiments []Experiment
+	cfactory    cluster.ClusterFactory
+	loadGen     *testutil.LoadGenerator
 }
 
-func (r *ExperimentRunner) run() (pass, fail int) {
+func (r *ExperimentRunner) Run() (pass, fail int) {
 
 	bold := color.New(color.Bold)
 	boldGrean := color.New(color.Bold, color.FgGreen)
@@ -85,15 +85,15 @@ func (r *ExperimentRunner) runSingleExperiment(expm Experiment) error {
 		testutil.Sleep(10 * time.Second)
 
 		fmt.Println("Setting up load generator")
-		err = r.loadGenerator.SetupOnCluster(cls)
+		err = r.loadGen.SetupOnCluster(cls)
 		if err != nil {
 			return
 		}
-		go r.loadGenerator.run(loadCtx)
+		go r.loadGen.Run(loadCtx)
 
 		testutil.Sleep(20 * time.Second)
 
-		if err := testutil.HealthCheckAll(cls); err != nil {
+		if err = testutil.HealthCheckAll(cls); err != nil {
 			fmt.Printf("health check failed before experiment, %+v\n", err)
 			cls.Stop()
 			os.Exit(1)

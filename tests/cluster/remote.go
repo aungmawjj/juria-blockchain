@@ -5,15 +5,19 @@ package cluster
 
 import (
 	"fmt"
+	"os"
 	"os/exec"
 	"path"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
 	"github.com/aungmawjj/juria-blockchain/node"
 	"github.com/multiformats/go-multiaddr"
 )
+
+var NetworkDevice = "eth0"
 
 type RemoteFactoryParams struct {
 	JuriaPath string
@@ -39,6 +43,7 @@ type RemoteFactory struct {
 var _ ClusterFactory = (*RemoteFactory)(nil)
 
 func NewRemoteFactory(params RemoteFactoryParams) (*RemoteFactory, error) {
+	os.Mkdir(params.WorkDir, 0755)
 	ftry := &RemoteFactory{
 		params: params,
 	}
@@ -105,13 +110,15 @@ func (ftry *RemoteFactory) setupRemoteDir() error {
 }
 
 func (ftry *RemoteFactory) setupRemoteDirOne(i int) error {
+	// also kills remaining effect and nodes to make sure clean environment
 	cmd := exec.Command("ssh",
 		"-i", ftry.params.KeySSH,
 		fmt.Sprintf("%s@%s", ftry.params.LoginName, ftry.hosts[i]),
+		"sudo", "tc", "qdisc", "del", "dev", NetworkDevice, "root", ";",
+		"sudo", "killall", "juria", ";",
 		"mkdir", ftry.params.RemoteWorkDir, ";",
 		"cd", ftry.params.RemoteWorkDir, ";",
-		"rm", "-r", "template", ";",
-		"sudo", "killall", "juria",
+		"rm", "-r", "template",
 	)
 	return RunCommand(cmd)
 }
@@ -227,10 +234,13 @@ func (node *RemoteNode) Start() error {
 
 func (node *RemoteNode) Stop() {
 	node.setRunning(false)
-	StopRemoteNode(node.host, node.loginName, node.keySSH)
+	cmd := exec.Command("ssh",
+		"-i", node.keySSH,
+		fmt.Sprintf("%s@%s", node.loginName, node.host),
+		"sudo", "killall", "juria",
+	)
+	cmd.Run()
 }
-
-var NetworkDevice = "eth0"
 
 func (node *RemoteNode) EffectDelay(d time.Duration) error {
 	cmd := exec.Command("ssh",
@@ -257,6 +267,47 @@ func (node *RemoteNode) RemoveEffect() {
 		"-i", node.keySSH,
 		fmt.Sprintf("%s@%s", node.loginName, node.host),
 		"sudo", "tc", "qdisc", "del", "dev", NetworkDevice, "root",
+	)
+	cmd.Run()
+}
+
+func (node *RemoteNode) InstallDstat() {
+	cmd := exec.Command("ssh",
+		"-i", node.keySSH,
+		fmt.Sprintf("%s@%s", node.loginName, node.host),
+		"sudo", "apt", "install", "-y", "dstat",
+	)
+	fmt.Printf("%s\n", strings.Join(cmd.Args, " "))
+	cmd.Run()
+}
+
+func (node *RemoteNode) StartDstat() {
+	cmd := exec.Command("ssh",
+		"-i", node.keySSH,
+		fmt.Sprintf("%s@%s", node.loginName, node.host),
+		"nohup",
+		"dstat", "-Tcmdns", "--output",
+		path.Join(node.config.Datadir, "dstat.csv"),
+		">", "/dev/null", "2>&1", "&",
+	)
+	cmd.Run()
+}
+
+func (node *RemoteNode) StopDstat() {
+	cmd := exec.Command("ssh",
+		"-i", node.keySSH,
+		fmt.Sprintf("%s@%s", node.loginName, node.host),
+		"sudo", "killall", "dstat",
+	)
+	cmd.Run()
+}
+
+func (node *RemoteNode) DownloadDstat(filepath string) {
+	cmd := exec.Command("scp",
+		"-i", node.keySSH,
+		fmt.Sprintf("%s@%s:%s", node.loginName, node.host,
+			path.Join(node.config.Datadir, "dstat.csv")),
+		filepath,
 	)
 	cmd.Run()
 }

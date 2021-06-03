@@ -97,6 +97,26 @@ func GetStatusAll(cls *cluster.Cluster) map[int]*consensus.Status {
 	return resps
 }
 
+func GetTxPoolStatusAll(cls *cluster.Cluster) map[int]*txpool.Status {
+	resps := make(map[int]*txpool.Status)
+	var mtx sync.Mutex
+	var wg sync.WaitGroup
+	wg.Add(cls.NodeCount())
+	for i := 0; i < cls.NodeCount(); i++ {
+		go func(i int) {
+			defer wg.Done()
+			resp, err := GetTxPoolStatus(cls.GetNode(i))
+			if err == nil {
+				mtx.Lock()
+				defer mtx.Unlock()
+				resps[i] = resp
+			}
+		}(i)
+	}
+	wg.Wait()
+	return resps
+}
+
 func GetBlockByHeight(node cluster.Node, height uint64) (*core.Block, error) {
 	if !node.IsRunning() {
 		return nil, fmt.Errorf("node is not running")

@@ -33,6 +33,7 @@ type LocalFactory struct {
 var _ ClusterFactory = (*LocalFactory)(nil)
 
 func NewLocalFactory(params LocalFactoryParams) (*LocalFactory, error) {
+	os.Mkdir(params.WorkDir, 0755)
 	ftry := &LocalFactory{
 		params: params,
 	}
