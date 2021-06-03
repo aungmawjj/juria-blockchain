@@ -31,8 +31,8 @@ const (
 
 	// Run tests in remote linux cluster
 	// if false it'll use local cluster (running multiple nodes on single local machine)
-	RemoteLinuxCluster  = true
-	RemoteTemplateSetup = false
+	RemoteLinuxCluster  = false
+	RemoteTemplateSetup = true
 	RemoteLoginName     = "ubuntu"
 	RemoteKeySSH        = "serverkey"
 	RemoteHostsPath     = "hosts"
@@ -47,9 +47,9 @@ func getNodeConfig() node.Config {
 
 func setupExperiments() []Experiment {
 	expms := make([]Experiment, 0)
-	// expms = append(expms, &experiments.RestartCluster{})
-	// expms = append(expms, &experiments.MajorityKeepRunning{})
-	// expms = append(expms, &experiments.CorrectExecution{})
+	expms = append(expms, &experiments.RestartCluster{})
+	expms = append(expms, &experiments.MajorityKeepRunning{})
+	expms = append(expms, &experiments.CorrectExecution{})
 	if RemoteLinuxCluster {
 		expms = append(expms, &experiments.NetworkDelay{
 			Delay: 100 * time.Millisecond,
