@@ -23,11 +23,9 @@ type Experiment interface {
 }
 
 type ExperimentRunner struct {
-	experiments []Experiment
-	cfactory    cluster.ClusterFactory
-
-	loadReqPerSec int
-	loadClient    testutil.LoadClient
+	experiments   []Experiment
+	cfactory      cluster.ClusterFactory
+	loadGenerator *LoadGenerator
 }
 
 func (r *ExperimentRunner) run() (pass, fail int) {
@@ -65,17 +63,19 @@ func (r *ExperimentRunner) run() (pass, fail int) {
 }
 
 func (r *ExperimentRunner) runSingleExperiment(expm Experiment) error {
+	var cls *cluster.Cluster
 	var err error
-	fmt.Println("Setting up a new cluster")
-	cls, err := r.cfactory.SetupCluster(expm.Name())
-	if err != nil {
-		return err
-	}
-
 	done := make(chan struct{})
 	loadCtx, stopLoad := context.WithCancel(context.Background())
 	go func() {
 		defer close(done)
+		fmt.Println("Setting up a new cluster")
+		cls, err = r.cfactory.SetupCluster(expm.Name())
+		if err != nil {
+			return
+		}
+
+		fmt.Println("Starting cluster")
 		cls.Stop() // to make sure no existing process keeps running
 		err = cls.Start()
 		if err != nil {
@@ -85,11 +85,11 @@ func (r *ExperimentRunner) runSingleExperiment(expm Experiment) error {
 		testutil.Sleep(10 * time.Second)
 
 		fmt.Println("Setting up load generator")
-		err = r.loadClient.SetupOnCluster(cls)
+		err = r.loadGenerator.SetupOnCluster(cls)
 		if err != nil {
 			return
 		}
-		go r.runLoadGenerator(loadCtx)
+		go r.loadGenerator.run(loadCtx)
 
 		testutil.Sleep(20 * time.Second)
 
@@ -117,38 +117,17 @@ func (r *ExperimentRunner) runSingleExperiment(expm Experiment) error {
 	case s := <-killed:
 		fmt.Println("\nGot signal:", s)
 		err = errors.New("interrupted")
+		if cls != nil {
+			fmt.Println("Removing effects")
+			cls.RemoveEffects()
+		}
 	case <-done:
 	}
 	stopLoad()
-	fmt.Println("Stopping cluster")
-	cls.Stop()
-	fmt.Println("Stopped cluster")
+	if cls != nil {
+		fmt.Println("Stopping cluster")
+		cls.Stop()
+		fmt.Println("Stopped cluster")
+	}
 	return err
-}
-
-func (r *ExperimentRunner) runLoadGenerator(ctx context.Context) {
-	delay := time.Second / time.Duration(r.loadReqPerSec)
-	ticker := time.NewTicker(delay)
-	defer ticker.Stop()
-
-	jobCh := make(chan struct{}, r.loadReqPerSec)
-	defer close(jobCh)
-
-	for i := 0; i < 100; i++ {
-		go r.loadWorker(jobCh)
-	}
-	for {
-		select {
-		case <-ctx.Done():
-			return
-		case <-ticker.C:
-			jobCh <- struct{}{}
-		}
-	}
-}
-
-func (r *ExperimentRunner) loadWorker(jobs <-chan struct{}) {
-	for range jobs {
-		r.loadClient.SubmitTx()
-	}
 }

@@ -4,12 +4,17 @@
 package cluster
 
 import (
+	"time"
+
 	"github.com/aungmawjj/juria-blockchain/node"
 )
 
 type Node interface {
 	Start() error
 	Stop()
+	EffectDelay(d time.Duration) error
+	EffectLoss(percent float32) error
+	RemoveEffect()
 	IsRunning() bool
 	GetEndpoint() string
 }
@@ -39,6 +44,12 @@ func (cls *Cluster) Start() error {
 func (cls *Cluster) Stop() {
 	for _, node := range cls.nodes {
 		node.Stop()
+	}
+}
+
+func (cls *Cluster) RemoveEffects() {
+	for _, node := range cls.nodes {
+		node.RemoveEffect()
 	}
 }
 

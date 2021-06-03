@@ -18,7 +18,7 @@ import (
 	"github.com/multiformats/go-multiaddr"
 )
 
-func GetRemoteHosts(hostsPath string, nodeCount int) ([]string, error) {
+func ReadRemoteHosts(hostsPath string, nodeCount int) ([]string, error) {
 	raw, err := ioutil.ReadFile(hostsPath)
 	if err != nil {
 		return nil, err

@@ -43,7 +43,7 @@ func NewRemoteFactory(params RemoteFactoryParams) (*RemoteFactory, error) {
 		params: params,
 	}
 	ftry.templateDir = path.Join(ftry.params.WorkDir, "cluster_template")
-	hosts, err := GetRemoteHosts(ftry.params.HostsPath, ftry.params.NodeCount)
+	hosts, err := ReadRemoteHosts(ftry.params.HostsPath, ftry.params.NodeCount)
 	if err != nil {
 		return nil, err
 	}
@@ -54,6 +54,14 @@ func NewRemoteFactory(params RemoteFactoryParams) (*RemoteFactory, error) {
 		}
 	}
 	return ftry, nil
+}
+
+func (ftry *RemoteFactory) GetHosts() []string {
+	return ftry.hosts
+}
+
+func (ftry *RemoteFactory) GetParams() RemoteFactoryParams {
+	return ftry.params
 }
 
 func (ftry *RemoteFactory) setup() error {
@@ -166,6 +174,7 @@ func (ftry *RemoteFactory) SetupCluster(name string) (*Cluster, error) {
 		}
 		cls.nodes[i] = node
 	}
+	cls.RemoveEffects()
 	cls.Stop()
 	time.Sleep(5 * time.Second)
 	return cls, nil
@@ -219,6 +228,37 @@ func (node *RemoteNode) Start() error {
 func (node *RemoteNode) Stop() {
 	node.setRunning(false)
 	StopRemoteNode(node.host, node.loginName, node.keySSH)
+}
+
+var NetworkDevice = "eth0"
+
+func (node *RemoteNode) EffectDelay(d time.Duration) error {
+	cmd := exec.Command("ssh",
+		"-i", node.keySSH,
+		fmt.Sprintf("%s@%s", node.loginName, node.host),
+		"sudo", "tc", "qdisc", "add", "dev", NetworkDevice, "root",
+		"netem", "delay", d.String(),
+	)
+	return cmd.Run()
+}
+
+func (node *RemoteNode) EffectLoss(percent float32) error {
+	cmd := exec.Command("ssh",
+		"-i", node.keySSH,
+		fmt.Sprintf("%s@%s", node.loginName, node.host),
+		"sudo", "tc", "qdisc", "add", "dev", NetworkDevice, "root",
+		"netem", "loss", fmt.Sprintf("%f%%", percent),
+	)
+	return cmd.Run()
+}
+
+func (node *RemoteNode) RemoveEffect() {
+	cmd := exec.Command("ssh",
+		"-i", node.keySSH,
+		fmt.Sprintf("%s@%s", node.loginName, node.host),
+		"sudo", "tc", "qdisc", "del", "dev", NetworkDevice, "root",
+	)
+	cmd.Run()
 }
 
 func (node *RemoteNode) IsRunning() bool {

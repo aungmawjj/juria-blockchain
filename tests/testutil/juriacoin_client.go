@@ -98,29 +98,20 @@ func (client *JuriaCoinClient) mintAccounts() error {
 	errCh := make(chan error, len(client.accounts))
 	for _, acc := range client.accounts {
 		go func(acc *core.PublicKey) {
-			errCh <- client.Mint(client.minter, acc, 1000000000)
+			errCh <- client.Mint(acc, 1000000000)
 		}(acc.PublicKey())
 	}
-	errCount := 0
 	for range client.accounts {
 		err := <-errCh
 		if err != nil {
-			errCount++
+			return err
 		}
-	}
-	if errCount > 20 {
-		return fmt.Errorf("mint err count %d", errCount)
-	} else if errCount > 0 {
-		fmt.Println("mint error count", errCount,
-			"problem to solve! some missing txs in current leader")
 	}
 	return nil
 }
 
-func (client *JuriaCoinClient) Mint(
-	minter *core.PrivateKey, dest *core.PublicKey, value int64,
-) error {
-	mintTx := client.MakeMintTx(minter, dest, value)
+func (client *JuriaCoinClient) Mint(dest *core.PublicKey, value int64) error {
+	mintTx := client.MakeMintTx(dest, value)
 	i, err := SubmitTxAndWait(client.cluster, mintTx)
 	if err != nil {
 		return fmt.Errorf("cannot mint juriacoin %w", err)
@@ -186,9 +177,7 @@ func (client *JuriaCoinClient) binccDeploymentInput() *execution.DeploymentInput
 	}
 }
 
-func (client *JuriaCoinClient) MakeMintTx(
-	minter *core.PrivateKey, dest *core.PublicKey, value int64,
-) *core.Transaction {
+func (client *JuriaCoinClient) MakeMintTx(dest *core.PublicKey, value int64) *core.Transaction {
 	input := &juriacoin.Input{
 		Method: "mint",
 		Dest:   dest.Bytes(),
@@ -199,7 +188,7 @@ func (client *JuriaCoinClient) MakeMintTx(
 		SetCodeAddr(client.codeAddr).
 		SetNonce(time.Now().UnixNano()).
 		SetInput(b).
-		Sign(minter)
+		Sign(client.minter)
 }
 
 func (client *JuriaCoinClient) MakeTransferTx(

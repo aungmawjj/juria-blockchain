@@ -10,6 +10,7 @@ import (
 	"os/exec"
 	"path"
 	"strings"
+	"time"
 
 	"github.com/aungmawjj/juria-blockchain/node"
 	"github.com/aungmawjj/juria-blockchain/tests/cluster"
@@ -18,21 +19,24 @@ import (
 )
 
 const (
-	WorkDir       = "./workdir"
-	NodeCount     = 4
-	LoadReqPerSec = 100
+	WorkDir   = "./workdir"
+	NodeCount = 4
+
+	LoadTxPerSec     = 100
+	LoadMintAccounts = 100
+	LoadDestAccounts = 10000
 
 	// Deploy juriacoin chaincode as bincc type (not embeded in juria node)
 	JuriaCoinBinCC = false
 
 	// Run tests in remote linux cluster
 	// if false it'll use local cluster (running multiple nodes on single local machine)
-	RemoteLinuxCluster = false
-	RemoteSetup        = true
-	RemoteLoginName    = "ubuntu"
-	RemoteKeySSH       = "serverkey"
-	RemoteHostsPath    = "hosts"
-	RemoteWorkDir      = "/home/ubuntu/juria-tests"
+	RemoteLinuxCluster  = true
+	RemoteTemplateSetup = false
+	RemoteLoginName     = "ubuntu"
+	RemoteKeySSH        = "serverkey"
+	RemoteHostsPath     = "hosts"
+	RemoteWorkDir       = "/home/ubuntu/juria-tests"
 )
 
 func getNodeConfig() node.Config {
@@ -43,18 +47,54 @@ func getNodeConfig() node.Config {
 
 func setupExperiments() []Experiment {
 	expms := make([]Experiment, 0)
-	expms = append(expms, &experiments.RestartCluster{})
-	expms = append(expms, &experiments.MajorityKeepRunning{})
+	// expms = append(expms, &experiments.RestartCluster{})
+	// expms = append(expms, &experiments.MajorityKeepRunning{})
+	// expms = append(expms, &experiments.CorrectExecution{})
+	if RemoteLinuxCluster {
+		expms = append(expms, &experiments.NetworkDelay{
+			Delay: 100 * time.Millisecond,
+		})
+		expms = append(expms, &experiments.NetworkPacketLoss{
+			Percent: 10,
+		})
+	}
 	return expms
 }
 
 func main() {
+	printVars()
+	os.Mkdir(WorkDir, 0755)
+	buildJuria()
+	lg := makeLoadGenerator()
+	runExperiments(lg)
+}
+
+func runExperiments(lg *LoadGenerator) {
+	var cfactory cluster.ClusterFactory
+	if RemoteLinuxCluster {
+		cfactory = makeRemoteClusterFactory()
+	} else {
+		cfactory = makeLocalClusterFactory()
+	}
+
+	r := &ExperimentRunner{
+		experiments:   setupExperiments(),
+		cfactory:      cfactory,
+		loadGenerator: lg,
+	}
+	pass, fail := r.run()
+	fmt.Printf("\nTotal: %d  |  Pass: %d  |  Fail: %d\n", len(r.experiments), pass, fail)
+}
+
+func printVars() {
 	fmt.Println()
 	fmt.Println("NodeCount =", NodeCount)
-	fmt.Println("LoadReqPerSec =", LoadReqPerSec)
+	fmt.Println("LoadTxPerSec=", LoadTxPerSec)
 	fmt.Println("RemoteCluster =", RemoteLinuxCluster)
 	fmt.Println()
+}
 
+func buildJuria() {
 	cmd := exec.Command("go", "build", "../cmd/juria")
 	if RemoteLinuxCluster {
 		cmd.Env = os.Environ()
@@ -63,39 +103,33 @@ func main() {
 	}
 	fmt.Printf(" $ %s\n\n", strings.Join(cmd.Args, " "))
 	check(cmd.Run())
+}
 
-	os.Mkdir(WorkDir, 0755)
-
-	var cfactory cluster.ClusterFactory
-	if RemoteLinuxCluster {
-		cfactory = makeRemoteClusterFactory()
-	} else {
-		cfactory = makeLocalClusterFactory()
-	}
-
+func makeLoadGenerator() *LoadGenerator {
 	var binccPath string
 	if JuriaCoinBinCC {
-		cmd := exec.Command("go", "build")
-		cmd.Args = append(cmd.Args, "-ldflags=-s")
-		cmd.Args = append(cmd.Args, "../execution/bincc/juriacoin")
-		if RemoteLinuxCluster {
-			cmd.Env = os.Environ()
-			cmd.Env = append(cmd.Env, "GOOS=linux")
-			fmt.Printf(" $ export %s\n", "GOOS=linux")
-		}
-		fmt.Printf(" $ %s\n\n", strings.Join(cmd.Args, " "))
-		check(cmd.Run())
+		buildJuriaCoinBinCC()
 		binccPath = "./juriacoin"
 	}
-
-	r := &ExperimentRunner{
-		experiments:   setupExperiments(),
-		cfactory:      cfactory,
-		loadClient:    testutil.NewJuriaCoinClient(100, 10000, binccPath),
-		loadReqPerSec: LoadReqPerSec,
+	fmt.Println("Preparing load generator")
+	return &LoadGenerator{
+		txPerSec: LoadTxPerSec,
+		client: testutil.NewJuriaCoinClient(
+			LoadMintAccounts, LoadDestAccounts, binccPath),
 	}
-	pass, fail := r.run()
-	fmt.Printf("\nTotal: %d  |  Pass: %d  |  Fail: %d\n", len(r.experiments), pass, fail)
+}
+
+func buildJuriaCoinBinCC() {
+	cmd := exec.Command("go", "build")
+	cmd.Args = append(cmd.Args, "-ldflags", "-s -w")
+	cmd.Args = append(cmd.Args, "../execution/bincc/juriacoin")
+	if RemoteLinuxCluster {
+		cmd.Env = os.Environ()
+		cmd.Env = append(cmd.Env, "GOOS=linux")
+		fmt.Printf(" $ export %s\n", "GOOS=linux")
+	}
+	fmt.Printf(" $ %s\n\n", strings.Join(cmd.Args, " "))
+	check(cmd.Run())
 }
 
 func makeLocalClusterFactory() cluster.ClusterFactory {
@@ -125,7 +159,7 @@ func makeRemoteClusterFactory() cluster.ClusterFactory {
 		KeySSH:        RemoteKeySSH,
 		HostsPath:     RemoteHostsPath,
 		RemoteWorkDir: RemoteWorkDir,
-		SetupRequired: RemoteSetup,
+		SetupRequired: RemoteTemplateSetup,
 	})
 	check(err)
 	return ftry

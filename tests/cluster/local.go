@@ -11,6 +11,7 @@ import (
 	"strconv"
 	"sync"
 	"syscall"
+	"time"
 
 	"github.com/aungmawjj/juria-blockchain/node"
 	"github.com/multiformats/go-multiaddr"
@@ -133,6 +134,20 @@ func (node *LocalNode) Stop() {
 	node.setRunning(false)
 	syscall.Kill(node.cmd.Process.Pid, syscall.SIGTERM)
 	node.logFile.Close()
+}
+
+func (node *LocalNode) EffectDelay(d time.Duration) error {
+	// no network delay for local node
+	return nil
+}
+
+func (node *LocalNode) EffectLoss(percent float32) error {
+	// no network loss for local node
+	return nil
+}
+
+func (node *LocalNode) RemoveEffect() {
+	// no network effects for local node
 }
 
 func (node *LocalNode) IsRunning() bool {

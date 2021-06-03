@@ -38,8 +38,10 @@ func SubmitTxAndWait(cls *cluster.Cluster, tx *core.Transaction) (int, error) {
 				return idx, nil
 			}
 		}
-		if time.Since(start) > 20*time.Second {
-			return idx, fmt.Errorf("tx not commited within 20s")
+		if time.Since(start) > 1*time.Second {
+			// maybe current leader doesn't receive tx
+			// resubmit tx again
+			return SubmitTxAndWait(cls, tx)
 		}
 		time.Sleep(50 * time.Millisecond)
 	}
