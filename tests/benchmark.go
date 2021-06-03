@@ -85,6 +85,10 @@ func (bm *Benchmark) Run() error {
 		fmt.Println("Stopping cluster")
 		bm.cluster.Stop()
 		fmt.Println("Stopped cluster")
+
+		bm.stopDstat()
+		bm.downDstat()
+		fmt.Println("Download dstat records")
 	}
 	return bm.err
 }
@@ -130,9 +134,6 @@ func (bm *Benchmark) runAsync(loadCtx context.Context, done chan struct{}) {
 	if bm.err != nil {
 		return
 	}
-	bm.stopDstat()
-	bm.downDstat()
-	fmt.Println("Download dstat records")
 }
 
 func (bm *Benchmark) installDstat() {

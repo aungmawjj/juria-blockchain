@@ -24,7 +24,7 @@ const (
 
 	LoadTxPerSec     = 100
 	LoadMintAccounts = 100
-	LoadDestAccounts = 10000
+	LoadDestAccounts = 10000 // increase dest accounts for benchmark
 
 	// Deploy juriacoin chaincode as bincc type (not embeded in juria node)
 	JuriaCoinBinCC = false
@@ -32,7 +32,7 @@ const (
 	// Run tests in remote linux cluster
 	// if false it'll use local cluster (running multiple nodes on single local machine)
 	RemoteLinuxCluster  = false
-	RemoteTemplateSetup = true
+	RemoteTemplateSetup = false
 	RemoteLoginName     = "ubuntu"
 	RemoteKeySSH        = "serverkey"
 	RemoteHostsPath     = "hosts"

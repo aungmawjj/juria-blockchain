@@ -116,6 +116,8 @@ func (ftry *RemoteFactory) setupRemoteDirOne(i int) error {
 		fmt.Sprintf("%s@%s", ftry.params.LoginName, ftry.hosts[i]),
 		"sudo", "tc", "qdisc", "del", "dev", NetworkDevice, "root", ";",
 		"sudo", "killall", "juria", ";",
+		"sudo", "killall", "dstat", ";",
+		"sudo", "killall", "python2", ";",
 		"mkdir", ftry.params.RemoteWorkDir, ";",
 		"cd", ftry.params.RemoteWorkDir, ";",
 		"rm", "-r", "template",
@@ -297,7 +299,8 @@ func (node *RemoteNode) StopDstat() {
 	cmd := exec.Command("ssh",
 		"-i", node.keySSH,
 		fmt.Sprintf("%s@%s", node.loginName, node.host),
-		"sudo", "killall", "dstat",
+		"sudo", "killall", "dstat", ";",
+		"sudo", "killall", "python2",
 	)
 	cmd.Run()
 }
