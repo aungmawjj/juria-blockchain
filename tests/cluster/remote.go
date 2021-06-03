@@ -277,6 +277,7 @@ func (node *RemoteNode) InstallDstat() {
 	cmd := exec.Command("ssh",
 		"-i", node.keySSH,
 		fmt.Sprintf("%s@%s", node.loginName, node.host),
+		"sudo", "apt", "update", ";",
 		"sudo", "apt", "install", "-y", "dstat",
 	)
 	fmt.Printf("%s\n", strings.Join(cmd.Args, " "))
