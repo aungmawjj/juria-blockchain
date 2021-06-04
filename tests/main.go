@@ -33,6 +33,7 @@ const (
 	// if false it'll use local cluster (running multiple nodes on single local machine)
 	RemoteLinuxCluster  = false
 	RemoteTemplateSetup = false
+	RemoteInstallDstat  = false
 	RemoteLoginName     = "ubuntu"
 	RemoteKeySSH        = "serverkey"
 	RemoteHostsPath     = "hosts"

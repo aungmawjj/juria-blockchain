@@ -102,7 +102,7 @@ func (bm *Benchmark) runAsync(loadCtx context.Context, done chan struct{}) {
 		return
 	}
 
-	if bm.cfactory.GetParams().SetupRequired {
+	if RemoteInstallDstat {
 		bm.installDstat()
 	}
 	bm.startDstat()
