@@ -57,12 +57,12 @@ func (client *JuriaCoinClient) generateKeyConcurrent(keys []*core.PrivateKey) {
 	for i := 0; i < 30; i++ {
 		go func() {
 			for i := range jobs {
-				client.accounts[i] = core.GenerateKey(nil)
+				keys[i] = core.GenerateKey(nil)
 				wg.Done()
 			}
 		}()
 	}
-	for i := range client.accounts {
+	for i := range keys {
 		wg.Add(1)
 		jobs <- i
 	}
