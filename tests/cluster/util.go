@@ -28,7 +28,7 @@ func ReadRemoteHosts(hostsPath string, nodeCount int) ([]string, error) {
 		return nil, fmt.Errorf("not enough hosts, %d | %d",
 			len(hosts), nodeCount)
 	}
-	return hosts, nil
+	return hosts[:nodeCount], nil
 }
 
 func WriteNodeKey(datadir string, key *core.PrivateKey) error {

@@ -68,6 +68,8 @@ func (bm *Benchmark) Run() error {
 	os.Mkdir(bm.workDir, 0755)
 	os.Mkdir(bm.resultDir, 0755)
 
+	bm.measurements = make([]*Measurement, 0)
+
 	done := make(chan struct{})
 	loadCtx, stopLoad := context.WithCancel(context.Background())
 	go bm.runAsync(loadCtx, done)
@@ -87,9 +89,10 @@ func (bm *Benchmark) Run() error {
 		bm.cluster.Stop()
 		fmt.Println("Stopped cluster")
 
+		bm.saveResults()
 		bm.stopDstat()
 		bm.downDstat()
-		fmt.Println("Download dstat records")
+		fmt.Println("Downloaded dstat records")
 	}
 	return bm.err
 }
@@ -199,20 +202,17 @@ func (bm *Benchmark) measure() error {
 	ticker := time.NewTicker(bm.interval)
 	defer ticker.Stop()
 
-	bm.measurements = make([]*Measurement, 0)
-	defer bm.saveResults()
-
-	for {
+	for range ticker.C {
+		if err := bm.onTick(); err != nil {
+			return err
+		}
 		select {
 		case <-timer.C:
 			return nil
-
-		case <-ticker.C:
-			if err := bm.onTick(); err != nil {
-				return err
-			}
+		default:
 		}
 	}
+	return nil
 }
 
 func (bm *Benchmark) onStartMeasure() {
