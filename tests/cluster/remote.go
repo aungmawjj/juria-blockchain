@@ -17,8 +17,6 @@ import (
 	"github.com/multiformats/go-multiaddr"
 )
 
-var NetworkDevice = "eth0"
-
 type RemoteFactoryParams struct {
 	JuriaPath string
 	WorkDir   string
@@ -32,6 +30,8 @@ type RemoteFactoryParams struct {
 
 	RemoteWorkDir string
 	SetupRequired bool
+
+	NetworkDevice string
 }
 
 type RemoteFactory struct {
@@ -114,7 +114,7 @@ func (ftry *RemoteFactory) setupRemoteDirOne(i int) error {
 	cmd := exec.Command("ssh",
 		"-i", ftry.params.KeySSH,
 		fmt.Sprintf("%s@%s", ftry.params.LoginName, ftry.hosts[i]),
-		"sudo", "tc", "qdisc", "del", "dev", NetworkDevice, "root", ";",
+		"sudo", "tc", "qdisc", "del", "dev", ftry.params.NetworkDevice, "root", ";",
 		"sudo", "killall", "juria", ";",
 		"sudo", "killall", "dstat", ";",
 		"sudo", "killall", "python2", ";",
@@ -175,11 +175,12 @@ func (ftry *RemoteFactory) SetupCluster(name string) (*Cluster, error) {
 	juriaPath := path.Join(ftry.params.RemoteWorkDir, "juria")
 	for i := 0; i < ftry.params.NodeCount; i++ {
 		node := &RemoteNode{
-			juriaPath: juriaPath,
-			config:    cls.nodeConfig,
-			loginName: ftry.params.LoginName,
-			keySSH:    ftry.params.KeySSH,
-			host:      ftry.hosts[i],
+			juriaPath:     juriaPath,
+			config:        cls.nodeConfig,
+			loginName:     ftry.params.LoginName,
+			keySSH:        ftry.params.KeySSH,
+			networkDevice: ftry.params.NetworkDevice,
+			host:          ftry.hosts[i],
 		}
 		cls.nodes[i] = node
 	}
@@ -213,6 +214,8 @@ type RemoteNode struct {
 	loginName string
 	keySSH    string
 	host      string
+
+	networkDevice string
 
 	running bool
 	mtxRun  sync.RWMutex
@@ -248,7 +251,7 @@ func (node *RemoteNode) EffectDelay(d time.Duration) error {
 	cmd := exec.Command("ssh",
 		"-i", node.keySSH,
 		fmt.Sprintf("%s@%s", node.loginName, node.host),
-		"sudo", "tc", "qdisc", "add", "dev", NetworkDevice, "root",
+		"sudo", "tc", "qdisc", "add", "dev", node.networkDevice, "root",
 		"netem", "delay", d.String(),
 	)
 	return cmd.Run()
@@ -258,7 +261,7 @@ func (node *RemoteNode) EffectLoss(percent float32) error {
 	cmd := exec.Command("ssh",
 		"-i", node.keySSH,
 		fmt.Sprintf("%s@%s", node.loginName, node.host),
-		"sudo", "tc", "qdisc", "add", "dev", NetworkDevice, "root",
+		"sudo", "tc", "qdisc", "add", "dev", node.networkDevice, "root",
 		"netem", "loss", fmt.Sprintf("%f%%", percent),
 	)
 	return cmd.Run()
@@ -268,7 +271,7 @@ func (node *RemoteNode) RemoveEffect() {
 	cmd := exec.Command("ssh",
 		"-i", node.keySSH,
 		fmt.Sprintf("%s@%s", node.loginName, node.host),
-		"sudo", "tc", "qdisc", "del", "dev", NetworkDevice, "root",
+		"sudo", "tc", "qdisc", "del", "dev", node.networkDevice, "root",
 	)
 	cmd.Run()
 }

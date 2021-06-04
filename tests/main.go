@@ -37,6 +37,7 @@ const (
 	RemoteKeySSH        = "serverkey"
 	RemoteHostsPath     = "hosts"
 	RemoteWorkDir       = "/home/ubuntu/juria-tests"
+	RemoteNetworkDevice = "ens5"
 
 	// run benchmark, otherwise run experiments
 	RunBenchmark      = false
@@ -176,6 +177,7 @@ func makeRemoteClusterFactory() *cluster.RemoteFactory {
 		HostsPath:     RemoteHostsPath,
 		RemoteWorkDir: RemoteWorkDir,
 		SetupRequired: RemoteTemplateSetup,
+		NetworkDevice: RemoteNetworkDevice,
 	})
 	check(err)
 	return ftry
