@@ -31,8 +31,8 @@ func ReadRemoteHosts(hostsPath string, nodeCount int) ([]string, error) {
 	return hosts, nil
 }
 
-func WriteNodeKey(nodedir string, key *core.PrivateKey) error {
-	f, err := os.Create(path.Join(nodedir, node.NodekeyFile))
+func WriteNodeKey(datadir string, key *core.PrivateKey) error {
+	f, err := os.Create(path.Join(datadir, node.NodekeyFile))
 	if err != nil {
 		return err
 	}
@@ -41,15 +41,27 @@ func WriteNodeKey(nodedir string, key *core.PrivateKey) error {
 	return err
 }
 
-func WriteValidatorsFile(nodedir string, vlds []node.Validator) error {
-	f, err := os.Create(path.Join(nodedir, node.ValidatorsFile))
+func WriteGenesisFile(datadir string, genesis *node.Genesis) error {
+	f, err := os.Create(path.Join(datadir, node.GenesisFile))
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	e := json.NewEncoder(f)
+	e.SetIndent("", "  ")
+	return e.Encode(genesis)
+}
+
+func WritePeersFile(datadir string, peers []node.Peer) error {
+	f, err := os.Create(path.Join(datadir, node.PeersFile))
 	if err != nil {
 		return err
 	}
 	defer f.Close()
 	e := json.NewEncoder(f)
 	e.SetIndent("", "  ")
-	return e.Encode(vlds)
+	return e.Encode(peers)
 }
 
 func MakeRandomKeys(count int) []*core.PrivateKey {
@@ -60,11 +72,11 @@ func MakeRandomKeys(count int) []*core.PrivateKey {
 	return keys
 }
 
-func MakeValidators(keys []*core.PrivateKey, addrs []multiaddr.Multiaddr) []node.Validator {
-	vlds := make([]node.Validator, len(addrs))
+func MakePeers(keys []*core.PrivateKey, addrs []multiaddr.Multiaddr) []node.Peer {
+	vlds := make([]node.Peer, len(addrs))
 	// create validator infos (pubkey + addr)
 	for i, addr := range addrs {
-		vlds[i] = node.Validator{
+		vlds[i] = node.Peer{
 			PubKey: keys[i].PublicKey().Bytes(),
 			Addr:   addr.String(),
 		}
@@ -72,12 +84,18 @@ func MakeValidators(keys []*core.PrivateKey, addrs []multiaddr.Multiaddr) []node
 	return vlds
 }
 
-func SetupTemplateDir(dir string, keys []*core.PrivateKey, vlds []node.Validator) error {
+func SetupTemplateDir(dir string, keys []*core.PrivateKey, vlds []node.Peer) error {
 	if err := os.RemoveAll(dir); err != nil {
 		return err
 	}
 	if err := os.Mkdir(dir, 0755); err != nil {
 		return err
+	}
+	genesis := &node.Genesis{
+		Validators: make([][]byte, len(keys)),
+	}
+	for i, v := range keys {
+		genesis.Validators[i] = v.PublicKey().Bytes()
 	}
 	for i, key := range keys {
 		dir := path.Join(dir, strconv.Itoa(i))
@@ -85,7 +103,10 @@ func SetupTemplateDir(dir string, keys []*core.PrivateKey, vlds []node.Validator
 		if err := WriteNodeKey(dir, key); err != nil {
 			return err
 		}
-		if err := WriteValidatorsFile(dir, vlds); err != nil {
+		if err := WriteGenesisFile(dir, genesis); err != nil {
+			return err
+		}
+		if err := WritePeersFile(dir, vlds); err != nil {
 			return err
 		}
 	}

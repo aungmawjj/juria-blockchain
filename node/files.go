@@ -11,51 +11,72 @@ import (
 	"path"
 
 	"github.com/aungmawjj/juria-blockchain/core"
+	"github.com/aungmawjj/juria-blockchain/p2p"
 	"github.com/multiformats/go-multiaddr"
 )
 
-type Validator struct {
+type Peer struct {
 	PubKey []byte
 	Addr   string
 }
 
+type Genesis struct {
+	Validators [][]byte
+}
+
 const (
-	NodekeyFile    = "nodekey"
-	ValidatorsFile = "validators.json"
+	NodekeyFile = "nodekey"
+	GenesisFile = "genesis.json"
+	PeersFile   = "peers.json"
 )
 
 func readNodeKey(datadir string) (*core.PrivateKey, error) {
 	b, err := ioutil.ReadFile(path.Join(datadir, NodekeyFile))
 	if err != nil {
-		return nil, fmt.Errorf("cannot read %s %w", NodekeyFile, err)
+		return nil, fmt.Errorf("cannot read %s, %w", NodekeyFile, err)
 	}
 	return core.NewPrivateKey(b)
 }
 
-func readValidators(datadir string) ([]*core.PublicKey, []multiaddr.Multiaddr, error) {
-	f, err := os.Open(path.Join(datadir, ValidatorsFile))
+func readGenesis(datadir string) (*Genesis, error) {
+	f, err := os.Open(path.Join(datadir, GenesisFile))
 	if err != nil {
-		return nil, nil, fmt.Errorf("cannot read %s %w", ValidatorsFile, err)
+		return nil, fmt.Errorf("cannot read %s, %w", GenesisFile, err)
 	}
 	defer f.Close()
 
-	var vlds []Validator
-	if err := json.NewDecoder(f).Decode(&vlds); err != nil {
-		return nil, nil, fmt.Errorf("cannot parse validators json %w", err)
+	genesis := new(Genesis)
+	if err := json.NewDecoder(f).Decode(&genesis); err != nil {
+		return nil, fmt.Errorf("cannot parse %s, %w", GenesisFile, err)
+
+	}
+	return genesis, nil
+}
+
+func readPeers(datadir string) ([]*p2p.Peer, error) {
+	f, err := os.Open(path.Join(datadir, PeersFile))
+	if err != nil {
+		return nil, fmt.Errorf("cannot read %s, %w", PeersFile, err)
+	}
+	defer f.Close()
+
+	var raws []Peer
+	if err := json.NewDecoder(f).Decode(&raws); err != nil {
+		return nil, fmt.Errorf("cannot parse %s, %w", PeersFile, err)
 	}
 
-	vldKeys := make([]*core.PublicKey, len(vlds))
-	vldAddrs := make([]multiaddr.Multiaddr, len(vlds))
+	peers := make([]*p2p.Peer, len(raws))
 
-	for i, vld := range vlds {
-		vldKeys[i], err = core.NewPublicKey(vld.PubKey)
+	for i, r := range raws {
+		pubKey, err := core.NewPublicKey(r.PubKey)
 		if err != nil {
-			return nil, nil, fmt.Errorf("invalid public key %w", err)
+			return nil, fmt.Errorf("invalid public key %w", err)
 		}
-		vldAddrs[i], err = multiaddr.NewMultiaddr(vld.Addr)
+		addr, err := multiaddr.NewMultiaddr(r.Addr)
 		if err != nil {
-			return nil, nil, fmt.Errorf("invalid multiaddr %w", err)
+			return nil, fmt.Errorf("invalid multiaddr %w", err)
 		}
+		peers[i] = p2p.NewPeer(pubKey, addr)
 	}
-	return vldKeys, vldAddrs, nil
+	return peers, nil
 }

@@ -81,8 +81,8 @@ func (ftry *RemoteFactory) setup() error {
 		return err
 	}
 	keys := MakeRandomKeys(ftry.params.NodeCount)
-	vlds := MakeValidators(keys, addrs)
-	if err := SetupTemplateDir(ftry.templateDir, keys, vlds); err != nil {
+	peers := MakePeers(keys, addrs)
+	if err := SetupTemplateDir(ftry.templateDir, keys, peers); err != nil {
 		return err
 	}
 	return ftry.sendTemplate()

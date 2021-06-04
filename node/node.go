@@ -26,9 +26,9 @@ import (
 type Node struct {
 	config Config
 
-	privKey  *core.PrivateKey
-	vldKeys  []*core.PublicKey
-	vldAddrs []multiaddr.Multiaddr
+	privKey *core.PrivateKey
+	peers   []*p2p.Peer
+	genesis *Genesis
 
 	vldStore  core.ValidatorStore
 	storage   *storage.Storage
@@ -86,65 +86,68 @@ func (node *Node) readFiles() {
 	}
 	logger.I().Infow("read nodekey", "pubkey", node.privKey.PublicKey())
 
-	node.vldKeys, node.vldAddrs, err = readValidators(node.config.Datadir)
+	node.genesis, err = readGenesis(node.config.Datadir)
 	if err != nil {
-		logger.I().Fatalw("read validators failed", "error", err)
+		logger.I().Fatalw("read genesis failed", "error", err)
 	}
-	logger.I().Infow("read validators", "count", len(node.vldKeys))
+
+	node.peers, err = readPeers(node.config.Datadir)
+	if err != nil {
+		logger.I().Fatalw("read peers failed", "error", err)
+	}
+	logger.I().Infow("read peers", "count", len(node.peers))
 }
 
 func (node *Node) setupComponents() {
-	node.vldStore = core.NewValidatorStore(node.vldKeys)
-	if err := node.setupStorage(); err != nil {
-		logger.I().Fatalw("setup storage failed", "error", err)
-	}
-	if err := node.setupHost(); err != nil {
-		logger.I().Fatalw("setup p2p host failed", "error", err)
-	}
+	node.setupValidatorStore()
+	node.setupStorage()
+	node.setupHost()
 	logger.I().Infow("setup p2p host", "port", node.config.Port)
 	node.msgSvc = p2p.NewMsgService(node.host)
 	node.execution = execution.New(node.storage, node.config.ExecutionConfig)
 	node.txpool = txpool.New(node.storage, node.execution, node.msgSvc)
 	node.setupConsensus()
-	node.msgSvc.SetReqHandler(&p2p.BlockReqHandler{
-		GetBlock: node.GetBlock,
-	})
-	node.msgSvc.SetReqHandler(&p2p.BlockByHeightReqHandler{
-		GetBlockByHeight: node.storage.GetBlockByHeight,
-	})
-	node.msgSvc.SetReqHandler(&p2p.TxListReqHandler{
-		GetTxList: node.GetTxList,
-	})
+	node.setReqHandlers()
 	serveNodeAPI(node)
 }
 
-func (node *Node) setupStorage() error {
-	db, err := storage.NewDB(path.Join(node.config.Datadir, "db"))
-	if err != nil {
-		return fmt.Errorf("cannot create db %w", err)
+func (node *Node) setupValidatorStore() {
+	validators := make([]*core.PublicKey, len(node.genesis.Validators))
+	for i, v := range node.genesis.Validators {
+		pubKey, err := core.NewPublicKey(v)
+		if err != nil {
+			logger.I().Fatalw("parse validator failed", "error", err)
+		}
+		validators[i] = pubKey
 	}
-	node.storage = storage.New(db, node.config.StorageConfig)
-	return nil
+	node.vldStore = core.NewValidatorStore(validators)
 }
 
-func (node *Node) setupHost() error {
+func (node *Node) setupStorage() {
+	db, err := storage.NewDB(path.Join(node.config.Datadir, "db"))
+	if err != nil {
+		logger.I().Fatalw("setup storage failed", "error", err)
+	}
+	node.storage = storage.New(db, node.config.StorageConfig)
+}
+
+func (node *Node) setupHost() {
 	ln, err := net.Listen("tcp4", fmt.Sprintf(":%d", node.config.Port))
 	if err != nil {
-		return fmt.Errorf("cannot listen on %d, %w", node.config.Port, err)
+		logger.I().Fatalw("cannot listen on port", "port", node.config.Port)
 	}
 	ln.Close()
 	addr, _ := multiaddr.NewMultiaddr(fmt.Sprintf("/ip4/0.0.0.0/tcp/%d", node.config.Port))
 	host, err := p2p.NewHost(node.privKey, addr)
 	if err != nil {
-		return fmt.Errorf("cannot create p2p host %w", err)
+		logger.I().Fatalw("cannot create p2p host", "error", err)
 	}
-	for i, key := range node.vldKeys {
-		if !key.Equal(node.privKey.PublicKey()) {
-			host.AddPeer(p2p.NewPeer(key, node.vldAddrs[i]))
+	for _, p := range node.peers {
+		if !p.PublicKey().Equal(node.privKey.PublicKey()) {
+			host.AddPeer(p)
 		}
 	}
 	node.host = host
-	return nil
 }
 
 func (node *Node) setupConsensus() {
@@ -157,6 +160,18 @@ func (node *Node) setupConsensus() {
 		Execution: node.execution,
 	}, node.config.ConsensusConfig)
 
+}
+
+func (node *Node) setReqHandlers() {
+	node.msgSvc.SetReqHandler(&p2p.BlockReqHandler{
+		GetBlock: node.GetBlock,
+	})
+	node.msgSvc.SetReqHandler(&p2p.BlockByHeightReqHandler{
+		GetBlockByHeight: node.storage.GetBlockByHeight,
+	})
+	node.msgSvc.SetReqHandler(&p2p.TxListReqHandler{
+		GetTxList: node.GetTxList,
+	})
 }
 
 func (node *Node) GetBlock(hash []byte) (*core.Block, error) {

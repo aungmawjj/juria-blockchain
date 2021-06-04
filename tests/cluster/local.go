@@ -50,8 +50,8 @@ func (ftry *LocalFactory) setup() error {
 		return err
 	}
 	keys := MakeRandomKeys(ftry.params.NodeCount)
-	vlds := MakeValidators(keys, addrs)
-	return SetupTemplateDir(ftry.templateDir, keys, vlds)
+	peers := MakePeers(keys, addrs)
+	return SetupTemplateDir(ftry.templateDir, keys, peers)
 }
 
 func (ftry *LocalFactory) makeAddrs() ([]multiaddr.Multiaddr, error) {
