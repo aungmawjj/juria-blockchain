@@ -49,6 +49,7 @@ type Benchmark struct {
 
 	measurements     []*Measurement
 	lastTxCommitedN0 int
+	lastMeasuredTime time.Time
 
 	benchmarkName string
 	resultDir     string
@@ -218,6 +219,7 @@ func (bm *Benchmark) onStartMeasure() {
 	bm.loadGen.ResetTotalSubmitted()
 	consStatus := testutil.GetStatusAll(bm.cluster)
 	bm.lastTxCommitedN0 = consStatus[0].CommitedTxCount
+	bm.lastMeasuredTime = time.Now()
 	fmt.Printf("\nStarted performance measurements\n")
 }
 
@@ -253,8 +255,10 @@ func (bm *Benchmark) onTick() error {
 	meas.TxCommited = meas.ConsensusStatus[0].CommitedTxCount - bm.lastTxCommitedN0
 	bm.lastTxCommitedN0 = meas.ConsensusStatus[0].CommitedTxCount
 
-	meas.Load = float32(meas.TxSubmitted) / float32(bm.interval.Seconds())
-	meas.Throughput = float32(meas.TxCommited) / float32(bm.interval.Seconds())
+	elapsed := time.Since(bm.lastMeasuredTime)
+	bm.lastMeasuredTime = time.Now()
+	meas.Load = float32(meas.TxSubmitted) / float32(elapsed.Seconds())
+	meas.Throughput = float32(meas.TxCommited) / float32(elapsed.Seconds())
 
 	bm.measurements = append(bm.measurements, meas)
 
