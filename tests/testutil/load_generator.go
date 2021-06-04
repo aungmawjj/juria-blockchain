@@ -37,7 +37,8 @@ func (lg *LoadGenerator) Run(ctx context.Context) {
 	jobCh := make(chan struct{}, lg.txPerSec)
 	defer close(jobCh)
 
-	for i := 0; i < 100; i++ {
+	workerCount := lg.txPerSec / 2
+	for i := 0; i < workerCount; i++ {
 		go lg.loadWorker(jobCh)
 	}
 	for {

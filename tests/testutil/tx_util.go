@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"mime/multipart"
 	"net/http"
 	"os"
@@ -19,6 +20,13 @@ import (
 	"github.com/aungmawjj/juria-blockchain/tests/cluster"
 	"github.com/aungmawjj/juria-blockchain/txpool"
 )
+
+func init() {
+	// to make load test http client efficient
+	transport := (http.DefaultTransport.(*http.Transport))
+	transport.MaxIdleConns = 100
+	transport.MaxIdleConnsPerHost = 100
+}
 
 func SubmitTxAndWait(cls *cluster.Cluster, tx *core.Transaction) (int, error) {
 	idx, err := SubmitTx(cls, tx)
@@ -62,6 +70,7 @@ func SubmitTx(cls *cluster.Cluster, tx *core.Transaction) (int, error) {
 			"application/json", bytes.NewReader(b))
 		retErr = checkResponse(resp, err)
 		if retErr == nil {
+			io.Copy(ioutil.Discard, resp.Body)
 			resp.Body.Close()
 			return i, nil
 		}
