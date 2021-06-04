@@ -7,6 +7,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"sync"
 	"sync/atomic"
 	"time"
 
@@ -44,13 +45,28 @@ func NewJuriaCoinClient(mintCount, destCount int, binccPath string) *JuriaCoinCl
 		accounts:  make([]*core.PrivateKey, mintCount),
 		dests:     make([]*core.PrivateKey, destCount),
 	}
-	for i := range client.accounts {
-		client.accounts[i] = core.GenerateKey(nil)
-	}
-	for i := range client.dests {
-		client.dests[i] = core.GenerateKey(nil)
-	}
+	client.generateKeyConcurrent(client.accounts)
+	client.generateKeyConcurrent(client.dests)
 	return client
+}
+
+func (client *JuriaCoinClient) generateKeyConcurrent(keys []*core.PrivateKey) {
+	jobs := make(chan int, 100)
+	defer close(jobs)
+	var wg sync.WaitGroup
+	for i := 0; i < 30; i++ {
+		go func() {
+			for i := range jobs {
+				client.accounts[i] = core.GenerateKey(nil)
+				wg.Done()
+			}
+		}()
+	}
+	for i := range client.accounts {
+		wg.Add(1)
+		jobs <- i
+	}
+	wg.Wait()
 }
 
 func (client *JuriaCoinClient) SetupOnCluster(cls *cluster.Cluster) error {
