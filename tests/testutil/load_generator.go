@@ -30,15 +30,15 @@ func (lg *LoadGenerator) SetupOnCluster(cls *cluster.Cluster) error {
 }
 
 func (lg *LoadGenerator) Run(ctx context.Context) {
-	delay := time.Second / time.Duration(lg.txPerSec)
+	jobPerTick := 20
+	delay := time.Second / time.Duration(lg.txPerSec/jobPerTick)
 	ticker := time.NewTicker(delay)
 	defer ticker.Stop()
 
 	jobCh := make(chan struct{}, lg.txPerSec)
 	defer close(jobCh)
 
-	workerCount := lg.txPerSec / 2
-	for i := 0; i < workerCount; i++ {
+	for i := 0; i < lg.txPerSec; i++ {
 		go lg.loadWorker(jobCh)
 	}
 	for {
@@ -46,7 +46,9 @@ func (lg *LoadGenerator) Run(ctx context.Context) {
 		case <-ctx.Done():
 			return
 		case <-ticker.C:
-			jobCh <- struct{}{}
+			for i := 0; i < jobPerTick; i++ {
+				jobCh <- struct{}{}
+			}
 		}
 	}
 }
