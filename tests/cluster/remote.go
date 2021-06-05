@@ -181,9 +181,10 @@ func (ftry *RemoteFactory) SetupCluster(name string) (*Cluster, error) {
 			networkDevice: ftry.params.NetworkDevice,
 			host:          ftry.hosts[i],
 		}
+		node.RemoveEffect()
+		node.StopDstat()
 		cls.nodes[i] = node
 	}
-	cls.RemoveEffects()
 	cls.Stop()
 	time.Sleep(5 * time.Second)
 	return cls, nil
@@ -300,7 +301,7 @@ func (node *RemoteNode) StopDstat() {
 	cmd := exec.Command("ssh",
 		"-i", node.keySSH,
 		fmt.Sprintf("%s@%s", node.loginName, node.host),
-		"sudo", "killall", "dstat", ";",
+		"sudo", "killall", "dstat",
 	)
 	cmd.Run()
 }
@@ -315,13 +316,13 @@ func (node *RemoteNode) DownloadDstat(filepath string) {
 	cmd.Run()
 }
 
-func (node *RemoteNode) RemoveDB() error {
+func (node *RemoteNode) RemoveDB() {
 	cmd := exec.Command("ssh",
 		"-i", node.keySSH,
 		fmt.Sprintf("%s@%s", node.loginName, node.host),
 		"rm", "-rf", path.Join(node.config.Datadir, "db"),
 	)
-	return RunCommand(cmd)
+	cmd.Run()
 }
 
 func (node *RemoteNode) IsRunning() bool {

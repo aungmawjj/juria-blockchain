@@ -26,23 +26,34 @@ func SubmitTxAndWait(cls *cluster.Cluster, tx *core.Transaction) (int, error) {
 	if err != nil {
 		return 0, err
 	}
+	for {
+		if err := WaitTxCommited(cls.GetNode(idx), tx); err != nil {
+			// maybe current leader doesn't receive tx
+			// resubmit tx again
+			time.Sleep(50 * time.Millisecond)
+			return SubmitTxAndWait(cls, tx)
+		} else {
+			return idx, nil
+		}
+	}
+}
+
+func WaitTxCommited(node cluster.Node, tx *core.Transaction) error {
 	start := time.Now()
 	for {
-		status, err := GetTxStatus(cls.GetNode(idx), tx.Hash())
+		status, err := GetTxStatus(node, tx.Hash())
 		if err != nil {
-			return 0, fmt.Errorf("get tx status error %w", err)
+			return fmt.Errorf("get tx status error %w", err)
 		} else {
 			if status == txpool.TxStatusNotFound {
-				return 0, fmt.Errorf("submited tx status not found")
+				return fmt.Errorf("submited tx status not found")
 			}
 			if status == txpool.TxStatusCommited {
-				return idx, nil
+				return nil
 			}
 		}
 		if time.Since(start) > 1*time.Second {
-			// maybe current leader doesn't receive tx
-			// resubmit tx again
-			return SubmitTxAndWait(cls, tx)
+			return fmt.Errorf("tx wait timeout")
 		}
 		time.Sleep(50 * time.Millisecond)
 	}

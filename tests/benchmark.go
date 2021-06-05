@@ -312,7 +312,7 @@ func (bm *Benchmark) measureLatency() time.Duration {
 }
 
 func (bm *Benchmark) saveResults() error {
-	if len(bm.measurements) > 0 {
+	if len(bm.measurements) == 0 {
 		return fmt.Errorf("no measurements to save")
 	}
 	fmt.Println("\nSaving results")
