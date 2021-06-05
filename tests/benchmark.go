@@ -41,9 +41,10 @@ type Benchmark struct {
 	duration time.Duration
 	interval time.Duration
 
-	cfactory *cluster.RemoteFactory
-	loadGen  *testutil.LoadGenerator
+	cfactory   *cluster.RemoteFactory
+	loadClient testutil.LoadClient
 
+	loadGen *testutil.LoadGenerator
 	cluster *cluster.Cluster
 	err     error
 
@@ -60,7 +61,9 @@ func (bm *Benchmark) Run() {
 	signal.Notify(killed, os.Interrupt, syscall.SIGTERM)
 
 	for _, tps := range BenchLoads {
-		bm.runWithLoad(tps)
+		if err := bm.runWithLoad(tps); err != nil {
+			log.Fatal(err)
+		}
 		select {
 		case s := <-killed:
 			fmt.Println("\nGot signal:", s)
@@ -71,7 +74,7 @@ func (bm *Benchmark) Run() {
 }
 
 func (bm *Benchmark) runWithLoad(tps int) error {
-	bm.loadGen.SetTxPerSec(tps)
+	bm.loadGen = testutil.NewLoadGenerator(tps, bm.loadClient)
 	bm.benchmarkName = fmt.Sprintf("bench_n_%d_load_%d",
 		bm.cfactory.GetParams().NodeCount, tps)
 	if JuriaCoinBinCC {
@@ -105,7 +108,9 @@ func (bm *Benchmark) runWithLoad(tps int) error {
 		bm.cluster.Stop()
 		fmt.Println("Stopped cluster")
 
-		bm.saveResults()
+		if err := bm.saveResults(); err != nil {
+			bm.err = err
+		}
 		bm.stopDstat()
 		bm.downloadDstat()
 		fmt.Println("Downloaded dstat records")
@@ -307,6 +312,9 @@ func (bm *Benchmark) measureLatency() time.Duration {
 }
 
 func (bm *Benchmark) saveResults() error {
+	if len(bm.measurements) > 0 {
+		return fmt.Errorf("no measurements to save")
+	}
 	fmt.Println("\nSaving results")
 	if err := bm.savePerformance(); err != nil {
 		return err

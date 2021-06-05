@@ -5,7 +5,6 @@ package testutil
 
 import (
 	"context"
-	"net/http"
 	"sync/atomic"
 	"time"
 
@@ -20,11 +19,6 @@ type LoadGenerator struct {
 }
 
 func NewLoadGenerator(tps int, client LoadClient) *LoadGenerator {
-	// to make load test http client efficient
-	transport := (http.DefaultTransport.(*http.Transport))
-	transport.MaxIdleConns = 100
-	transport.MaxIdleConnsPerHost = 100
-
 	return &LoadGenerator{
 		txPerSec: tps,
 		client:   client,
@@ -73,10 +67,6 @@ func (lg *LoadGenerator) increaseSubmitted() {
 
 func (lg *LoadGenerator) ResetTotalSubmitted() int {
 	return int(atomic.SwapInt64(&lg.totalSubmitted, 0))
-}
-
-func (lg *LoadGenerator) SetTxPerSec(val int) {
-	lg.txPerSec = val
 }
 
 func (lg *LoadGenerator) GetTxPerSec() int {

@@ -6,6 +6,7 @@ package main
 import (
 	"fmt"
 	"log"
+	"net/http"
 	"os"
 	"os/exec"
 	"path"
@@ -71,26 +72,35 @@ func main() {
 	printVars()
 	os.Mkdir(WorkDir, 0755)
 	buildJuria()
-	loadGen := makeLoadGenerator()
+	setupTransport()
 	if RunBenchmark {
-		runBenchmark(loadGen)
+		runBenchmark()
 	} else {
-		runExperiments(loadGen)
+		runExperiments(testutil.NewLoadGenerator(
+			LoadTxPerSec, makeLoadClient(),
+		))
 	}
 }
 
-func runBenchmark(loadGen *testutil.LoadGenerator) {
+func setupTransport() {
+	// to make load test http client efficient
+	transport := (http.DefaultTransport.(*http.Transport))
+	transport.MaxIdleConns = 100
+	transport.MaxIdleConnsPerHost = 100
+}
+
+func runBenchmark() {
 	if !RemoteLinuxCluster {
 		fmt.Println("mush run benchmark on remote cluster")
 		os.Exit(1)
 		return
 	}
 	bm := &Benchmark{
-		workDir:  path.Join(WorkDir, "benchmarks"),
-		duration: BenchmarkDuration,
-		interval: 5 * time.Second,
-		cfactory: makeRemoteClusterFactory(),
-		loadGen:  loadGen,
+		workDir:    path.Join(WorkDir, "benchmarks"),
+		duration:   BenchmarkDuration,
+		interval:   5 * time.Second,
+		cfactory:   makeRemoteClusterFactory(),
+		loadClient: makeLoadClient(),
 	}
 	bm.Run()
 }
@@ -132,15 +142,14 @@ func buildJuria() {
 	check(cmd.Run())
 }
 
-func makeLoadGenerator() *testutil.LoadGenerator {
+func makeLoadClient() testutil.LoadClient {
 	var binccPath string
 	if JuriaCoinBinCC {
 		buildJuriaCoinBinCC()
 		binccPath = "./juriacoin"
 	}
-	fmt.Println("Preparing load generator")
-	loadClient := testutil.NewJuriaCoinClient(LoadMintAccounts, LoadDestAccounts, binccPath)
-	return testutil.NewLoadGenerator(LoadTxPerSec, loadClient)
+	fmt.Println("Preparing load client")
+	return testutil.NewJuriaCoinClient(LoadMintAccounts, LoadDestAccounts, binccPath)
 }
 
 func buildJuriaCoinBinCC() {
