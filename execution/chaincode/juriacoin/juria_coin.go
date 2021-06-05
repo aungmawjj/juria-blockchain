@@ -62,7 +62,7 @@ func (jctx *JuriaCoin) Query(ctx chaincode.CallContext) ([]byte, error) {
 	switch input.Method {
 
 	case "minter":
-		return ctx.VerifyState(keyMinter)
+		return ctx.GetState(keyMinter), nil
 
 	case "total":
 		return queryTotal(ctx)
@@ -116,19 +116,11 @@ func invokeTransfer(ctx chaincode.CallContext, input *Input) error {
 }
 
 func queryTotal(ctx chaincode.CallContext) ([]byte, error) {
-	b, err := ctx.VerifyState(keyTotal)
-	if err != nil {
-		return nil, err
-	}
-	return json.Marshal(decodeBalance(b))
+	return json.Marshal(decodeBalance(ctx.GetState(keyTotal)))
 }
 
 func queryBalance(ctx chaincode.CallContext, input *Input) ([]byte, error) {
-	b, err := ctx.VerifyState(input.Dest)
-	if err != nil {
-		return nil, err
-	}
-	return json.Marshal(decodeBalance(b))
+	return json.Marshal(decodeBalance(ctx.GetState(input.Dest)))
 }
 
 func decodeBalance(b []byte) int64 {

@@ -71,31 +71,6 @@ func TestGetState(t *testing.T) {
 	assert.Equal(value, res)
 }
 
-func TestVerifyState(t *testing.T) {
-	r, c := setupRunnerAndClient()
-	mctx := new(chaincode.MockCallContext)
-	mctx.MockState = chaincode.NewMockState()
-	r.callContext = mctx
-
-	key := []byte("somekey")
-	value := []byte("somevalue")
-	mctx.SetState(key, value)
-
-	go r.serveStateAndGetResult()
-	res, err := c.VerifyState(key)
-
-	assert := assert.New(t)
-	assert.NoError(err)
-	assert.Equal(value, res)
-
-	mctx.VerifyError = errors.New("invalid merkle root")
-	res, err = c.VerifyState(key)
-
-	assert.Error(err)
-	assert.Equal(mctx.VerifyError.Error(), err.Error())
-	assert.Nil(res)
-}
-
 func TestSetState(t *testing.T) {
 	r, c := setupRunnerAndClient()
 	mctx := new(chaincode.MockCallContext)

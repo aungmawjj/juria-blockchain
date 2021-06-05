@@ -97,7 +97,8 @@ func (txe *txExecutor) executeDeployment() error {
 }
 
 func (txe *txExecutor) executeInvoke() error {
-	cc, err := txe.codeRegistry.getInstance(txe.tx.CodeAddr(), txe.rootTrk.spawn(codeRegistryAddr))
+	cc, err := txe.codeRegistry.getInstance(
+		txe.tx.CodeAddr(), txe.rootTrk.spawn(codeRegistryAddr))
 	if err != nil {
 		return err
 	}
@@ -110,11 +111,11 @@ func (txe *txExecutor) executeInvoke() error {
 	return nil
 }
 
-func (txe *txExecutor) makeCallContext(state State, input []byte) chaincode.CallContext {
-	return &callContext{
-		blk:   txe.blk,
-		tx:    txe.tx,
-		input: input,
-		State: state,
+func (txe *txExecutor) makeCallContext(st *stateTracker, input []byte) chaincode.CallContext {
+	return &callContextTx{
+		blk:          txe.blk,
+		tx:           txe.tx,
+		input:        input,
+		stateTracker: st,
 	}
 }

@@ -5,6 +5,7 @@ package txpool
 
 import (
 	"errors"
+	"fmt"
 	"testing"
 	"time"
 
@@ -73,9 +74,8 @@ func TestTxPool_SubmitTx(t *testing.T) {
 	msgSvc.On("SubscribeTxList", mock.Anything).Return(emitter.New().Subscribe(10))
 
 	pool := New(storage, execution, msgSvc)
-	pool.broadcaster.batchSize = 2         // broadcast after two successful submitTx
-	pool.broadcaster.timeout = time.Minute // to avoid timeout broadcast
-	pool.broadcaster.timer.Reset(time.Minute)
+	pool.broadcaster.timer.Reset(time.Hour) // to avoid timeout broadcast for testing
+	pool.broadcaster.batchSize = 2          // broadcast after two successful submitTx
 
 	time.Sleep(time.Millisecond)
 	msgSvc.AssertExpectations(t)
@@ -92,14 +92,16 @@ func TestTxPool_SubmitTx(t *testing.T) {
 	storage.AssertExpectations(t)
 	execution.AssertExpectations(t)
 
-	storage.On("HasTx", tx2.Hash()).Return(true) // assume tx2 already executed
+	storage.On("HasTx", tx2.Hash()).Return(false)
+	// tx2 is invalid to execute
+	execution.On("VerifyTx", tx2).Return(fmt.Errorf("invalid tx"))
 	err = pool.SubmitTx(tx2)
 
 	assert.Error(err, "verify should failed for executed tx")
 	storage.AssertExpectations(t)
 
-	storage.On("HasTx", tx3.Hash()).Return(false)
-	execution.On("VerifyTx", tx3).Return(nil)
+	// tx3 is already executed
+	storage.On("HasTx", tx3.Hash()).Return(true)
 	msgSvc.On("BroadcastTxList", &core.TxList{tx1, tx3}).Return(nil)
 	err = pool.SubmitTx(tx3)
 
@@ -111,7 +113,8 @@ func TestTxPool_SubmitTx(t *testing.T) {
 	msgSvc.AssertExpectations(t)
 	assert.Empty(pool.broadcaster.txBatch, "batch should be reset after broadcast")
 
-	assert.Equal(2, pool.GetStatus().Queue)
+	// only tx1 should be added to pool
+	assert.Equal(1, pool.GetStatus().Queue)
 }
 
 func TestTxPool_SubscribeTxList(t *testing.T) {

@@ -23,7 +23,6 @@ type UpStreamType int
 
 const (
 	UpStreamGetState UpStreamType = iota
-	UpStreamVerifyState
 	UpStreamSetState
 	UpStreamResult
 )

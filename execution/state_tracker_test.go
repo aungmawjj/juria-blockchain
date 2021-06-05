@@ -19,8 +19,8 @@ func newMapStateStore() *mapStateStore {
 	}
 }
 
-func (store *mapStateStore) VerifyState(key []byte) ([]byte, error) {
-	return store.stateMap[string(key)], nil
+func (store *mapStateStore) VerifyState(key []byte) []byte {
+	return store.stateMap[string(key)]
 }
 
 func (store *mapStateStore) GetState(key []byte) []byte {

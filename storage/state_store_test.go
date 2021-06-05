@@ -52,11 +52,11 @@ func TestStateStore_updateState(t *testing.T) {
 		SetValue([]byte{2}).
 		SetTreeIndex([]byte{1})
 
-	assert.Nil(ss.getState(upd.Key()))
+	assert.Nil(ss.getStateNotFoundNil(upd.Key()))
 
 	updateBadgerDB(db, ss.commitStateChange(upd))
 
-	assert.Equal(upd.Value(), ss.getState(upd.Key()))
+	assert.Equal(upd.Value(), ss.getStateNotFoundNil(upd.Key()))
 
 	idx, err := ss.getMerkleIndex(upd.Key())
 	assert.NoError(err)

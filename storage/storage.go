@@ -5,7 +5,6 @@ package storage
 
 import (
 	"crypto"
-	"errors"
 	"math/big"
 	"sync"
 	"time"
@@ -98,26 +97,30 @@ func (strg *Storage) GetTxCommit(hash []byte) (*core.TxCommit, error) {
 }
 
 func (strg *Storage) GetState(key []byte) []byte {
-	return strg.stateStore.getState(key)
+	return strg.stateStore.getStateNotFoundNil(key)
 }
 
-func (strg *Storage) VerifyState(key []byte) ([]byte, error) {
+func (strg *Storage) VerifyState(key []byte) []byte {
 	strg.mtxWriteState.RLock()
 	defer strg.mtxWriteState.RUnlock()
 
-	value := strg.stateStore.getState(key)
+	value, err := strg.stateStore.getState(key)
+	if err != nil {
+		// state not found
+		return nil
+	}
 	merkleIdx, err := strg.stateStore.getMerkleIndex(key)
 	if err != nil {
-		return nil, errors.New("state not found: " + err.Error())
+		panic("failed to get state merkle index")
 	}
 	node := &merkle.Node{
 		Data:     strg.stateStore.sumStateValue(value),
 		Position: merkle.NewPosition(0, big.NewInt(0).SetBytes(merkleIdx)),
 	}
 	if !strg.merkleTree.Verify([]*merkle.Node{node}) {
-		return nil, errors.New("merkle verification failed")
+		panic("merkle verification failed")
 	}
-	return value, nil
+	return value
 }
 
 func (strg *Storage) GetMerkleRoot() []byte {

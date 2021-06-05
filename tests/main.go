@@ -18,7 +18,7 @@ import (
 	"github.com/aungmawjj/juria-blockchain/tests/testutil"
 )
 
-const (
+var (
 	WorkDir   = "./workdir"
 	NodeCount = 4
 
@@ -32,8 +32,7 @@ const (
 	// Run tests in remote linux cluster
 	// if false it'll use local cluster (running multiple nodes on single local machine)
 	RemoteLinuxCluster  = false
-	RemoteTemplateSetup = false
-	RemoteInstallDstat  = false
+	RemoteSetupRequired = true
 	RemoteLoginName     = "ubuntu"
 	RemoteKeySSH        = "serverkey"
 	RemoteHostsPath     = "hosts"
@@ -43,6 +42,7 @@ const (
 	// run benchmark, otherwise run experiments
 	RunBenchmark      = false
 	BenchmarkDuration = 5 * time.Minute
+	BenchLoads        = []int{1000, 2000, 3000, 4000, 5000, 6000, 7000, 8000, 9000}
 )
 
 func getNodeConfig() node.Config {
@@ -53,9 +53,6 @@ func getNodeConfig() node.Config {
 
 func setupExperiments() []Experiment {
 	expms := make([]Experiment, 0)
-	expms = append(expms, &experiments.RestartCluster{})
-	expms = append(expms, &experiments.MajorityKeepRunning{})
-	expms = append(expms, &experiments.CorrectExecution{})
 	if RemoteLinuxCluster {
 		expms = append(expms, &experiments.NetworkDelay{
 			Delay: 100 * time.Millisecond,
@@ -64,6 +61,9 @@ func setupExperiments() []Experiment {
 			Percent: 10,
 		})
 	}
+	expms = append(expms, &experiments.MajorityKeepRunning{})
+	expms = append(expms, &experiments.CorrectExecution{})
+	expms = append(expms, &experiments.RestartCluster{})
 	return expms
 }
 
@@ -92,7 +92,7 @@ func runBenchmark(loadGen *testutil.LoadGenerator) {
 		cfactory: makeRemoteClusterFactory(),
 		loadGen:  loadGen,
 	}
-	check(bm.Run())
+	bm.Run()
 }
 
 func runExperiments(loadGen *testutil.LoadGenerator) {
@@ -177,7 +177,7 @@ func makeRemoteClusterFactory() *cluster.RemoteFactory {
 		KeySSH:        RemoteKeySSH,
 		HostsPath:     RemoteHostsPath,
 		RemoteWorkDir: RemoteWorkDir,
-		SetupRequired: RemoteTemplateSetup,
+		SetupRequired: RemoteSetupRequired,
 		NetworkDevice: RemoteNetworkDevice,
 	})
 	check(err)

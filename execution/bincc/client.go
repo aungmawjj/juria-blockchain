@@ -91,10 +91,6 @@ func (c *Client) Input() []byte {
 	return c.callData.Input
 }
 
-func (c *Client) VerifyState(key []byte) ([]byte, error) {
-	return c.request(key, nil, UpStreamVerifyState)
-}
-
 func (c *Client) GetState(key []byte) []byte {
 	val, _ := c.request(key, nil, UpStreamGetState)
 	return val

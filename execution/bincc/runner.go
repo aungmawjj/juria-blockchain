@@ -141,13 +141,6 @@ func (r *Runner) serveState(up *UpStream) error {
 		val := r.callContext.GetState(up.Key)
 		down.Value = val
 
-	case UpStreamVerifyState:
-		val, err := r.callContext.VerifyState(up.Key)
-		down.Value = val
-		if err != nil {
-			down.Error = err.Error()
-		}
-
 	case UpStreamSetState:
 		r.callContext.SetState(up.Key, up.Value)
 	}

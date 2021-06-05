@@ -5,6 +5,7 @@ package execution
 
 import (
 	"encoding/json"
+	"fmt"
 	"time"
 
 	"github.com/aungmawjj/juria-blockchain/core"
@@ -23,16 +24,21 @@ var DefaultConfig = Config{
 }
 
 type Execution struct {
-	state  StateRO
-	config Config
+	stateStore StateStore
+	config     Config
 
 	codeRegistry *codeRegistry
 }
 
-func New(state StateRO, config Config) *Execution {
+type StateStore interface {
+	VerifyState(key []byte) []byte
+	GetState(key []byte) []byte
+}
+
+func New(stateStore StateStore, config Config) *Execution {
 	exec := &Execution{
-		state:  state,
-		config: config,
+		stateStore: stateStore,
+		config:     config,
 	}
 	exec.codeRegistry = newCodeRegistry()
 	exec.codeRegistry.registerDriver(DriverTypeNative, newNativeCodeDriver())
@@ -48,7 +54,7 @@ func (exec *Execution) Execute(blk *core.Block, txs []*core.Transaction) (
 		txTimeout:       exec.config.TxExecTimeout,
 		concurrentLimit: exec.config.ConcurrentLimit,
 		codeRegistry:    exec.codeRegistry,
-		state:           exec.state,
+		state:           exec.stateStore,
 		blk:             blk,
 		txs:             txs,
 	}
@@ -60,15 +66,20 @@ type QueryData struct {
 	Input    []byte
 }
 
-func (exec *Execution) Query(query *QueryData) ([]byte, error) {
+func (exec *Execution) Query(query *QueryData) (val []byte, err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			err = fmt.Errorf("%v", r)
+		}
+	}()
 	cc, err := exec.codeRegistry.getInstance(
-		query.CodeAddr, newStateTracker(exec.state, codeRegistryAddr))
+		query.CodeAddr, newStateVerifier(exec.stateStore, codeRegistryAddr))
 	if err != nil {
 		return nil, err
 	}
-	return cc.Query(&callContext{
-		input: query.Input,
-		State: newStateTracker(exec.state, query.CodeAddr),
+	return cc.Query(&callContextQuery{
+		input:       query.Input,
+		stateGetter: newStateVerifier(exec.stateStore, query.CodeAddr),
 	})
 }
 

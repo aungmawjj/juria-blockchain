@@ -19,7 +19,7 @@ type stateStore struct {
 
 func (ss *stateStore) loadPrevValues(scList []*core.StateChange) {
 	for _, sc := range scList {
-		sc.SetPrevValue(ss.getState(sc.Key()))
+		sc.SetPrevValue(ss.getStateNotFoundNil(sc.Key()))
 	}
 }
 
@@ -83,12 +83,16 @@ func (ss *stateStore) commitStateChange(sc *core.StateChange) []updateFunc {
 	return ret
 }
 
-func (ss *stateStore) getState(key []byte) []byte {
-	val, err := ss.getter.Get(concatBytes([]byte{colStateValueByKey}, key))
+func (ss *stateStore) getStateNotFoundNil(key []byte) []byte {
+	val, err := ss.getState(key)
 	if err != nil {
 		return nil
 	}
 	return val
+}
+
+func (ss *stateStore) getState(key []byte) ([]byte, error) {
+	return ss.getter.Get(concatBytes([]byte{colStateValueByKey}, key))
 }
 
 func (ss *stateStore) getMerkleIndex(key []byte) ([]byte, error) {

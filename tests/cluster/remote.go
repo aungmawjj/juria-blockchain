@@ -117,7 +117,6 @@ func (ftry *RemoteFactory) setupRemoteDirOne(i int) error {
 		"sudo", "tc", "qdisc", "del", "dev", ftry.params.NetworkDevice, "root", ";",
 		"sudo", "killall", "juria", ";",
 		"sudo", "killall", "dstat", ";",
-		"sudo", "killall", "python2", ";",
 		"mkdir", ftry.params.RemoteWorkDir, ";",
 		"cd", ftry.params.RemoteWorkDir, ";",
 		"rm", "-r", "template",
@@ -291,10 +290,8 @@ func (node *RemoteNode) StartDstat() {
 	cmd := exec.Command("ssh",
 		"-i", node.keySSH,
 		fmt.Sprintf("%s@%s", node.loginName, node.host),
-		"nohup",
-		"dstat", "-Tcmdns", "--output",
-		path.Join(node.config.Datadir, "dstat.csv"),
-		">", "/dev/null", "2>&1", "&",
+		"nohup", "dstat", "-Tcmdns",
+		">", path.Join(node.config.Datadir, "dstat.txt"), "2>&1", "&",
 	)
 	cmd.Run()
 }
@@ -304,7 +301,6 @@ func (node *RemoteNode) StopDstat() {
 		"-i", node.keySSH,
 		fmt.Sprintf("%s@%s", node.loginName, node.host),
 		"sudo", "killall", "dstat", ";",
-		"sudo", "killall", "python2",
 	)
 	cmd.Run()
 }
@@ -313,10 +309,19 @@ func (node *RemoteNode) DownloadDstat(filepath string) {
 	cmd := exec.Command("scp",
 		"-i", node.keySSH,
 		fmt.Sprintf("%s@%s:%s", node.loginName, node.host,
-			path.Join(node.config.Datadir, "dstat.csv")),
+			path.Join(node.config.Datadir, "dstat.txt")),
 		filepath,
 	)
 	cmd.Run()
+}
+
+func (node *RemoteNode) RemoveDB() error {
+	cmd := exec.Command("ssh",
+		"-i", node.keySSH,
+		fmt.Sprintf("%s@%s", node.loginName, node.host),
+		"rm", "-rf", path.Join(node.config.Datadir, "db"),
+	)
+	return RunCommand(cmd)
 }
 
 func (node *RemoteNode) IsRunning() bool {

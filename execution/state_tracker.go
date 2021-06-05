@@ -13,14 +13,8 @@ import (
 	"github.com/aungmawjj/juria-blockchain/logger"
 )
 
-type StateRO interface {
-	VerifyState(key []byte) ([]byte, error)
+type stateGetter interface {
 	GetState(key []byte) []byte
-}
-
-type State interface {
-	StateRO
-	SetState(key, value []byte)
 }
 
 // stateTracker tracks state changes in key order
@@ -28,19 +22,17 @@ type State interface {
 // get state from base state getter if no changes occured for a key
 type stateTracker struct {
 	keyPrefix []byte
-	baseState StateRO
+	baseState stateGetter
 
 	trackDep     bool
-	dependencies map[string]struct{} // getState/verifyState calls
+	dependencies map[string]struct{} // getState calls
 	changes      map[string][]byte   // setState calls
 
 	mtxChg sync.RWMutex
 	mtxDep sync.RWMutex
 }
 
-var _ State = (*stateTracker)(nil)
-
-func newStateTracker(state StateRO, keyPrefix []byte) *stateTracker {
+func newStateTracker(state stateGetter, keyPrefix []byte) *stateTracker {
 	return &stateTracker{
 		keyPrefix: keyPrefix,
 		baseState: state,
@@ -48,12 +40,6 @@ func newStateTracker(state StateRO, keyPrefix []byte) *stateTracker {
 		dependencies: make(map[string]struct{}),
 		changes:      make(map[string][]byte),
 	}
-}
-
-func (trk *stateTracker) VerifyState(key []byte) ([]byte, error) {
-	trk.mtxChg.RLock()
-	defer trk.mtxChg.RUnlock()
-	return trk.verifyState(key)
 }
 
 func (trk *stateTracker) GetState(key []byte) []byte {
@@ -128,15 +114,6 @@ func (trk *stateTracker) getStateChanges() []*core.StateChange {
 		scList[i] = core.NewStateChange().SetKey([]byte(key)).SetValue(value)
 	}
 	return scList
-}
-
-func (trk *stateTracker) verifyState(key []byte) ([]byte, error) {
-	key = concatBytes(trk.keyPrefix, key)
-	trk.setDependency(key)
-	if value, ok := trk.changes[string(key)]; ok {
-		return value, nil
-	}
-	return trk.baseState.VerifyState(key)
 }
 
 func (trk *stateTracker) getState(key []byte) []byte {

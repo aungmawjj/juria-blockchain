@@ -8,16 +8,16 @@ import (
 	"github.com/aungmawjj/juria-blockchain/execution/chaincode"
 )
 
-type callContext struct {
+type callContextTx struct {
 	blk   *core.Block
 	tx    *core.Transaction
 	input []byte
-	State
+	*stateTracker
 }
 
-var _ chaincode.CallContext = (*callContext)(nil)
+var _ chaincode.CallContext = (*callContextTx)(nil)
 
-func (ctx *callContext) Sender() []byte {
+func (ctx *callContextTx) Sender() []byte {
 	if ctx.tx == nil {
 		return nil
 	}
@@ -27,20 +27,47 @@ func (ctx *callContext) Sender() []byte {
 	return ctx.tx.Sender().Bytes()
 }
 
-func (ctx *callContext) BlockHash() []byte {
+func (ctx *callContextTx) BlockHash() []byte {
 	if ctx.blk == nil {
 		return nil
 	}
 	return ctx.blk.Hash()
 }
 
-func (ctx *callContext) BlockHeight() uint64 {
+func (ctx *callContextTx) BlockHeight() uint64 {
 	if ctx.blk == nil {
 		return 0
 	}
 	return ctx.blk.Height()
 }
 
-func (ctx *callContext) Input() []byte {
+func (ctx *callContextTx) Input() []byte {
 	return ctx.input
+}
+
+type callContextQuery struct {
+	input []byte
+	stateGetter
+}
+
+var _ chaincode.CallContext = (*callContextQuery)(nil)
+
+func (ctx *callContextQuery) Input() []byte {
+	return ctx.input
+}
+
+func (ctx *callContextQuery) Sender() []byte {
+	return nil
+}
+
+func (ctx *callContextQuery) BlockHash() []byte {
+	return nil
+}
+
+func (ctx *callContextQuery) BlockHeight() uint64 {
+	return 0
+}
+
+func (ctx *callContextQuery) SetState(key, value []byte) {
+	// do nothing
 }

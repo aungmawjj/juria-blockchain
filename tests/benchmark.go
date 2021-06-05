@@ -55,9 +55,25 @@ type Benchmark struct {
 	resultDir     string
 }
 
-func (bm *Benchmark) Run() error {
+func (bm *Benchmark) Run() {
+	killed := make(chan os.Signal, 1)
+	signal.Notify(killed, os.Interrupt, syscall.SIGTERM)
+
+	for _, tps := range BenchLoads {
+		bm.runWithLoad(tps)
+		select {
+		case s := <-killed:
+			fmt.Println("\nGot signal:", s)
+			return
+		default:
+		}
+	}
+}
+
+func (bm *Benchmark) runWithLoad(tps int) error {
+	bm.loadGen.SetTxPerSec(tps)
 	bm.benchmarkName = fmt.Sprintf("bench_n_%d_load_%d",
-		bm.cfactory.GetParams().NodeCount, bm.loadGen.GetTxPerSec())
+		bm.cfactory.GetParams().NodeCount, tps)
 	if JuriaCoinBinCC {
 		bm.benchmarkName += "bincc"
 	}
@@ -91,8 +107,11 @@ func (bm *Benchmark) Run() error {
 
 		bm.saveResults()
 		bm.stopDstat()
-		bm.downDstat()
+		bm.downloadDstat()
 		fmt.Println("Downloaded dstat records")
+
+		bm.removeDB()
+		fmt.Println("Removed DB, Done", bm.benchmarkName)
 	}
 	return bm.err
 }
@@ -106,7 +125,7 @@ func (bm *Benchmark) runAsync(loadCtx context.Context, done chan struct{}) {
 		return
 	}
 
-	if RemoteInstallDstat {
+	if RemoteSetupRequired {
 		bm.installDstat()
 	}
 	bm.startDstat()
@@ -179,15 +198,28 @@ func (bm *Benchmark) stopDstat() {
 	wg.Wait()
 }
 
-func (bm *Benchmark) downDstat() {
+func (bm *Benchmark) downloadDstat() {
 	var wg sync.WaitGroup
 	for i := 0; i < bm.cluster.NodeCount(); i++ {
 		node := bm.cluster.GetNode(i).(*cluster.RemoteNode)
-		filePath := path.Join(bm.resultDir, fmt.Sprintf("dstat_%d.csv", i))
+		filePath := path.Join(bm.resultDir, fmt.Sprintf("dstat_%d.txt", i))
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
 			node.DownloadDstat(filePath)
+		}()
+	}
+	wg.Wait()
+}
+
+func (bm *Benchmark) removeDB() {
+	var wg sync.WaitGroup
+	for i := 0; i < bm.cluster.NodeCount(); i++ {
+		node := bm.cluster.GetNode(i).(*cluster.RemoteNode)
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			node.RemoveDB()
 		}()
 	}
 	wg.Wait()

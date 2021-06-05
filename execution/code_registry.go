@@ -60,17 +60,19 @@ func (reg *codeRegistry) install(input *DeploymentInput) error {
 }
 
 func (reg *codeRegistry) deploy(
-	codeAddr []byte, input *DeploymentInput, state State,
+	codeAddr []byte, input *DeploymentInput, st *stateTracker,
 ) (chaincode.Chaincode, error) {
 	driver, err := reg.getDriver(input.CodeInfo.DriverType)
 	if err != nil {
 		return nil, err
 	}
-	reg.setCodeInfo(codeAddr, &input.CodeInfo, state)
+	reg.setCodeInfo(codeAddr, &input.CodeInfo, st)
 	return driver.GetInstance(input.CodeInfo.CodeID)
 }
 
-func (reg *codeRegistry) getInstance(codeAddr []byte, state StateRO) (chaincode.Chaincode, error) {
+func (reg *codeRegistry) getInstance(
+	codeAddr []byte, state stateGetter,
+) (chaincode.Chaincode, error) {
 	info, err := reg.getCodeInfo(codeAddr, state)
 	if err != nil {
 		return nil, err
@@ -90,16 +92,18 @@ func (reg *codeRegistry) getDriver(driverType DriverType) (CodeDriver, error) {
 	return driver, nil
 }
 
-func (reg *codeRegistry) setCodeInfo(codeAddr []byte, codeInfo *CodeInfo, state State) error {
+func (reg *codeRegistry) setCodeInfo(
+	codeAddr []byte, codeInfo *CodeInfo, st *stateTracker,
+) error {
 	b, err := json.Marshal(codeInfo)
 	if err != nil {
 		return err
 	}
-	state.SetState(codeAddr, b)
+	st.SetState(codeAddr, b)
 	return nil
 }
 
-func (reg *codeRegistry) getCodeInfo(codeAddr []byte, state StateRO) (*CodeInfo, error) {
+func (reg *codeRegistry) getCodeInfo(codeAddr []byte, state stateGetter) (*CodeInfo, error) {
 	b := state.GetState(codeAddr)
 	info := new(CodeInfo)
 	err := json.Unmarshal(b, info)

@@ -90,8 +90,8 @@ func (r *ExperimentRunner) runSingleExperiment(expm Experiment) error {
 			return
 		}
 		go r.loadGen.Run(loadCtx)
-
-		testutil.Sleep(20 * time.Second)
+		fmt.Println("Load generator running")
+		testutil.Sleep(10 * time.Second)
 
 		if err = testutil.HealthCheckAll(cls); err != nil {
 			fmt.Printf("health check failed before experiment, %+v\n", err)

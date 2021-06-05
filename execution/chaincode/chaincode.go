@@ -9,7 +9,6 @@ type CallContext interface {
 	BlockHeight() uint64
 	Input() []byte
 
-	VerifyState(key []byte) ([]byte, error)
 	GetState(key []byte) []byte
 	SetState(key, value []byte)
 }

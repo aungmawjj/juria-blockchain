@@ -17,7 +17,7 @@ type blkExecutor struct {
 	concurrentLimit int
 
 	codeRegistry *codeRegistry
-	state        StateRO
+	state        StateStore
 	blk          *core.Block
 	txs          []*core.Transaction
 
@@ -29,10 +29,22 @@ type blkExecutor struct {
 }
 
 /*
-execute transactions of a block in sequential
-to improve the performance, execute transactions in parallel
-if state conflict occur, (i.e, a transaction call getState of the another transaction's setState)
-re-execute the conflict transactions
+Transactions of a block are executed concurrently.
+
+The state changes for the block is tracked throughout the execution.
+
+For each tx, both state changes and state dependencies are tracked separately when it's executed.
+Later tx's state changes are merged with the block's state changes.
+
+Given the total transactions is N and concurrentLimit is L.
+
+An (i)th tx is executed after (i - L)th tx is executed and it's state changes are merged.
+If (i) < (L) it's straight away executed.
+
+An (i)th tx's state changes are merged only after (i - 1)th tx's state changes are merged.
+Before merging, it's checked that whether the state dependencies of the (i)th tx
+are already tracked as changed.
+If so, the tx is executed again before merging.
 */
 func (bexe *blkExecutor) execute() (*core.BlockCommit, []*core.TxCommit) {
 	start := time.Now()

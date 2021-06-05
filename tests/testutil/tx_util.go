@@ -21,13 +21,6 @@ import (
 	"github.com/aungmawjj/juria-blockchain/txpool"
 )
 
-func init() {
-	// to make load test http client efficient
-	transport := (http.DefaultTransport.(*http.Transport))
-	transport.MaxIdleConns = 100
-	transport.MaxIdleConnsPerHost = 100
-}
-
 func SubmitTxAndWait(cls *cluster.Cluster, tx *core.Transaction) (int, error) {
 	idx, err := SubmitTx(cls, tx)
 	if err != nil {

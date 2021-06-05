@@ -63,9 +63,9 @@ func TestTxExecuter(t *testing.T) {
 		Method: "minter",
 	}
 	b, _ = json.Marshal(ccInput)
-	minter, err := cc.Query(&callContext{
-		input: b,
-		State: trk.spawn(txDep.Hash()),
+	minter, err := cc.Query(&callContextTx{
+		input:        b,
+		stateTracker: trk.spawn(txDep.Hash()),
 	})
 
 	assert.NoError(err)
@@ -87,9 +87,9 @@ func TestTxExecuter(t *testing.T) {
 	ccInput.Value = 0
 	b, _ = json.Marshal(ccInput)
 
-	b, err = cc.Query(&callContext{
-		input: b,
-		State: trk.spawn(txDep.Hash()),
+	b, err = cc.Query(&callContextTx{
+		input:        b,
+		stateTracker: trk.spawn(txDep.Hash()),
 	})
 
 	var balance int64
