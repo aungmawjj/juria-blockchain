@@ -62,13 +62,15 @@ func (bm *Benchmark) Run() {
 
 	for _, tps := range BenchLoads {
 		if err := bm.runWithLoad(tps); err != nil {
-			log.Fatal(err)
+			fmt.Println(err)
+			return
 		}
 		select {
 		case s := <-killed:
 			fmt.Println("\nGot signal:", s)
 			return
 		default:
+			time.Sleep(10 * time.Second)
 		}
 	}
 }
@@ -108,15 +110,14 @@ func (bm *Benchmark) runWithLoad(tps int) error {
 		bm.cluster.Stop()
 		fmt.Println("Stopped cluster")
 
-		if err := bm.saveResults(); err != nil {
-			bm.err = err
-		}
+		bm.saveResults()
 		bm.stopDstat()
 		bm.downloadDstat()
 		fmt.Println("Downloaded dstat records")
 
 		bm.removeDB()
 		fmt.Println("Removed DB, Done", bm.benchmarkName)
+		fmt.Print("\n\n")
 	}
 	return bm.err
 }
@@ -130,9 +131,6 @@ func (bm *Benchmark) runAsync(loadCtx context.Context, done chan struct{}) {
 		return
 	}
 
-	if RemoteSetupRequired {
-		bm.installDstat()
-	}
 	bm.startDstat()
 
 	fmt.Println("Starting cluster")
@@ -162,19 +160,6 @@ func (bm *Benchmark) runAsync(loadCtx context.Context, done chan struct{}) {
 	if bm.err != nil {
 		return
 	}
-}
-
-func (bm *Benchmark) installDstat() {
-	var wg sync.WaitGroup
-	for i := 0; i < bm.cluster.NodeCount(); i++ {
-		node := bm.cluster.GetNode(i).(*cluster.RemoteNode)
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			node.InstallDstat()
-		}()
-	}
-	wg.Wait()
 }
 
 func (bm *Benchmark) startDstat() {

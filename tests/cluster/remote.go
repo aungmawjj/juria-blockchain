@@ -70,7 +70,7 @@ func (ftry *RemoteFactory) GetParams() RemoteFactoryParams {
 }
 
 func (ftry *RemoteFactory) setup() error {
-	if err := ftry.setupRemoteDir(); err != nil {
+	if err := ftry.setupRemoteServers(); err != nil {
 		return err
 	}
 	if err := ftry.sendJuria(); err != nil {
@@ -102,14 +102,14 @@ func (ftry *RemoteFactory) makeAddrs() ([]multiaddr.Multiaddr, error) {
 	return addrs, nil
 }
 
-func (ftry *RemoteFactory) setupRemoteDir() error {
+func (ftry *RemoteFactory) setupRemoteServers() error {
 	for i := 0; i < ftry.params.NodeCount; i++ {
-		ftry.setupRemoteDirOne(i)
+		ftry.setupRemoteServerOne(i)
 	}
 	return nil
 }
 
-func (ftry *RemoteFactory) setupRemoteDirOne(i int) error {
+func (ftry *RemoteFactory) setupRemoteServerOne(i int) error {
 	// also kills remaining effect and nodes to make sure clean environment
 	cmd := exec.Command("ssh",
 		"-i", ftry.params.KeySSH,
@@ -117,6 +117,8 @@ func (ftry *RemoteFactory) setupRemoteDirOne(i int) error {
 		"sudo", "tc", "qdisc", "del", "dev", ftry.params.NetworkDevice, "root", ";",
 		"sudo", "killall", "juria", ";",
 		"sudo", "killall", "dstat", ";",
+		"sudo", "apt", "update", ";",
+		"sudo", "apt", "install", "-y", "dstat", ";",
 		"mkdir", ftry.params.RemoteWorkDir, ";",
 		"cd", ftry.params.RemoteWorkDir, ";",
 		"rm", "-r", "template",

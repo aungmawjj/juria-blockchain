@@ -43,7 +43,7 @@ var (
 	// run benchmark, otherwise run experiments
 	RunBenchmark      = false
 	BenchmarkDuration = 5 * time.Minute
-	BenchLoads        = []int{1000, 2000, 3000, 4000, 5000, 6000, 7000, 8000, 9000}
+	BenchLoads        = []int{1000, 2000, 3000, 4000, 4500, 5000, 5500, 6000, 7000}
 )
 
 func getNodeConfig() node.Config {
