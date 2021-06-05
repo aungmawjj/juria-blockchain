@@ -27,10 +27,12 @@ type CommitData struct {
 
 type Config struct {
 	MerkleBranchFactor uint8
+	ConcurrentLimit    int
 }
 
 var DefaultConfig = Config{
 	MerkleBranchFactor: 8,
+	ConcurrentLimit:    20,
 }
 
 type Storage struct {
@@ -49,9 +51,13 @@ func New(db *badger.DB, config Config) *Storage {
 	strg.db = db
 	getter := &badgerGetter{db}
 	strg.chainStore = &chainStore{getter}
-	strg.stateStore = &stateStore{getter, crypto.SHA3_256}
+	strg.stateStore = &stateStore{getter, crypto.SHA3_256, config.ConcurrentLimit}
 	strg.merkleStore = &merkleStore{getter}
-	strg.merkleTree = merkle.NewTree(strg.merkleStore, crypto.SHA3_256, config.MerkleBranchFactor)
+	strg.merkleTree = merkle.NewTree(strg.merkleStore, merkle.Config{
+		Hash:            crypto.SHA3_256,
+		BranchFactor:    config.MerkleBranchFactor,
+		ConcurrentLimit: config.ConcurrentLimit,
+	})
 	return strg
 }
 

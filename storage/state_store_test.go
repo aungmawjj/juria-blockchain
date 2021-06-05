@@ -20,7 +20,7 @@ func TestStateStore_loadPrevValuesAndTreeIndexes(t *testing.T) {
 	assert := assert.New(t)
 
 	db := createOnMemoryDB()
-	ss := &stateStore{&badgerGetter{db}, hashFunc}
+	ss := &stateStore{&badgerGetter{db}, hashFunc, 20}
 
 	updfns := make([]updateFunc, 3)
 	updfns[0] = ss.setState([]byte{1}, []byte{100})
@@ -45,7 +45,7 @@ func TestStateStore_updateState(t *testing.T) {
 	assert := assert.New(t)
 
 	db := createOnMemoryDB()
-	ss := &stateStore{&badgerGetter{db}, hashFunc}
+	ss := &stateStore{&badgerGetter{db}, hashFunc, 20}
 
 	upd := core.NewStateChange().
 		SetKey([]byte{1}).
@@ -74,7 +74,8 @@ func TestStateStore_computeUpdatedTreeNodes(t *testing.T) {
 	}
 
 	ss := &stateStore{
-		hashFunc: hashFunc,
+		hashFunc:        hashFunc,
+		concurrentLimit: 20,
 	}
 	nodes := ss.computeUpdatedTreeNodes(scList)
 

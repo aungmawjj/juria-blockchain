@@ -7,14 +7,16 @@ import (
 	"bytes"
 	"crypto"
 	"math/big"
+	"sync"
 
 	"github.com/aungmawjj/juria-blockchain/core"
 	"github.com/aungmawjj/juria-blockchain/merkle"
 )
 
 type stateStore struct {
-	getter   getter
-	hashFunc crypto.Hash
+	getter          getter
+	hashFunc        crypto.Hash
+	concurrentLimit int
 }
 
 func (ss *stateStore) loadPrevValues(scList []*core.StateChange) {
@@ -51,13 +53,33 @@ func (ss *stateStore) setNewTreeIndexes(scList []*core.StateChange, leafCount *b
 
 func (ss *stateStore) computeUpdatedTreeNodes(scList []*core.StateChange) []*merkle.Node {
 	nodes := make([]*merkle.Node, len(scList))
-	for i, sc := range scList {
+	jobs := make(chan int, ss.concurrentLimit)
+	defer close(jobs)
+
+	wg := new(sync.WaitGroup)
+	for i := 0; i < ss.concurrentLimit; i++ {
+		go ss.worker(nodes, scList, jobs, wg)
+	}
+	for i := range scList {
+		wg.Add(1)
+		jobs <- i
+	}
+	wg.Wait()
+	return nodes
+}
+
+func (ss *stateStore) worker(
+	nodes []*merkle.Node, scList []*core.StateChange,
+	jobs <-chan int, wg *sync.WaitGroup,
+) {
+	for i := range jobs {
+		sc := scList[i]
 		nodes[i] = &merkle.Node{
 			Position: merkle.NewPosition(0, big.NewInt(0).SetBytes(sc.TreeIndex())),
 			Data:     ss.sumStateValue(sc.Value()),
 		}
+		wg.Done()
 	}
-	return nodes
 }
 
 func (ss *stateStore) sumStateValue(value []byte) []byte {

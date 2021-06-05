@@ -9,24 +9,31 @@ import (
 	"math/big"
 )
 
+type Config struct {
+	Hash            crypto.Hash
+	BranchFactor    uint8
+	ConcurrentLimit int
+}
+
 // Tree implements a merkle tree engine
 type Tree struct {
-	store    Store
-	bfactor  uint8
-	hashFunc crypto.Hash
-	calc     *TreeCalc
+	store  Store
+	config Config
+	calc   *TreeCalc
 }
 
 // NewTree creates a new Merkle Tree
-func NewTree(store Store, h crypto.Hash, bfactor uint8) *Tree {
+func NewTree(store Store, config Config) *Tree {
 	tree := new(Tree)
 	tree.store = store
-	tree.bfactor = bfactor
-	if tree.bfactor < 2 {
-		tree.bfactor = 2
+	tree.config = config
+	if tree.config.BranchFactor < 2 {
+		tree.config.BranchFactor = 2
 	}
-	tree.hashFunc = h
-	tree.calc = NewTreeCalc(tree.bfactor)
+	if tree.config.ConcurrentLimit == 0 {
+		tree.config.ConcurrentLimit = 20
+	}
+	tree.calc = NewTreeCalc(tree.config.BranchFactor)
 	return tree
 }
 
@@ -49,22 +56,12 @@ func (tree *Tree) Update(leaves []*Node, newLeafCount *big.Int) *UpdateResult {
 		Branches:  make([]*Node, 0),
 	}
 	nodes := leaves
-	rowNodeCount := newLeafCount
+	rowSize := newLeafCount
 
-	for i := res.Height; i > 1; i-- {
-		groups, gnodes := tree.groupNodesByParent(nodes)
-		parents := make([]*Node, 0, len(groups))
-		for _, g := range groups { // the body of the loop can run in parallel
-			g.Load(rowNodeCount)
-			for _, n := range gnodes[g.parentPosition.String()] {
-				g.SetNode(n) // set updated nodes in blocks
-			}
-			p := g.MakeParent()
-			parents = append(parents, p)
-			res.Branches = append(res.Branches, p)
-		}
-		nodes = parents
-		rowNodeCount = tree.calc.GroupCount(rowNodeCount)
+	for i := uint8(0); i < res.Height-1; i++ {
+		nodes = tree.updateOneLevel(nodes, rowSize)
+		res.Branches = append(res.Branches, nodes...)
+		rowSize = tree.calc.GroupCount(rowSize)
 	}
 	if res.Height > 1 {
 		res.Root = res.Branches[len(res.Branches)-1]
@@ -72,6 +69,40 @@ func (tree *Tree) Update(leaves []*Node, newLeafCount *big.Int) *UpdateResult {
 		res.Root = res.Leaves[0]
 	}
 	return res
+}
+
+func (tree *Tree) updateOneLevel(nodes []*Node, rowSize *big.Int) []*Node {
+	groups, gnodes := tree.groupNodesByParent(nodes)
+	parents := make([]*Node, 0, len(groups))
+	jobs, out := tree.spawnWorkers(rowSize, len(groups))
+	defer close(jobs) // to stop workers
+	for _, g := range groups {
+		for _, n := range gnodes[g.parentPosition.String()] {
+			g.SetNode(n) // set updated nodes in blocks
+		}
+		jobs <- g
+	}
+	for i := 0; i < len(groups); i++ {
+		p := <-out
+		parents = append(parents, p)
+	}
+	return parents
+}
+
+func (tree *Tree) spawnWorkers(rowSize *big.Int, nResult int) (chan *Group, chan *Node) {
+	jobs := make(chan *Group, tree.config.ConcurrentLimit)
+	out := make(chan *Node, nResult)
+	for i := 0; i < tree.config.ConcurrentLimit; i++ {
+		go tree.worker(rowSize, jobs, out)
+	}
+	return jobs, out
+}
+
+func (tree *Tree) worker(rowSize *big.Int, jobs <-chan *Group, out chan<- *Node) {
+	for g := range jobs {
+		g.Load(rowSize)
+		out <- g.MakeParent()
+	}
 }
 
 // Verify verifies leaves with the current root-node.
@@ -125,7 +156,7 @@ func (tree *Tree) getGroupPositions(nodes []*Node) Positions {
 func (tree *Tree) makeGroups(pmap map[string]*Position) map[string]*Group {
 	groups := make(map[string]*Group, len(pmap))
 	for _, p := range pmap {
-		groups[p.String()] = NewGroup(tree.hashFunc, tree.calc, tree.store, p)
+		groups[p.String()] = NewGroup(tree.config.Hash, tree.calc, tree.store, p)
 	}
 	return groups
 }

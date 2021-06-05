@@ -110,12 +110,24 @@ func NewGroup(h crypto.Hash, tc *TreeCalc, store Store, pPos *Position) *Group {
 	}
 }
 
+// SetNode sets the node at the corresponding index in the block
+func (b *Group) SetNode(n *Node) *Group {
+	i := b.tc.NodeIndexInGroup(n.Position.Index())
+	if i < len(b.nodes) {
+		b.nodes[i] = n
+	}
+	return b
+}
+
 // Load loads the child nodes from the store
-func (b *Group) Load(rowNodeCount *big.Int) *Group {
+func (b *Group) Load(rowSize *big.Int) *Group {
 	offset := b.tc.FirstNodeOfGroup(b.parentPosition.Index())
-	for i := range b.nodes {
+	for i, n := range b.nodes {
+		if n != nil {
+			continue
+		}
 		index := big.NewInt(0).Add(offset, big.NewInt(int64(i)))
-		if rowNodeCount.Cmp(index) != 1 {
+		if rowSize.Cmp(index) != 1 {
 			break
 		}
 		p := NewPosition(b.parentPosition.level-1, index)
@@ -123,14 +135,6 @@ func (b *Group) Load(rowNodeCount *big.Int) *Group {
 		if data := b.store.GetNode(p); data != nil {
 			b.nodes[i] = &Node{p, data}
 		}
-	}
-	return b
-}
-
-// SetNode sets the node at the corresponding index in the block
-func (b *Group) SetNode(n *Node) *Group {
-	if b.tc.NodeIndexInGroup(n.Position.Index()) < len(b.nodes) {
-		b.nodes[b.tc.NodeIndexInGroup(n.Position.Index())] = n
 	}
 	return b
 }

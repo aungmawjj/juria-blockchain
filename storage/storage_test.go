@@ -12,7 +12,7 @@ import (
 )
 
 func newTestStorage() *Storage {
-	return New(createOnMemoryDB(), Config{MerkleBranchFactor: 8})
+	return New(createOnMemoryDB(), DefaultConfig)
 }
 
 func TestStorage_StateZero(t *testing.T) {
