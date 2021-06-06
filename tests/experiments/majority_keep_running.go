@@ -9,6 +9,7 @@ import (
 
 	"github.com/aungmawjj/juria-blockchain/core"
 	"github.com/aungmawjj/juria-blockchain/tests/cluster"
+	"github.com/aungmawjj/juria-blockchain/tests/health"
 	"github.com/aungmawjj/juria-blockchain/tests/testutil"
 )
 
@@ -30,7 +31,7 @@ func (expm *MajorityKeepRunning) Run(cls *cluster.Cluster) error {
 	fmt.Printf("Stopped %d out of %d nodes: %v\n", len(faulty), total, faulty)
 
 	testutil.Sleep(10 * time.Second)
-	if err := testutil.HealthCheckMajority(cls); err != nil {
+	if err := health.CheckMajorityNodes(cls); err != nil {
 		return err
 	}
 	for _, fi := range faulty {

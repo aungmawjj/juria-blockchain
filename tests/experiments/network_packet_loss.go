@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/aungmawjj/juria-blockchain/tests/cluster"
+	"github.com/aungmawjj/juria-blockchain/tests/health"
 	"github.com/aungmawjj/juria-blockchain/tests/testutil"
 )
 
@@ -33,7 +34,7 @@ func (expm *NetworkPacketLoss) Run(cls *cluster.Cluster) error {
 
 	fmt.Printf("Added packet loss %v\n", effects)
 	testutil.Sleep(20 * time.Second)
-	if err := testutil.HealthCheckMajority(cls); err != nil {
+	if err := health.CheckMajorityNodes(cls); err != nil {
 		return err
 	}
 

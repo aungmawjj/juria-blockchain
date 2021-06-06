@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/aungmawjj/juria-blockchain/tests/cluster"
+	"github.com/aungmawjj/juria-blockchain/tests/health"
 	"github.com/aungmawjj/juria-blockchain/tests/testutil"
 	"github.com/fatih/color"
 )
@@ -93,7 +94,7 @@ func (r *ExperimentRunner) runSingleExperiment(expm Experiment) error {
 		fmt.Println("Load generator running")
 		testutil.Sleep(10 * time.Second)
 
-		if err = testutil.HealthCheckAll(cls); err != nil {
+		if err = health.CheckAllNodes(cls); err != nil {
 			fmt.Printf("health check failed before experiment, %+v\n", err)
 			cls.Stop()
 			os.Exit(1)
@@ -107,7 +108,7 @@ func (r *ExperimentRunner) runSingleExperiment(expm Experiment) error {
 			return
 		}
 		fmt.Println("==> Finished experiment")
-		err = testutil.HealthCheckAll(cls)
+		err = health.CheckAllNodes(cls)
 	}()
 
 	killed := make(chan os.Signal, 1)

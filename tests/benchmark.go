@@ -19,6 +19,7 @@ import (
 
 	"github.com/aungmawjj/juria-blockchain/consensus"
 	"github.com/aungmawjj/juria-blockchain/tests/cluster"
+	"github.com/aungmawjj/juria-blockchain/tests/health"
 	"github.com/aungmawjj/juria-blockchain/tests/testutil"
 	"github.com/aungmawjj/juria-blockchain/txpool"
 )
@@ -149,7 +150,7 @@ func (bm *Benchmark) runAsync(loadCtx context.Context, done chan struct{}) {
 	go bm.loadGen.Run(loadCtx)
 	testutil.Sleep(20 * time.Second)
 
-	bm.err = testutil.HealthCheckAll(bm.cluster)
+	bm.err = health.CheckAllNodes(bm.cluster)
 	if bm.err != nil {
 		fmt.Printf("health check failed before benchmark, %+v\n", bm.err)
 		bm.cluster.Stop()
