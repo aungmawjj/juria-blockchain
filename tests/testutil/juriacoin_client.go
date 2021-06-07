@@ -128,12 +128,10 @@ func (client *JuriaCoinClient) mintAccounts() error {
 
 func (client *JuriaCoinClient) Mint(dest *core.PublicKey, value int64) error {
 	mintTx := client.MakeMintTx(dest, value)
-	i, err := SubmitTx(client.cluster, mintTx)
+	i, err := SubmitTxAndWait(client.cluster, mintTx)
 	if err != nil {
 		return fmt.Errorf("cannot mint juriacoin %w", err)
 	}
-	time.Sleep(3 * time.Second)
-	WaitTxCommited(client.cluster.GetNode(i), mintTx)
 	balance, err := client.QueryBalance(client.cluster.GetNode(i), dest)
 	if err != nil {
 		return fmt.Errorf("cannot query juriacoin balance %w", err)
