@@ -10,7 +10,7 @@ Juria is a high-performance consortium blockchain with [Hotstuff](https://arxiv.
 
 Hotstuff provides a mechanism to rotate leader (block maker) efficiently among the validator nodes. Hence it is not required to have a single trusted leader in the network.
 
-With the use of three-chain Hotstuff commit rule, Juria ensures that the same history of blocks are commited on all nodes despite network and machine failures.
+With the use of Hotstuff three-chain commit rule, Juria ensures that the same history of blocks is committed on all nodes despite network and machine failures.
 
 [Get started now](#getting-started){: .btn .btn-primary .fs-5 .mb-4 .mb-md-0 .mr-2 }
 [View it on GitHub](https://github.com/aungmawjj/juria-blockchain){: .btn .fs-5 .mb-4 .mb-md-0 }
@@ -33,10 +33,10 @@ go mod tidy
 cd tests
 go run .
 ```
-The test script will compile `cmd/juria` and setup cluster of 4 nodes with different ports on local machine.
-Experiments from `tests/experiments` will be run and health check will be performed throughout the tests.
+The test script will compile `cmd/juria` and set up a cluster of 4 nodes with different ports on the local machine.
+Experiments from `tests/experiments` will be run and health checks will be performed throughout the tests.
 
-***NOTE**: Network simmulation experiments are only run on the remote linux cluster.*
+***NOTE**: Network simulation experiments are only run on the remote linux cluster.*
 
 ## Documentation
 * [Key Concepts]({{site.baseurl}}{% link key-concepts/index.md %})
