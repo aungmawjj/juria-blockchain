@@ -1,0 +1,7 @@
+remote_theme: pmarsceill/just-the-docs
+
+title: Juria Blockchain
+description: High-performance consortium blockchain
+
+color_scheme: juria
+logo: "assets/images/title.png"

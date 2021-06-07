@@ -1,12 +1,21 @@
-# Juria Blockchain
+---
+layout: default
+title: Home
+nav_order: 1
+description: High-performance consortium blockchain
+---
 
+# Juria Blockchain
 Juria is a high-performance consortium blockchain with [Hotstuff](https://arxiv.org/abs/1803.05069) consensus mechanism and a transaction-based state machine.
 
 Hotstuff provides a mechanism to rotate leader (block maker) efficiently among the validator nodes. Hence it is not required to have a single trusted leader in the network.
 
 With the use of three-chain Hotstuff commit rule, Juria ensures that the same history of blocks are commited on all nodes despite network and machine failures.
 
-![Benchmark](docs/assets/images/benchmark_juria.png)
+[Get started now](#getting-started){: .btn .btn-primary .fs-5 .mb-4 .mb-md-0 .mr-2 }
+[View it on GitHub](https://github.com/aungmawjj/juria-blockchain){: .btn .fs-5 .mb-4 .mb-md-0 }
+
+![Benchmark](assets/images/benchmark_juria.png)
 
 ## Getting started
 You can run the cluster tests on local machine in a few seconds.
@@ -30,10 +39,10 @@ Experiments from `tests/experiments` will be run and health check will be perfor
 ***NOTE**: Network simmulation experiments are only run on the remote linux cluster.*
 
 ## Documentation
-* [Key Concepts](https://aungmawjj.github.io/juria-blockchain/key-concepts)
-* [Tests and Evaluation](https://aungmawjj.github.io/juria-blockchain/tests-and-evaluation)
-* [Benchmark on AWS](https://aungmawjj.github.io/juria-blockchain/benchmark-on-aws)
-* [Setup Juria Cluster](https://aungmawjj.github.io/juria-blockchain/setup-juria-cluster)
+* [Key Concepts]({{site.baseurl}}{% link key-concepts/index.md %})
+* [Tests and Evaluation]({{site.baseurl}}{% link tests-and-evaluation/index.md %})
+* [Benchmark on AWS]({{site.baseurl}}{% link benchmark-on-aws/index.md %})
+* [Setup Juria Cluster]({{site.baseurl}}{% link setup-juria-cluster/index.md %})
 
 ## About the project
 ### License
