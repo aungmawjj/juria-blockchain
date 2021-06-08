@@ -8,8 +8,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/aungmawjj/juria-blockchain/chaincodes/juriacoin"
 	"github.com/aungmawjj/juria-blockchain/core"
-	"github.com/aungmawjj/juria-blockchain/execution/chaincode/juriacoin"
 	"github.com/stretchr/testify/assert"
 )
 

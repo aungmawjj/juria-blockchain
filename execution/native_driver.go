@@ -7,8 +7,8 @@ import (
 	"bytes"
 	"errors"
 
+	"github.com/aungmawjj/juria-blockchain/chaincodes/juriacoin"
 	"github.com/aungmawjj/juria-blockchain/execution/chaincode"
-	"github.com/aungmawjj/juria-blockchain/execution/chaincode/juriacoin"
 )
 
 var (
