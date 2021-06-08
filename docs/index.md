@@ -19,20 +19,29 @@ With the use of Hotstuff three-chain commit rule, Juria ensures that the same hi
 
 ## Getting started
 You can run the cluster tests on local machine in a few seconds.
-`go 1.16` is required.
 
-1. Prepare the repo
-```sh
+1. Install dependencies
+```bash
+# MacOS
+xcode-select --install
+```
+```bash
+# Ubuntu
+sudo apt-get install build-essential
+```
+2. Download and install [`go 1.16`](https://golang.org/doc/install)
+3. Prepare the repo
+```bash
 git clone https://github.com/aungmawjj/juria-blockchain
 cd juria-blockchain
 go mod tidy
 ```
-
-2. Run tests
-```sh
+4. Run tests
+```bash
 cd tests
 go run .
 ```
+
 The test script will compile `cmd/juria` and set up a cluster of 4 nodes with different ports on the local machine.
 Experiments from `tests/experiments` will be run and health checks will be performed throughout the tests.
 
