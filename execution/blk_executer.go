@@ -119,21 +119,21 @@ func (bexe *blkExecutor) waitToMerge(i int) {
 
 func (bexe *blkExecutor) mergeTxStateChanges(i int, texe *txExecutor) {
 	defer bexe.increaseMergeIdx()
-	if bexe.rootTrk.hasDependencyChanges(texe.rootTrk) {
+	if bexe.rootTrk.hasDependencyChanges(texe.txTrk) {
 		// earlier txs changes the dependencies of this tx, execute tx again
 		texe = bexe.executeTx(i)
 	}
 	if bexe.txCommits[i].Error() != "" {
 		return // don't merge state
 	}
-	bexe.rootTrk.merge(texe.rootTrk)
+	bexe.rootTrk.merge(texe.txTrk)
 }
 
 func (bexe *blkExecutor) executeTx(i int) *txExecutor {
 	texe := &txExecutor{
 		codeRegistry: bexe.codeRegistry,
 		timeout:      bexe.txTimeout,
-		rootTrk:      bexe.rootTrk.spawn(nil),
+		txTrk:        bexe.rootTrk.spawn(nil),
 		blk:          bexe.blk,
 		tx:           bexe.txs[i],
 	}

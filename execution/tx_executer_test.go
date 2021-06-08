@@ -33,7 +33,7 @@ func TestTxExecuter(t *testing.T) {
 	texe := txExecutor{
 		codeRegistry: reg,
 		timeout:      1 * time.Second,
-		rootTrk:      trk,
+		txTrk:        trk,
 		blk:          blk,
 		tx:           txDep,
 	}

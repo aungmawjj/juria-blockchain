@@ -24,7 +24,7 @@ type txExecutor struct {
 	codeRegistry *codeRegistry
 
 	timeout time.Duration
-	rootTrk *stateTracker
+	txTrk   *stateTracker
 
 	blk *core.Block
 	tx  *core.Transaction
@@ -80,34 +80,34 @@ func (txe *txExecutor) executeDeployment() error {
 		return err
 	}
 
-	regTrk := txe.rootTrk.spawn(codeRegistryAddr)
+	regTrk := txe.txTrk.spawn(codeRegistryAddr)
 	cc, err := txe.codeRegistry.deploy(txe.tx.Hash(), input, regTrk)
 	if err != nil {
 		return err
 	}
 
-	initTrk := txe.rootTrk.spawn(txe.tx.Hash())
+	initTrk := txe.txTrk.spawn(txe.tx.Hash())
 	err = cc.Init(txe.makeCallContext(initTrk, input.InitInput))
 	if err != nil {
 		return err
 	}
-	txe.rootTrk.merge(regTrk)
-	txe.rootTrk.merge(initTrk)
+	txe.txTrk.merge(regTrk)
+	txe.txTrk.merge(initTrk)
 	return nil
 }
 
 func (txe *txExecutor) executeInvoke() error {
 	cc, err := txe.codeRegistry.getInstance(
-		txe.tx.CodeAddr(), txe.rootTrk.spawn(codeRegistryAddr))
+		txe.tx.CodeAddr(), txe.txTrk.spawn(codeRegistryAddr))
 	if err != nil {
 		return err
 	}
-	invokeTrk := txe.rootTrk.spawn(txe.tx.CodeAddr())
+	invokeTrk := txe.txTrk.spawn(txe.tx.CodeAddr())
 	err = cc.Invoke(txe.makeCallContext(invokeTrk, txe.tx.Input()))
 	if err != nil {
 		return err
 	}
-	txe.rootTrk.merge(invokeTrk)
+	txe.txTrk.merge(invokeTrk)
 	return nil
 }
 
