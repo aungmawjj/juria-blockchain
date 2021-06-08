@@ -5,6 +5,7 @@ package consensus
 
 import (
 	"bytes"
+	"encoding/base64"
 	"fmt"
 	"sync"
 
@@ -259,7 +260,7 @@ func (vld *validator) verifyProposalToVote(proposal *core.Block) error {
 			return err
 		}
 	}
-	return vld.resources.TxPool.VerifyProposalTxs(proposal.Transactions())
+	return vld.verifyProposalTxs(proposal)
 }
 
 func (vld *validator) verifyMerkleRoot(proposal *core.Block) error {
@@ -270,6 +271,22 @@ func (vld *validator) verifyMerkleRoot(proposal *core.Block) error {
 	mr := vld.resources.Storage.GetMerkleRoot()
 	if !bytes.Equal(mr, proposal.MerkleRoot()) {
 		return fmt.Errorf("invalid merkle root")
+	}
+	return nil
+}
+
+func (vld *validator) verifyProposalTxs(proposal *core.Block) error {
+	for _, hash := range proposal.Transactions() {
+		if vld.resources.Storage.HasTx(hash) {
+			return fmt.Errorf("already commited tx: %s", base64String(hash))
+		}
+		tx := vld.resources.TxPool.GetTx(hash)
+		if tx == nil {
+			return fmt.Errorf("tx not found: %s", base64String(hash))
+		}
+		if tx.Expiry() != 0 && tx.Expiry() < proposal.Height() {
+			return fmt.Errorf("expired tx: %s", base64String(hash))
+		}
 	}
 	return nil
 }
@@ -288,4 +305,8 @@ func (vld *validator) onReceiveNewView(qc *core.QuorumCert) error {
 	}
 	vld.hotstuff.UpdateQCHigh(newHsQC(qc, vld.state))
 	return nil
+}
+
+func base64String(b []byte) string {
+	return base64.StdEncoding.EncodeToString(b)
 }

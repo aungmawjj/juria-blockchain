@@ -43,6 +43,7 @@ func (tx *Transaction) Sum() []byte {
 	h.Write(tx.data.Sender)
 	h.Write(tx.data.CodeAddr)
 	h.Write(tx.data.Input)
+	binary.Write(h, binary.BigEndian, tx.data.Expiry)
 	return h.Sum(nil)
 }
 
@@ -89,6 +90,11 @@ func (tx *Transaction) SetInput(val []byte) *Transaction {
 	return tx
 }
 
+func (tx *Transaction) SetExpiry(val uint64) *Transaction {
+	tx.data.Expiry = val
+	return tx
+}
+
 func (tx *Transaction) Sign(signer Signer) *Transaction {
 	tx.sender = signer.PublicKey()
 	tx.data.Sender = signer.PublicKey().key
@@ -102,6 +108,7 @@ func (tx *Transaction) Nonce() int64       { return tx.data.Nonce }
 func (tx *Transaction) Sender() *PublicKey { return tx.sender }
 func (tx *Transaction) CodeAddr() []byte   { return tx.data.CodeAddr }
 func (tx *Transaction) Input() []byte      { return tx.data.Input }
+func (tx *Transaction) Expiry() uint64     { return tx.data.Expiry }
 
 // Marshal encodes transaction as bytes
 func (tx *Transaction) Marshal() ([]byte, error) {

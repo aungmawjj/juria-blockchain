@@ -211,51 +211,6 @@ func TestTxPool_Sync(t *testing.T) {
 	storage.AssertExpectations(t)
 }
 
-func TestTxPool_VerifyTxs(t *testing.T) {
-	assert := assert.New(t)
-
-	priv := core.GenerateKey(nil)
-
-	storage := new(MockStorage)
-	execution := new(MockExecution)
-	msgSvc := new(MockMsgService)
-
-	msgSvc.On("SubscribeTxList", mock.Anything).Return(emitter.New().Subscribe(10))
-
-	pool := New(storage, execution, msgSvc)
-	pool.broadcaster.timeout = time.Minute // to avoid timeout broadcast
-	pool.broadcaster.timer.Reset(time.Minute)
-
-	time.Sleep(time.Millisecond)
-
-	tx1 := core.NewTransaction().SetNonce(1).Sign(priv)
-	tx2 := core.NewTransaction().SetNonce(2).Sign(priv)
-	tx3 := core.NewTransaction().SetNonce(3).Sign(priv)
-
-	storage.On("HasTx", tx1.Hash()).Return(false)
-	storage.On("HasTx", tx2.Hash()).Return(true)
-	storage.On("HasTx", tx3.Hash()).Return(false)
-
-	execution.On("VerifyTx", tx1).Return(nil)
-	execution.On("VerifyTx", tx3).Return(nil)
-
-	pool.SubmitTx(tx1)
-
-	err := pool.VerifyProposalTxs([][]byte{tx1.Hash(), tx2.Hash(), tx3.Hash()})
-
-	assert.Error(err, "tx2 found in storage")
-
-	err = pool.VerifyProposalTxs([][]byte{tx1.Hash(), tx3.Hash()})
-
-	assert.Error(err, "tx3 not found")
-
-	pool.SubmitTx(tx3)
-	err = pool.VerifyProposalTxs([][]byte{tx1.Hash(), tx3.Hash()})
-
-	assert.NoError(err)
-	storage.AssertExpectations(t)
-}
-
 func TestTxPool_GetTxsToExecute(t *testing.T) {
 	assert := assert.New(t)
 

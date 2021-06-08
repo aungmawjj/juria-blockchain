@@ -17,7 +17,7 @@ type TxPool interface {
 	RemoveTxs(hashes [][]byte)
 	PutTxsToQueue(hashes [][]byte)
 	SyncTxs(peer *core.PublicKey, hashes [][]byte) error
-	VerifyProposalTxs(hashes [][]byte) error
+	GetTx(hash []byte) *core.Transaction
 	GetStatus() txpool.Status
 }
 
@@ -28,6 +28,7 @@ type Storage interface {
 	GetLastBlock() (*core.Block, error)
 	GetLastQC() (*core.QuorumCert, error)
 	GetBlockHeight() uint64
+	HasTx(hash []byte) bool
 }
 
 type MsgService interface {

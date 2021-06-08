@@ -7,7 +7,6 @@ import (
 	"bytes"
 	"encoding/base64"
 	"errors"
-	"fmt"
 
 	"github.com/aungmawjj/juria-blockchain/core"
 	"github.com/aungmawjj/juria-blockchain/emitter"
@@ -33,10 +32,6 @@ type MsgService interface {
 	BroadcastTxList(txList *core.TxList) error
 	RequestTxList(pubKey *core.PublicKey, hashes [][]byte) (*core.TxList, error)
 }
-
-var (
-	ErrOldTx = errors.New("transaction already executed")
-)
 
 type TxStatus uint8
 
@@ -74,10 +69,6 @@ func (pool *TxPool) SubmitTx(tx *core.Transaction) error {
 
 func (pool *TxPool) SyncTxs(peer *core.PublicKey, hashes [][]byte) error {
 	return pool.syncTxs(peer, hashes)
-}
-
-func (pool *TxPool) VerifyProposalTxs(hashes [][]byte) error {
-	return pool.verifyProposalTxs(hashes)
 }
 
 func (pool *TxPool) PopTxsFromQueue(max int) [][]byte {
@@ -198,18 +189,6 @@ func (pool *TxPool) requestTxList(peer *core.PublicKey, hashes [][]byte) (*core.
 		}
 	}
 	return txList, nil
-}
-
-func (pool *TxPool) verifyProposalTxs(hashes [][]byte) error {
-	for _, hash := range hashes {
-		if pool.storage.HasTx(hash) {
-			return ErrOldTx
-		}
-		if pool.store.getTx(hash) == nil {
-			return fmt.Errorf("tx not found %s", base64.StdEncoding.EncodeToString(hash))
-		}
-	}
-	return nil
 }
 
 func (pool *TxPool) getTxsToExecute(hashes [][]byte) ([]*core.Transaction, [][]byte) {

@@ -52,6 +52,7 @@ message Transaction {
 	bytes sender = 4;
 	bytes codeAddr = 5;
 	bytes input = 6;
+	uint64 expiry = 7; // expiry block height
 }
 
 message TxCommit {

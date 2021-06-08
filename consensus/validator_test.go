@@ -4,7 +4,6 @@
 package consensus
 
 import (
-	"errors"
 	"testing"
 
 	"github.com/aungmawjj/juria-blockchain/core"
@@ -15,59 +14,100 @@ func TestValidator_verifyProposalToVote(t *testing.T) {
 	priv0 := core.GenerateKey(nil)
 	priv1 := core.GenerateKey(nil)
 	resources := &Resources{
-		VldStore: core.NewValidatorStore([]*core.PublicKey{priv0.PublicKey(), priv1.PublicKey()}),
+		VldStore: core.NewValidatorStore([]*core.PublicKey{
+			priv0.PublicKey(),
+			priv1.PublicKey(),
+		}),
 	}
+	mStrg := new(MockStorage)
+	mTxPool := new(MockTxPool)
 
-	type given struct {
-		execHeight   int
-		merkleRoot   []byte
-		leaderIdx    int
-		verifyTxsErr error
+	resources.Storage = mStrg
+	resources.TxPool = mTxPool
+
+	mRoot := []byte("merkle-root")
+	mStrg.On("GetBlockHeight").Return(10)
+	mStrg.On("GetMerkleRoot").Return(mRoot)
+
+	// valid tx
+	tx1 := core.NewTransaction().SetExpiry(15).Sign(core.GenerateKey(nil))
+	// commited tx
+	tx2 := core.NewTransaction().SetExpiry(9).Sign(core.GenerateKey(nil))
+	// expired tx
+	tx3 := core.NewTransaction().SetExpiry(13).Sign(core.GenerateKey(nil))
+	// no expiry tx (should only used for test)
+	tx4 := core.NewTransaction().Sign(core.GenerateKey(nil))
+	// not found tx
+	// This should not happen at run time.
+	// Not found tx means sync txs failed. If sync failed, cannot vote already
+	tx5 := core.NewTransaction().SetExpiry(15).Sign(core.GenerateKey(nil))
+
+	mStrg.On("HasTx", tx1.Hash()).Return(false)
+	mStrg.On("HasTx", tx2.Hash()).Return(true)
+	mStrg.On("HasTx", tx3.Hash()).Return(false)
+	mStrg.On("HasTx", tx4.Hash()).Return(false)
+	mStrg.On("HasTx", tx5.Hash()).Return(false)
+
+	mTxPool.On("GetTx", tx1.Hash()).Return(tx1)
+	mTxPool.On("GetTx", tx3.Hash()).Return(tx3)
+	mTxPool.On("GetTx", tx4.Hash()).Return(tx4)
+	mTxPool.On("GetTx", tx5.Hash()).Return(nil)
+
+	vld := &validator{
+		resources: resources,
+		state:     newState(resources),
 	}
+	vld.state.commitedHeight = mStrg.GetBlockHeight()
+	vld.state.setLeaderIndex(1)
+
 	tests := []struct {
 		name     string
-		wantErr  bool
-		given    given
+		valid    bool
 		proposal *core.Block
 	}{
-		{"proposer is not leader", true, given{2, []byte{1}, 1, nil},
-			core.NewBlock().SetExecHeight(2).Sign(priv0)},
-
-		{"different exec height", true, given{2, []byte{1}, 1, nil},
-			core.NewBlock().SetExecHeight(1).Sign(priv1)},
-
-		{"different merkle root", true, given{2, []byte{1}, 1, nil},
-			core.NewBlock().SetExecHeight(2).SetMerkleRoot([]byte{2}).Sign(priv1)},
-
-		{"verify txs failed", true, given{2, []byte{1}, 1, errors.New("verify txs error")},
-			core.NewBlock().SetExecHeight(2).SetMerkleRoot([]byte{1}).Sign(priv1)},
-
-		{"can vote", false, given{2, []byte{1}, 1, nil},
-			core.NewBlock().SetExecHeight(2).SetMerkleRoot([]byte{1}).Sign(priv1)},
+		{"valid", true, core.NewBlock().
+			SetHeight(14).SetExecHeight(10).SetMerkleRoot(mRoot).
+			SetTransactions([][]byte{tx1.Hash(), tx4.Hash()}).
+			Sign(priv1),
+		},
+		{"proposer is not leader", false, core.NewBlock().
+			SetHeight(14).SetExecHeight(10).SetMerkleRoot(mRoot).
+			SetTransactions([][]byte{tx1.Hash(), tx4.Hash()}).
+			Sign(priv0),
+		},
+		{"different exec height", false, core.NewBlock().
+			SetHeight(14).SetExecHeight(9).SetMerkleRoot(mRoot).
+			SetTransactions([][]byte{tx1.Hash(), tx4.Hash()}).
+			Sign(priv1),
+		},
+		{"different merkle root", false, core.NewBlock().
+			SetHeight(14).SetExecHeight(10).SetMerkleRoot([]byte("different")).
+			SetTransactions([][]byte{tx1.Hash(), tx4.Hash()}).
+			Sign(priv1),
+		},
+		{"commited tx", false, core.NewBlock().
+			SetHeight(14).SetExecHeight(10).SetMerkleRoot(mRoot).
+			SetTransactions([][]byte{tx1.Hash(), tx2.Hash(), tx4.Hash()}).
+			Sign(priv1),
+		},
+		{"expired tx", false, core.NewBlock().
+			SetHeight(14).SetExecHeight(10).SetMerkleRoot(mRoot).
+			SetTransactions([][]byte{tx1.Hash(), tx3.Hash(), tx4.Hash()}).
+			Sign(priv1),
+		},
+		{"not found tx", false, core.NewBlock().
+			SetHeight(14).SetExecHeight(10).SetMerkleRoot(mRoot).
+			SetTransactions([][]byte{tx1.Hash(), tx5.Hash(), tx4.Hash()}).
+			Sign(priv1),
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			vld := &validator{
-				resources: resources,
-				state:     newState(resources),
-			}
-			vld.state.commitedHeight = uint64(tt.given.execHeight)
-			vld.state.setLeaderIndex(tt.given.leaderIdx)
-
-			storage := new(MockStorage)
-			storage.On("GetBlockHeight").Return(tt.given.execHeight)
-			storage.On("GetMerkleRoot").Return(tt.given.merkleRoot)
-			resources.Storage = storage
-
-			txPool := new(MockTxPool)
-			txPool.On("VerifyProposalTxs", tt.proposal.Transactions()).Return(tt.given.verifyTxsErr)
-			resources.TxPool = txPool
-
 			assert := assert.New(t)
-			if tt.wantErr {
-				assert.Error(vld.verifyProposalToVote(tt.proposal))
-			} else {
+			if tt.valid {
 				assert.NoError(vld.verifyProposalToVote(tt.proposal))
+			} else {
+				assert.Error(vld.verifyProposalToVote(tt.proposal))
 			}
 		})
 	}

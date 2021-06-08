@@ -44,9 +44,9 @@ func (m *MockTxPool) SyncTxs(peer *core.PublicKey, hashes [][]byte) error {
 	return args.Error(0)
 }
 
-func (m *MockTxPool) VerifyProposalTxs(hashes [][]byte) error {
-	args := m.Called(hashes)
-	return args.Error(0)
+func (m *MockTxPool) GetTx(hash []byte) *core.Transaction {
+	args := m.Called(hash)
+	return castTransaction(args.Get(0))
 }
 
 func (m *MockTxPool) GetStatus() txpool.Status {
@@ -88,6 +88,11 @@ func (m *MockStorage) GetLastQC() (*core.QuorumCert, error) {
 func (m *MockStorage) GetBlockHeight() uint64 {
 	args := m.Called()
 	return uint64(args.Int(0))
+}
+
+func (m *MockStorage) HasTx(hash []byte) bool {
+	args := m.Called(hash)
+	return args.Bool(0)
 }
 
 type MockMsgService struct {
@@ -180,6 +185,13 @@ func castQC(val interface{}) *core.QuorumCert {
 		return nil
 	}
 	return val.(*core.QuorumCert)
+}
+
+func castTransaction(val interface{}) *core.Transaction {
+	if val == nil {
+		return nil
+	}
+	return val.(*core.Transaction)
 }
 
 func castTransactions(val interface{}) []*core.Transaction {
