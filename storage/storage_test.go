@@ -96,11 +96,11 @@ func TestStorage_Commit(t *testing.T) {
 		SetStateChanges([]*core.StateChange{
 			core.NewStateChange().SetKey([]byte{1}).SetValue([]byte{20}),
 
-			// new key, leaf index -> 2, increase leaf count -> 3
-			core.NewStateChange().SetKey([]byte{5}).SetValue([]byte{30}),
-
 			// new key, leaf index -> 3, increase leaf count -> 4
-			core.NewStateChange().SetKey([]byte{3}).SetValue([]byte{50}),
+			core.NewStateChange().SetKey([]byte{5}).SetValue([]byte{50}),
+
+			// new key, leaf index -> 2, increase leaf count -> 3
+			core.NewStateChange().SetKey([]byte{3}).SetValue([]byte{30}),
 		})
 	data = &CommitData{
 		Block:        b1,
@@ -133,8 +133,8 @@ func TestStorage_Commit(t *testing.T) {
 	bcm, err = strg.GetBlockCommit(b1.Hash())
 	assert.NoError(err)
 	assert.Equal([]byte{0}, bcm.StateChanges()[0].PrevTreeIndex())
-	assert.Equal(big.NewInt(2).Bytes(), bcm.StateChanges()[1].TreeIndex())
-	assert.Equal(big.NewInt(3).Bytes(), bcm.StateChanges()[2].TreeIndex())
+	assert.Equal(big.NewInt(3).Bytes(), bcm.StateChanges()[1].TreeIndex())
+	assert.Equal(big.NewInt(2).Bytes(), bcm.StateChanges()[2].TreeIndex())
 	assert.Equal(big.NewInt(4).Bytes(), bcm.LeafCount())
 
 	h.Write(strg.stateStore.sumStateValue([]byte{20}))
@@ -146,12 +146,12 @@ func TestStorage_Commit(t *testing.T) {
 	assert.Equal(mroot, bcm.MerkleRoot())
 	assert.Equal(bcm.MerkleRoot(), strg.GetMerkleRoot())
 
-	assert.Equal([]byte{30}, strg.GetState([]byte{5}))
+	assert.Equal([]byte{50}, strg.GetState([]byte{5}))
 	var value []byte
 	assert.NotPanics(func() {
 		value = strg.VerifyState([]byte{5})
 	})
-	assert.Equal([]byte{30}, value)
+	assert.Equal([]byte{50}, value)
 
 	assert.NotPanics(func() {
 		// non existing state value

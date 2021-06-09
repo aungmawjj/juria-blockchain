@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"crypto"
 	"math/big"
+	"sort"
 	"sync"
 
 	"github.com/aungmawjj/juria-blockchain/core"
@@ -34,21 +35,33 @@ func (ss *stateStore) loadPrevTreeIndexes(scList []*core.StateChange) {
 	}
 }
 
-func (ss *stateStore) setNewTreeIndexes(scList []*core.StateChange, leafCount *big.Int) *big.Int {
-	lc := big.NewInt(0).Set(leafCount)
-	for _, sc := range scList {
+func (ss *stateStore) setNewTreeIndexes(scList []*core.StateChange, prevLC *big.Int) *big.Int {
+	newKeys := make([]string, 0)
+	scByKey := make(map[string]int)
+	for i, sc := range scList {
 		if sc.PrevTreeIndex() != nil {
 			sc.SetTreeIndex(sc.PrevTreeIndex())
 		} else {
-			idxB := lc.Bytes()
-			if len(idxB) == 0 {
-				idxB = []byte{0}
-			}
-			sc.SetTreeIndex(idxB)
-			lc.Add(lc, big.NewInt(1))
+			key := string(sc.Key())
+			newKeys = append(newKeys, key)
+			scByKey[key] = i
 		}
 	}
-	return lc
+	sort.Strings(newKeys) // sort new keys to get consistent leaf indexes
+	leafCount := big.NewInt(0).Set(prevLC)
+	for _, key := range newKeys {
+		setLeafIndex(scList[scByKey[key]], leafCount)
+		leafCount.Add(leafCount, big.NewInt(1))
+	}
+	return leafCount
+}
+
+func setLeafIndex(sc *core.StateChange, idx *big.Int) {
+	idxB := idx.Bytes()
+	if len(idxB) == 0 {
+		idxB = []byte{0}
+	}
+	sc.SetTreeIndex(idxB)
 }
 
 func (ss *stateStore) computeUpdatedTreeNodes(scList []*core.StateChange) []*merkle.Node {
