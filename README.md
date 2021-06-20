@@ -3,7 +3,7 @@
 
 Hotstuff provides a mechanism to rotate leader (block maker) efficiently among the validator nodes. Hence it is not required to have a single trusted leader in the network.
 
-With the use of Hotstuff three-chain commit rule, Juria ensures that the same history of blocks is committed on all nodes despite network and machine failures.
+With the use of Hotstuff three-chain commit rule, Juria blockchain ensures that the same history of blocks is committed on all nodes despite network and machine failures.
 
 ![Benchmark](docs/assets/images/benchmark_juria.png)
 
