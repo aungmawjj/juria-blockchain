@@ -15,6 +15,10 @@ Juria blockchain can be represented as a state machine replicated on different c
 * TOC
 {:toc}
 
+## Transaction
+A transaction is a unique input with a digital signature from the end-user.
+Transactions are the inputs for the state machine which are processed in the same order on different computers.
+
 ## State Merkle Tree
 In Juria, the state machine records the current state as key-value pairs.
 It is essential to ensure that state machines on different computers reach the same state
@@ -36,6 +40,3 @@ A chaincode or smart contract is a program with a unique address and isolated st
 When the state machine processes an input, it executes the chaincode at the given address.
 During the execution, the chaincode changes its key-value pairs.
 
-## Transaction
-A transaction is a unique input with a digital signature from the end-user.
-Transactions are the inputs for the state machine which are processed in the same order on different computers.
