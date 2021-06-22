@@ -30,6 +30,7 @@ However, the downside of this approach is that it recomputes the hash of the who
 even for a single value change.
 
 Juria blockchain uses a [Merkle tree](https://en.wikipedia.org/wiki/Merkle_tree) to compute the hash of all key-value pairs efficiently.
+![Merkle tree](/assets/images/merkle_tree.jpeg)
 A Merkle tree or hash tree is a tree data structure in which each non-leaf node is the cryptographic hash of its child nodes.
 The leaf nodes are the cryptographic hash of the corresponding key-value pairs.
 The Merkle tree allows efficient and secure verification of the contents of large data structures.

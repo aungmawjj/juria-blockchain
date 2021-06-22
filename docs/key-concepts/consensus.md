@@ -30,7 +30,7 @@ The leader creates a new *QC* once the votes from majority nodes are collected.
 This way, the leader creates new blocks repeatedly.
 
 ## Voting Rules
-For voting a proposal, in addition to Hotstuff’s safety and liveness rules, the following rules are checked to ensure the correct state machine synchronization.
+For voting a proposal, in addition to Hotstuff’s `safety` and `liveness` rules, the following rules are checked to ensure the correct state machine synchronization.
 
 1. The last committed block height must be the same.
 2. Merkle root of the [state tree]({{site.baseurl}}{% link key-concepts/state-machine.md %}/#state-merkle-tree) must be the same.
