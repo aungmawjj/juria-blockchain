@@ -49,9 +49,9 @@ Experiments from `tests/experiments` will be run and health checks will be perfo
 
 ## Documentation
 * [Key Concepts]({{site.baseurl}}{% link key-concepts/index.md %})
-* [Tests and Evaluation]({{site.baseurl}}{% link tests-and-evaluation/index.md %})
-* [Benchmark on AWS]({{site.baseurl}}{% link benchmark-on-aws/index.md %})
-* [Setup Juria Cluster]({{site.baseurl}}{% link setup-juria-cluster/index.md %})
+* [Cluster Tests]({{site.baseurl}}{% link cluster-tests/index.md %})
+* [Benchmark]({{site.baseurl}}{% link benchmark/index.md %})
+* [Setup Cluster]({{site.baseurl}}{% link setup-cluster/index.md %})
 
 ## About the project
 ### License
