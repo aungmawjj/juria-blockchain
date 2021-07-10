@@ -15,7 +15,7 @@ With the use of Hotstuff three-chain commit rule, Juria blockchain ensures that 
 [Get started now](#getting-started){: .btn .btn-primary .fs-5 .mb-4 .mb-md-0 .mr-2 }
 [View it on GitHub](https://github.com/aungmawjj/juria-blockchain){: .btn .fs-5 .mb-4 .mb-md-0 }
 
-![Benchmark](assets/images/benchmark_juria.png)
+![Benchmark](/assets/images/benchmark_juria.png)
 
 ## Getting started
 You can run the cluster tests on local machine in a few seconds.
@@ -51,7 +51,7 @@ Experiments from `tests/experiments` will be run and health checks will be perfo
 * [Key Concepts]({{site.baseurl}}{% link key-concepts/index.md %})
 * [Cluster Tests]({{site.baseurl}}{% link cluster-tests/index.md %})
 * [Benchmark]({{site.baseurl}}{% link benchmark/index.md %})
-* [Setup Cluster]({{site.baseurl}}{% link setup-cluster/index.md %})
+<!-- * [Setup Cluster]({{site.baseurl}}{% link setup-cluster/index.md %}) -->
 
 ## About the project
 ### License

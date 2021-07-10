@@ -41,7 +41,7 @@ Experiments from `tests/experiments` will be run and health checks will be perfo
 * [Key Concepts](https://aungmawjj.github.io/juria-blockchain/key-concepts)
 * [Cluster Tests](https://aungmawjj.github.io/juria-blockchain/cluster-tests)
 * [Benchmark](https://aungmawjj.github.io/juria-blockchain/benchmark)
-* [Setup Cluster](https://aungmawjj.github.io/juria-blockchain/setup-cluster)
+<!-- * [Setup Cluster](https://aungmawjj.github.io/juria-blockchain/setup-cluster) -->
 
 ## About the project
 ### License

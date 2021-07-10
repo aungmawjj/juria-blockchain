@@ -72,6 +72,5 @@ Provide two files:
 
 Run tests.
 ```bash
-cd tests
 go run .
 ```
