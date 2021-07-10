@@ -36,4 +36,4 @@ go run .
 ## Benchmark on AWS
 Benchmarks using different cluster sizes are run on AWS.
 The results, logs, and resource utilization (dstat) can be found [here](https://drive.google.com/drive/folders/1ob9hn_B7JTRdwPUoQh2psqFHjyx4YgcW?usp=sharing).
-![Benchmark](/assets/images/benchmark_juria.png)
+![Benchmark]({{site.baseurl}}{% link assets/images/benchmark_juria.png %})

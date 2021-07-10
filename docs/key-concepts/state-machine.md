@@ -31,7 +31,7 @@ even for a single value change.
 
 Juria blockchain uses a [Merkle tree](https://en.wikipedia.org/wiki/Merkle_tree) to compute the hash of all key-value pairs efficiently.
 
-![Merkle tree](/assets/images/merkle_tree.jpeg)
+![Merkle tree]({{site.baseurl}}{% link assets/images/merkle_tree.jpeg %})
 State Merkle tree with the branching factor: *`3`*
 {: .text-center}
 
